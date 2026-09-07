@@ -1,8 +1,14 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { events, faqs, img, klasses, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
+
+const WhyKryacademiaYoga = dynamic(() => import('./WhyKryacademiaYoga'), {
+  ssr: false,
+  loading: () => <div className="why-yoga-canvas" aria-hidden="true" />,
+});
 
 const nav = [
   ['Home', 'home'],
@@ -344,59 +350,22 @@ function Klass() {
 
 function Purpose() {
   return (
-    <section className="purpose">
-      <div className="ambient-orb ambient-orb-2" />
-      <div className="reveal">
-        <span className="eyebrow">Why KRYAcademia</span>
-        <h2>Learning should prepare young people to shape the world—not simply fit into it.</h2>
-        <p className="sdgs">SDG 4 · SDG 9 · SDG 12 · SDG 17</p>
+    <section id="why" className="purpose">
+      <WhyKryacademiaYoga />
+      <div className="sr-only">
+        <h2>Why KRYAcademia</h2>
+        <p>Learning should prepare young people to shape the world, not simply fit into it.</p>
+        <ul>
+          <li>Background: sustainable development becomes a creative and practical learning lens.</li>
+          <li>Our vision: thoughtful creators committed to a sustainable future.</li>
+          <li>Our mission: project-based learning for critical thinking, confidence, and collaboration.</li>
+        </ul>
       </div>
-      <figure className="reveal">
-        <img src={img.purpose} alt="Project-based learning activity" />
-        <figcaption>
-          Global citizenship
-          <br />
-          starts with curiosity.
-        </figcaption>
-      </figure>
-      <div className="purposecopy reveal">
-        {[
-          [
-            '01',
-            'Background',
-            'We integrate sustainable development into creative learning, inspiring students to understand global challenges and act with purpose.',
-          ],
-          [
-            '02',
-            'Our vision',
-            'To foster a generation of thoughtful creators committed to a sustainable future.',
-          ],
-          [
-            '03',
-            'Our mission',
-            'Deliver project-based learning that builds critical thinking, collaboration, and confidence.',
-          ],
-        ].map((x) => (
-          <article key={x[0]}>
-            <small>{x[0]}</small>
-            <h3>{x[1]}</h3>
-            <p>{x[2]}</p>
-          </article>
-        ))}
-      </div>
-
-      {/* 🌟 SDGs Connecting Banner & Vector Graphic */}
-      <div className="sdgs-footer-banner reveal">
-        <p className="sdgs-connecting-text">
-          Setiap metode pengajaran dan proyek pembelajaran di <strong>KRYAcademia</strong> dirancang secara khusus untuk berorientasi pada pilar <strong>UN Sustainable Development Goals (SDGs)</strong>, membekali siswa dengan pola pikir solutif untuk menciptakan dampak nyata bagi masyarakat dan lingkungan global.
+      <div className="why-yoga-footer reveal">
+        <p>
+          Every KRYAcademia project connects creative learning with the UN Sustainable Development Goals, helping students turn curiosity into responsible action.
         </p>
-        <div className="sdgs-vector-wrapper">
-          <img
-            src="/sdgs-1.svg"
-            alt="UN Sustainable Development Goals Framework - KRYAcademia"
-            className="sdgs-vector-img"
-          />
-        </div>
+        <span>SDG 4 / SDG 9 / SDG 12 / SDG 17</span>
       </div>
     </section>
   );
