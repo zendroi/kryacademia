@@ -520,31 +520,33 @@ function Activities() {
 
   useEffect(() => {
     if (pause) return;
-    const t = setInterval(() => setI((x) => (x + 1) % 10), 4200);
-    return () => clearInterval(t);
+    const timer = setInterval(() => {
+      setI((prev) => (prev + 1) % activities.length);
+    }, 2500);
+    return () => clearInterval(timer);
   }, [pause]);
 
   return (
     <section
       id="activities"
-      className="activities"
+      className="activities group cursor-pointer"
       tabIndex={0}
       onMouseEnter={() => setPause(true)}
       onMouseLeave={() => setPause(false)}
       onKeyDown={(e) => {
-        if (e.key === 'ArrowRight') setI((i + 1) % 10);
-        if (e.key === 'ArrowLeft') setI((i + 9) % 10);
+        if (e.key === 'ArrowRight') setI((i + 1) % activities.length);
+        if (e.key === 'ArrowLeft') setI((i + activities.length - 1) % activities.length);
       }}
     >
       <Heading
         eyebrow="Inside KRYAcademia"
         title="Our Activities"
-        copy="Discover inspiring moments of creativity, collaboration, and meaningful learning at KRYAcademia."
+        copy="Discover inspiring moments of creativity, collaboration, and meaningful learning at KRYAcademia. Hover cursor to pause auto-scroll."
       />
       <div className="viewport">
         <div className="track" style={{ transform: `translateX(calc(-${i} * (33.333% + 7px)))` }}>
           {activities.map((x, n) => (
-            <figure key={n}>
+            <figure key={n} className="transition-transform duration-500 hover:scale-[1.02]">
               <img src={x[1]} alt={x[0]} />
               <figcaption>
                 <small>0{n + 1}</small>
@@ -555,12 +557,18 @@ function Activities() {
         </div>
       </div>
       <div className="controls">
-        <span>0{i + 1} / 10</span>
+        <span>
+          0{i + 1} / {activities.length} {pause && <small className="text-[#ff8996] ml-2 font-mono">⏸ PAUSED</small>}
+        </span>
         <i>
-          <b style={{ width: (i + 1) * 10 + '%' }} />
+          <b style={{ width: ((i + 1) / activities.length) * 100 + '%' }} />
         </i>
-        <button onClick={() => setI((i + 9) % 10)}>←</button>
-        <button onClick={() => setI((i + 1) % 10)}>→</button>
+        <button aria-label="Previous slide" onClick={() => setI((i + activities.length - 1) % activities.length)}>
+          ←
+        </button>
+        <button aria-label="Next slide" onClick={() => setI((i + 1) % activities.length)}>
+          →
+        </button>
       </div>
     </section>
   );
