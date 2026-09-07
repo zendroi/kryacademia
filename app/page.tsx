@@ -1,7 +1,8 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { activities, events, faqs, img, klasses, partners, programs } from './mockData';
+import { events, faqs, img, klasses, partners, programs } from './mockData';
+import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 
 const nav = [
   ['Home', 'home'],
@@ -529,61 +530,14 @@ function Agenda() {
 }
 
 function Activities() {
-  const [i, setI] = useState(0);
-  const [pause, setPause] = useState(false);
-
-  useEffect(() => {
-    if (pause) return;
-    const timer = setInterval(() => {
-      setI((prev) => (prev + 1) % activities.length);
-    }, 2500);
-    return () => clearInterval(timer);
-  }, [pause]);
-
   return (
-    <section
-      id="activities"
-      className="activities group cursor-pointer"
-      tabIndex={0}
-      onMouseEnter={() => setPause(true)}
-      onMouseLeave={() => setPause(false)}
-      onKeyDown={(e) => {
-        if (e.key === 'ArrowRight') setI((i + 1) % activities.length);
-        if (e.key === 'ArrowLeft') setI((i + activities.length - 1) % activities.length);
-      }}
-    >
+    <section id="activities" className="activities">
       <Heading
         eyebrow="Inside KRYAcademia"
         title="Our Activities"
-        copy="Discover inspiring moments of creativity, collaboration, and meaningful learning at KRYAcademia. Hover cursor to pause auto-scroll."
+        copy="Discover inspiring moments of creativity, collaboration, and meaningful learning at KRYAcademia."
       />
-      <div className="viewport">
-        <div className="track" style={{ transform: `translateX(calc(-${i} * (33.333% + 7px)))` }}>
-          {activities.map((x, n) => (
-            <figure key={n} className="transition-transform duration-500 hover:scale-[1.02]">
-              <img src={x[1]} alt={x[0]} />
-              <figcaption>
-                <small>0{n + 1}</small>
-                {x[0]}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </div>
-      <div className="controls">
-        <span>
-          0{i + 1} / {activities.length} {pause && <small className="text-[#ff8996] ml-2 font-mono">⏸ PAUSED</small>}
-        </span>
-        <i>
-          <b style={{ width: ((i + 1) / activities.length) * 100 + '%' }} />
-        </i>
-        <button aria-label="Previous slide" onClick={() => setI((i + activities.length - 1) % activities.length)}>
-          ←
-        </button>
-        <button aria-label="Next slide" onClick={() => setI((i + 1) % activities.length)}>
-          →
-        </button>
-      </div>
+      <ActivitiesInfiniteScroll />
     </section>
   );
 }

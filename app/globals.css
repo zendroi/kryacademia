@@ -1353,9 +1353,15 @@ img {
 
 /* 🌟 Activities Carousel */
 .activities {
-  background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+  background: var(--navy-dark);
   color: white;
   overflow: hidden;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.activities > .heading {
+  padding: 0 7vw;
 }
 
 .activities .heading p {
@@ -1366,81 +1372,107 @@ img {
   color: #ff8996;
 }
 
-.viewport {
-  overflow: visible;
-}
-
-.track {
-  display: flex;
-  gap: 22px;
-  transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.track figure {
-  flex: 0 0 calc(33.333% - 15px);
-  height: 440px;
-  margin: 0;
-  border-radius: 26px;
-  overflow: hidden;
+.activities-gallery {
   position: relative;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  min-height: clamp(520px, 54vw, 680px);
+  isolation: isolate;
 }
 
-.track figure img {
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.track figure:hover img {
-  transform: scale(1.08);
-}
-
-.track figcaption {
+.activities-canvas {
   position: absolute;
+  inset: 0;
+  min-height: inherit;
+  background: var(--navy-dark);
+}
+
+.activities-canvas > div,
+.activities-canvas canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.activities-canvas > div > div::-webkit-scrollbar {
+  display: none;
+}
+
+.activities-gallery::before,
+.activities-gallery::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: 0;
   bottom: 0;
+  width: min(10vw, 130px);
+  pointer-events: none;
+}
+
+.activities-gallery::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--navy-dark), transparent);
+}
+
+.activities-gallery::after {
+  right: 0;
+  background: linear-gradient(-90deg, var(--navy-dark), transparent);
+}
+
+.activities-gallery-legend {
+  position: absolute;
+  z-index: 3;
   left: 0;
   right: 0;
-  padding: 60px 24px 24px;
-  background: linear-gradient(transparent, rgba(16, 36, 63, 0.95));
-  font-size: 17px;
-  font-weight: 700;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 4vw, 70px);
+  padding: 100px 7vw 28px;
+  background: linear-gradient(transparent, rgba(5, 14, 27, 0.92));
+  pointer-events: none;
 }
 
-.track figcaption small {
-  color: #ff8996;
-  margin-right: 14px;
-}
-
-.controls {
+.activities-gallery-legend > div {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 45px;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
 }
 
-.controls > span {
-  font-size: 11px;
+.activities-gallery-legend small {
+  color: #ff8996;
+  font-size: 12px;
   font-weight: 800;
 }
 
-.controls > i {
-  height: 2px;
-  background: rgba(255, 255, 255, 0.2);
-  flex: 1;
-  border-radius: 99px;
-  overflow: hidden;
+.activities-gallery-legend strong {
+  font-size: clamp(14px, 1.25vw, 18px);
+  line-height: 1.3;
 }
 
-.controls > i b {
-  display: block;
+.activities-fallback {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
   height: 100%;
-  background: var(--red);
-  transition: width 0.4s ease;
+  padding: 45px 7vw 100px;
 }
 
-.controls button {
-  background: none;
-  color: white;
-  border-color: rgba(255, 255, 255, 0.3);
+.activities-fallback figure {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* 🌟 Partner School Logos */
@@ -1907,7 +1939,11 @@ img {
   .impact p {
     display: none;
   }
-  .section, .activities, .contact, .purpose, .footer {
+  .section, .contact, .purpose, .footer {
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+  .activities > .heading {
     padding-left: 22px;
     padding-right: 22px;
   }
@@ -1952,15 +1988,25 @@ img {
     grid-column: 2;
     width: max-content;
   }
-  .track {
-    gap: 0;
+  .activities-gallery {
+    min-height: 540px;
   }
-  .track figure {
-    flex: 0 0 100%;
-    height: 450px;
+  .activities-gallery-legend {
+    grid-template-columns: 1fr;
+    padding: 90px 22px 24px;
   }
-  .activities .track {
-    transform: translateX(calc(-1 * 100% * var(--i))) !important;
+  .activities-gallery-legend > div {
+    display: none;
+  }
+  .activities-gallery-legend > div:nth-child(2) {
+    display: flex;
+  }
+  .activities-fallback {
+    grid-template-columns: 1fr;
+    padding: 30px 22px 85px;
+  }
+  .activities-fallback figure:not(:nth-child(2)) {
+    display: none;
   }
   .logos {
     grid-template-columns: 1fr 1fr;
