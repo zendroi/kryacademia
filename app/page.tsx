@@ -383,6 +383,20 @@ function Purpose() {
           </article>
         ))}
       </div>
+
+      {/* 🌟 SDGs Connecting Banner & Vector Graphic */}
+      <div className="sdgs-footer-banner reveal">
+        <p className="sdgs-connecting-text">
+          Setiap metode pengajaran dan proyek pembelajaran di <strong>KRYAcademia</strong> dirancang secara khusus untuk berorientasi pada pilar <strong>UN Sustainable Development Goals (SDGs)</strong>, membekali siswa dengan pola pikir solutif untuk menciptakan dampak nyata bagi masyarakat dan lingkungan global.
+        </p>
+        <div className="sdgs-vector-wrapper">
+          <img
+            src="/sdgs-1.svg"
+            alt="UN Sustainable Development Goals Framework - KRYAcademia"
+            className="sdgs-vector-img"
+          />
+        </div>
+      </div>
     </section>
   );
 }
