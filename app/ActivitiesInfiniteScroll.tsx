@@ -1,10 +1,10 @@
 'use client';
 
 import * as THREE from 'three';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Image as DreiImage, Preload, Scroll, ScrollControls, useScroll } from '@react-three/drei';
+import { Image as DreiImage, Preload, Scroll, ScrollControls, Text, useScroll } from '@react-three/drei';
 import { activities } from './mockData';
 
 const CARDS_PER_PAGE = 3;
@@ -55,6 +55,10 @@ function ActivityImage({
   const group = useRef<THREE.Group>(null!);
   const scroll = useScroll();
   const baseZ = position[2];
+  const labelHeight = Math.min(0.96, scale[1] * 0.22);
+  const labelLeft = -scale[0] / 2 + 0.14;
+  const labelBottom = -scale[1] / 2;
+  const titleSize = scale[0] < 1.6 ? 0.14 : 0.17;
 
   useFrame((_, delta) => {
     const material = image.current.material as ImageMaterial;
@@ -86,6 +90,34 @@ function ActivityImage({
         zoom={1.08}
         toneMapped={false}
       />
+      <mesh position={[0, labelBottom + labelHeight / 2, 0.018]} renderOrder={1}>
+        <planeGeometry args={[scale[0], labelHeight]} />
+        <meshBasicMaterial color="#071321" transparent opacity={0.82} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <Text
+        position={[labelLeft, labelBottom + labelHeight - 0.13, 0.035]}
+        fontSize={0.1}
+        font="/Inter-UI-Medium.ttf"
+        color="#ff8996"
+        anchorX="left"
+        anchorY="top"
+        renderOrder={2}
+      >
+        {String(item.index + 1).padStart(2, '0')}
+      </Text>
+      <Text
+        position={[labelLeft, labelBottom + labelHeight - 0.3, 0.035]}
+        fontSize={titleSize}
+        font="/Inter-UI-Medium.ttf"
+        maxWidth={scale[0] - 0.28}
+        lineHeight={1.12}
+        color="white"
+        anchorX="left"
+        anchorY="top"
+        renderOrder={2}
+      >
+        {item.title}
+      </Text>
     </group>
   );
 }
@@ -127,28 +159,16 @@ function ActivityPages({ reducedMotion }: { reducedMotion: boolean }) {
   );
 }
 
-function PageObserver({ onPageChange }: { onPageChange: (page: number) => void }) {
-  const scroll = useScroll();
-  const previousPage = useRef(-1);
-
-  useFrame(() => {
-    const loopedOffset = ((scroll.offset % 1) + 1) % 1;
-    const nextPage = Math.round(loopedOffset * PAGE_COUNT) % PAGE_COUNT;
-    if (nextPage !== previousPage.current) {
-      previousPage.current = nextPage;
-      onPageChange(nextPage);
-    }
-  });
-
-  return null;
-}
-
 function FallbackGallery() {
   return (
     <div className="activities-fallback">
       {galleryPages[0].map((item) => (
         <figure key={item.index}>
           <NextImage src={item.url} alt={item.title} width={900} height={1200} />
+          <figcaption>
+            <small>{String(item.index + 1).padStart(2, '0')}</small>
+            <strong>{item.title}</strong>
+          </figcaption>
         </figure>
       ))}
     </div>
@@ -156,9 +176,7 @@ function FallbackGallery() {
 }
 
 export default function ActivitiesInfiniteScroll() {
-  const [activePage, setActivePage] = useState(0);
   const reducedMotion = useReducedMotion();
-  const visibleItems = useMemo(() => galleryPages[activePage], [activePage]);
 
   return (
     <div className="activities-gallery" role="region" aria-label="KRYAcademia activity gallery">
@@ -182,20 +200,10 @@ export default function ActivitiesInfiniteScroll() {
               <Scroll>
                 <ActivityPages reducedMotion={reducedMotion} />
               </Scroll>
-              <PageObserver onPageChange={setActivePage} />
             </ScrollControls>
             <Preload all />
           </Suspense>
         </Canvas>
-      </div>
-
-      <div className="activities-gallery-legend" aria-live="polite">
-        {visibleItems.map((item) => (
-          <div key={`${activePage}-${item.index}`}>
-            <small>{String(item.index + 1).padStart(2, '0')}</small>
-            <strong>{item.title}</strong>
-          </div>
-        ))}
       </div>
 
       <ol className="sr-only">
