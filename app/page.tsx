@@ -6,6 +6,7 @@ import NextImage from 'next/image';
 import { events, faqs, img, klasses, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 import FoldText from './FoldText';
+import StaggeredMenu from './StaggeredMenu';
 
 const WhyKryacademiaLens = dynamic(() => import('./WhyKryacademiaLens'), {
   ssr: false,
@@ -154,8 +155,20 @@ function Heading({
   );
 }
 
+const staggeredNavItems = nav.map(([label, id]) => ({
+  label,
+  ariaLabel: `Navigate to ${label}`,
+  link: `#${id}`,
+}));
+
+const staggeredSocialItems = [
+  { label: 'Teacher & Admin Portal →', link: '/login' },
+  { label: 'Instagram', link: 'https://instagram.com/krya.global' },
+  { label: 'LinkedIn', link: 'https://linkedin.com/company/krya-global' },
+  { label: 'WhatsApp', link: 'https://wa.me/628172362236' },
+];
+
 function Navbar({ search }: { search: () => void }) {
-  const [open, setOpen] = useState(false);
   const [active, setActive] = useState('home');
   const [scrolled, setScrolled] = useState(false);
 
@@ -191,27 +204,13 @@ function Navbar({ search }: { search: () => void }) {
         <a className="login group" href="/login">
           Login <A />
         </a>
-        <button className="hamb" onClick={() => setOpen(true)}>
-          ☰
-        </button>
+        <StaggeredMenu
+          items={staggeredNavItems}
+          socialItems={staggeredSocialItems}
+          colors={['#0b192c', '#173051', '#e8001b']}
+          accentColor="#e8001b"
+        />
       </div>
-      {open && (
-        <div className="mobile">
-          <div>
-            <Brand light />
-            <button onClick={() => setOpen(false)}>×</button>
-          </div>
-          <nav>
-            {nav.map(([n, id], i) => (
-              <a href={'#' + id} key={id} onClick={() => setOpen(false)}>
-                <small>0{i + 1}</small>
-                {n}
-              </a>
-            ))}
-          </nav>
-          <a href="/login">Teacher & Admin Portal →</a>
-        </div>
-      )}
     </header>
   );
 }
