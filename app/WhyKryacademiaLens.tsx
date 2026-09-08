@@ -4,12 +4,11 @@ import * as THREE from 'three';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber';
 import {
-  Image,
+  Image as SceneImage,
   MeshTransmissionMaterial,
   Preload,
   Scroll,
   ScrollControls,
-  Text,
   useFBO,
   useGLTF,
   useScroll,
@@ -28,6 +27,7 @@ type PanelProps = {
   scale: [number, number];
   start: number;
   zoom?: number;
+  reducedMotion?: boolean;
 };
 
 function useReducedMotion() {
@@ -61,7 +61,7 @@ function Lens({ children, reducedMotion }: { children: React.ReactNode; reducedM
     lens.current.position.z = 15;
 
     state.gl.setRenderTarget(buffer);
-    state.gl.setClearColor('#d8d7d7');
+    if (state.scene.background instanceof THREE.Color) state.gl.setClearColor(state.scene.background);
     state.gl.clear();
     state.gl.render(scene, state.camera);
     state.gl.setRenderTarget(null);
@@ -72,7 +72,7 @@ function Lens({ children, reducedMotion }: { children: React.ReactNode; reducedM
       {createPortal(children, scene)}
       <mesh scale={[viewport.width, viewport.height, 1]}>
         <planeGeometry />
-        <meshBasicMaterial map={buffer.texture} />
+        <meshBasicMaterial map={buffer.texture} toneMapped={false} />
       </mesh>
       <mesh
         ref={lens}
@@ -92,12 +92,12 @@ function Lens({ children, reducedMotion }: { children: React.ReactNode; reducedM
   );
 }
 
-function ScrollImage({ url, position, scale, start, zoom = 0.22 }: PanelProps) {
+function ScrollImage({ url, position, scale, start, zoom = 0.22, reducedMotion = false }: PanelProps) {
   const group = useRef<THREE.Group>(null!);
   const scroll = useScroll();
 
   useFrame((_, delta) => {
-    const progress = scroll.range(start, 0.34);
+    const progress = reducedMotion ? 0 : scroll.range(start, 0.34);
     const scaleTarget = 1 + progress * zoom;
     const depthTarget = progress * 0.65;
 
@@ -108,37 +108,18 @@ function ScrollImage({ url, position, scale, start, zoom = 0.22 }: PanelProps) {
 
   return (
     <group ref={group} position={position}>
-      {/* eslint-disable-next-line jsx-a11y/alt-text -- this is a WebGL plane; the section has screen-reader copy. */}
-      <Image url={url} scale={scale} />
+      <SceneImage url={url} scale={scale} transparent toneMapped={false} />
     </group>
   );
 }
 
-function ScrollCopy({
-  children,
-  start,
-  length = 0.32,
-}: {
-  children: React.ReactNode;
-  start: number;
-  length?: number;
-}) {
-  const group = useRef<THREE.Group>(null!);
-  const scroll = useScroll();
-
-  useFrame(() => {
-    group.current.visible = scroll.visible(start, length, 0.06);
-  });
-
-  return <group ref={group}>{children}</group>;
-}
-
-function Images() {
+function Images({ reducedMotion }: { reducedMotion: boolean }) {
   const { width, height } = useThree((state) => state.viewport);
 
   return (
     <group>
       <ScrollImage
+        reducedMotion={reducedMotion}
         url="/activities/collaboration.jpg"
         position={[0, 0, 0]}
         scale={[width * 0.88, height * 0.86]}
@@ -146,30 +127,35 @@ function Images() {
         zoom={0.11}
       />
       <ScrollImage
+        reducedMotion={reducedMotion}
         url="/activities/coding.png"
         position={[width * 0.28, height * 0.1, 3]}
         scale={[width * 0.28, height * 0.53]}
         start={0.03}
       />
       <ScrollImage
+        reducedMotion={reducedMotion}
         url="/activities/maker.png"
         position={[-width * 0.28, -height * 0.76, 4]}
         scale={[width * 0.28, height * 0.62]}
         start={0.31}
       />
       <ScrollImage
+        reducedMotion={reducedMotion}
         url="/activities/sustainability.jpg"
         position={[-width * 0.02, -height * 0.76, 7]}
         scale={[width * 0.28, height * 0.43]}
         start={0.35}
       />
       <ScrollImage
+        reducedMotion={reducedMotion}
         url="/activities/animation.png"
         position={[width * 0.29, -height * 0.76, 9]}
         scale={[width * 0.28, height * 0.62]}
         start={0.39}
       />
       <ScrollImage
+        reducedMotion={reducedMotion}
         url="/activities/ar.png"
         position={[0, -height * 1.26, 5]}
         scale={[width * 0.46, height * 0.76]}
@@ -177,6 +163,7 @@ function Images() {
         zoom={0.16}
       />
       <ScrollImage
+        reducedMotion={reducedMotion}
         url="/activities/sustainability.jpg"
         position={[0, -height * 1.76, 0]}
         scale={[width * 0.88, height * 0.74]}
@@ -187,95 +174,12 @@ function Images() {
   );
 }
 
-function Typography() {
-  const { camera, viewport } = useThree();
-  const textViewport = viewport.getCurrentViewport(camera, [0, 0, 12]);
-  const { width, height } = viewport;
-  const { width: textWidth, height: textHeight } = textViewport;
-  const compact = width < 5;
-  const headlineSize = compact ? textWidth / 4.6 : textHeight / 5.6;
-  const secondarySize = compact ? textWidth / 7.4 : textHeight / 9.5;
-  const finalSize = compact ? textWidth / 7.4 : textHeight / 9.2;
-  const shared = {
-    font: '/Inter-UI-Medium.ttf',
-    color: '#101010',
-    letterSpacing: 0,
-  };
-
-  return (
-    <>
-      <ScrollCopy start={0} length={0.28}>
-        <Text
-          {...shared}
-          anchorX="left"
-          anchorY="middle"
-          fontSize={headlineSize}
-          lineHeight={0.88}
-          position={[-textWidth * 0.43, -height * 0.07, 12]}
-        >
-          WHY
-        </Text>
-        <Text
-          font="/Inter-UI-Medium.ttf"
-          fontSize={compact ? textWidth / 18 : textHeight / 26}
-          color="#e8001b"
-          anchorX={compact ? 'left' : 'right'}
-          anchorY="top"
-          position={[compact ? -textWidth * 0.43 : textWidth * 0.43, height * 0.32, 12]}
-        >
-          01 / WHY
-        </Text>
-      </ScrollCopy>
-      <ScrollCopy start={0.28} length={0.18}>
-        <Text
-          {...shared}
-          anchorX="left"
-          anchorY="middle"
-          fontSize={secondarySize}
-          lineHeight={0.95}
-          maxWidth={textWidth * 0.35}
-          position={[textWidth * 0.1, -height * 0.84, 12]}
-        >
-          {'Curiosity\nbecomes\ncapability.'}
-        </Text>
-      </ScrollCopy>
-      <ScrollCopy start={0.54} length={0.18}>
-        <Text
-          {...shared}
-          anchorX="left"
-          anchorY="middle"
-          fontSize={secondarySize * 0.78}
-          lineHeight={0.95}
-          maxWidth={textWidth * 0.34}
-          position={[-textWidth * 0.4, -height * 1.31, 12]}
-        >
-          {'Learn,\nmake,\nshare.'}
-        </Text>
-      </ScrollCopy>
-      <ScrollCopy start={0.72} length={0.28}>
-        <Text
-          {...shared}
-          anchorX="center"
-          anchorY="middle"
-          fontSize={finalSize * 0.66}
-          lineHeight={0.9}
-          maxWidth={textWidth * 0.38}
-          position={[-textWidth * 0.15, -height * 1.77, 12]}
-        >
-          {'A future\nmade by doing.'}
-        </Text>
-      </ScrollCopy>
-    </>
-  );
-}
-
 function Scene({ reducedMotion }: { reducedMotion: boolean }) {
   return (
-    <ScrollControls pages={3} damping={reducedMotion ? 0 : 0.18} distance={0.62}>
+    <ScrollControls pages={3} damping={reducedMotion ? 0 : 0.18} distance={0.62} style={{ scrollbarWidth: 'thin', scrollbarColor: '#173051 transparent' }}>
       <Lens reducedMotion={reducedMotion}>
         <Scroll>
-          <Typography />
-          <Images />
+          <Images reducedMotion={reducedMotion} />
         </Scroll>
         <Preload all />
       </Lens>
@@ -303,7 +207,11 @@ export default function WhyKryacademiaLens() {
           camera={{ position: [0, 0, 20], fov: 15 }}
           gl={{ alpha: false, antialias: false, powerPreference: 'high-performance', stencil: false }}
           fallback={<StaticFallback />}
-          onCreated={({ gl }) => gl.setClearColor('#d8d7d7')}
+          onCreated={({ gl, scene }) => {
+            const background = getComputedStyle(gl.domElement).getPropertyValue('--page-background').trim();
+            scene.background = new THREE.Color(background || '#faf9f5');
+            gl.setClearColor(scene.background);
+          }}
         >
           <Suspense fallback={null}>
             <Scene reducedMotion={reducedMotion} />

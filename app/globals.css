@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 
 :root {
+  --page-background: #faf9f5;
   --navy: #173051;
   --navy-dark: #0b192c;
   --red: #e8001b;
@@ -25,7 +26,7 @@ body {
   margin: 0;
   color: var(--ink);
   font-family: var(--font), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #faf9f5;
+  background-color: var(--page-background);
   overflow-x: hidden;
   position: relative;
 }
@@ -875,81 +876,162 @@ img {
   margin-top: 48px;
 }
 
-/* Why KRYAcademia: a scroll-controlled editorial photo field with a refractive lens. */
+/* Why KRYAcademia shares the site's typography and page background. */
 .purpose {
-  padding: 0;
-  background: #d8d7d7;
-  color: #101010;
-  position: relative;
-  overflow: hidden;
+  padding: 88px 0 0;
+  background: var(--page-background);
+  color: var(--ink);
+  scroll-margin-top: 90px;
 }
-
+.why-content {
+  width: 86%;
+  max-width: 1440px;
+  margin-inline: auto;
+}
+.purpose h2, .purpose h3, .purpose h4, .purpose p, .purpose span, .purpose figcaption {
+  font-family: inherit;
+  letter-spacing: 0;
+}
+.purpose p {
+  margin: 0;
+  color: #40536a;
+  font-size: 16px;
+  line-height: 1.8;
+}
+.why-intro, .why-sdgs-intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 48px;
+}
+.why-intro { padding-bottom: 36px; }
+.why-label {
+  display: block;
+  margin-bottom: 14px;
+  color: #b80019;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+.purpose h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
 .why-lens-experience {
   position: relative;
   width: 100%;
-  height: clamp(720px, 88svh, 980px);
+  height: 500px;
   overflow: hidden;
-  background: #d8d7d7;
+  background: var(--page-background);
 }
-
 .why-lens-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  background: #d8d7d7;
+  background: var(--page-background);
 }
-
 .why-lens-canvas canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
 }
-
-.why-lens-footer {
-  min-height: 100px;
-  padding: 26px 7vw 30px;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
-  background: #102d4d;
+.why-principles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40px;
+  padding-block: 44px 64px;
 }
-
-.why-lens-footer p {
-  max-width: 780px;
+.why-principles article {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.why-principles h3 {
+  margin: 0 0 16px;
+  color: var(--navy);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.why-sdgs {
+  padding-block: 64px 72px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+}
+.why-sdgs-intro h3 {
   margin: 0;
-  color: #d9e7ee;
-  font-size: 15px;
-  line-height: 1.55;
-}
-
-.why-lens-footer span {
-  flex: 0 0 auto;
-  color: #ffb6c1;
-  font-size: 10px;
+  color: var(--navy);
+  font-size: 36px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
+  line-height: 1.25;
 }
-
-.why-lens-fallback {
+.why-sdgs-intro p + p { margin-top: 16px; }
+.why-sdgs-figure { margin: 32px 0 36px; }
+.why-sdgs-figure img {
+  display: block;
   width: 100%;
+  height: auto;
+  aspect-ratio: 1350 / 500;
+  object-fit: contain;
+}
+.why-sdgs-figure figcaption {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 16px;
+  color: #40536a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.why-sdgs-figure a:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 4px;
+}
+.why-sdgs-figure figcaption a {
+  color: #a80019;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.why-sdg-connections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 48px;
+}
+.why-sdg-connections article {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 20px;
+  padding-block: 26px;
+  border-top: 1px solid var(--line);
+}
+.why-sdg-number {
+  padding-top: 3px;
+  color: #b80019;
+  font-size: 14px;
+  font-weight: 800;
+}
+.why-sdg-connections h4 {
+  margin: 0 0 10px;
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.why-lens-fallback {
   height: 100%;
-  padding: 48px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 16px;
-  color: #101010;
-  background: #d8d7d7;
-}
-
-.why-lens-fallback strong {
-  color: #e8001b;
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  padding: 32px 7%;
+  background: var(--page-background);
+  color: var(--navy);
 }
 
 /* 🌟 Programs Section */
@@ -1884,21 +1966,23 @@ img {
   .klassgrid, .programgrid, .agendagrid, .faq, .contact {
     grid-template-columns: 1fr;
   }
-  .why-lens-experience {
-    height: 78svh;
-    min-height: 650px;
+  .purpose { padding-top: 60px; }
+  .why-content { width: auto; margin-inline: 22px; }
+  .why-intro, .why-sdgs-intro, .why-principles, .why-sdg-connections {
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
-  .why-lens-footer {
-    padding: 24px 22px 28px;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .why-lens-footer p {
-    font-size: 14px;
-  }
-  .why-lens-footer span {
-    white-space: normal;
+  .purpose h2 { font-size: 32px; }
+  .why-lens-experience { height: 400px; }
+  .why-principles { padding-block: 32px 44px; }
+  .why-principles h3 { font-size: 23px; }
+  .why-sdgs { padding-block: 44px; }
+  .why-sdgs-intro h3 { font-size: 28px; }
+  .why-sdgs-figure { margin-block: 24px; }
+  .why-sdg-connections { gap: 0; }
+  .why-sdg-connections article {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 14px;
   }
   .program {
     grid-template-columns: 25px 120px 1fr;

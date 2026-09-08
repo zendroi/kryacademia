@@ -2,12 +2,13 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import NextImage from 'next/image';
 import { events, faqs, img, klasses, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 
 const WhyKryacademiaLens = dynamic(() => import('./WhyKryacademiaLens'), {
   ssr: false,
-  loading: () => <div className="why-lens-canvas" aria-hidden="true" />,
+  loading: () => <div className="why-lens-experience" aria-hidden="true" />,
 });
 
 const nav = [
@@ -350,22 +351,69 @@ function Klass() {
 
 function Purpose() {
   return (
-    <section id="why" className="purpose">
+    <section id="why" className="purpose" aria-labelledby="why-title">
+      <header className="why-intro why-content">
+        <div>
+          <span className="why-label">Learning with purpose</span>
+          <h2 id="why-title">Why KRYAcademia</h2>
+        </div>
+        <p>Learning should prepare young people to shape the world, not simply fit into it. Through creative, project-based experiences, students turn curiosity into skills they can use beyond the classroom.</p>
+      </header>
       <WhyKryacademiaLens />
-      <div className="sr-only">
-        <h2>Why KRYAcademia</h2>
-        <p>Learning should prepare young people to shape the world, not simply fit into it.</p>
-        <ul>
-          <li>Background: sustainable development becomes a creative and practical learning lens.</li>
-          <li>Our vision: thoughtful creators committed to a sustainable future.</li>
-          <li>Our mission: project-based learning for critical thinking, confidence, and collaboration.</li>
-        </ul>
+      <div className="why-principles why-content">
+        <article>
+          <span className="why-label">01 / Our background</span>
+          <h3>Curiosity becomes capability.</h3>
+          <p>Young people need opportunities to connect what they learn with the world around them. KRYAcademia brings technology, art, and hands-on making together, using real challenges to build practical skills and a sense of purpose.</p>
+        </article>
+        <article>
+          <span className="why-label">02 / Our vision</span>
+          <h3>A future made by doing.</h3>
+          <p>We envision thoughtful, confident creators who can contribute to a sustainable future. Students learn to question, imagine possibilities, and consider how their ideas affect other people and the environment.</p>
+        </article>
+        <article>
+          <span className="why-label">03 / Our mission</span>
+          <h3>Learn, make, and share.</h3>
+          <p>Our mission is to develop critical thinking, creativity, confidence, and collaboration through project-based learning. Students explore a challenge, build and test their ideas, improve their work, and share what they discover.</p>
+        </article>
       </div>
-      <div className="why-lens-footer reveal">
-        <p>
-          Every KRYAcademia project connects creative learning with the UN Sustainable Development Goals, helping students turn curiosity into responsible action.
-        </p>
-        <span>SDG 4 / SDG 9 / SDG 12 / SDG 17</span>
+      <div className="why-sdgs">
+        <div className="why-content">
+          <header className="why-sdgs-intro">
+            <div>
+              <span className="why-label">Connected to the real world</span>
+              <h3>Small projects.<br />Shared global goals.</h3>
+            </div>
+            <div>
+              <p>The United Nations Sustainable Development Goals (SDGs) are 17 goals for a fairer, healthier, and more sustainable world by 2030.</p>
+              <p>At KRYAcademia, they provide a real-world context for creative learning: a coding project can explore a community need, an upcycling project can rethink waste, and a shared challenge can build teamwork. These are four ways our learning approach connects with the goals.</p>
+            </div>
+          </header>
+          <figure className="why-sdgs-figure">
+            <a href="/sdg-goals.png" target="_blank" rel="noreferrer" aria-label="View the full-size poster of the 17 Sustainable Development Goals">
+              <NextImage src="/sdg-goals.png" alt="The 17 United Nations Sustainable Development Goals, from No Poverty to Partnerships for the Goals." width={1350} height={500} unoptimized />
+            </a>
+            <figcaption>United Nations Sustainable Development Goals. <a href="https://sdgs.un.org/goals" target="_blank" rel="noreferrer">Explore all 17 goals <A /></a></figcaption>
+          </figure>
+          <div className="why-sdg-connections">
+            <article>
+              <span className="why-sdg-number">SDG 4</span>
+              <div><h4>Quality Education</h4><p>Creative coding, art, and STEAM projects give students practical ways to learn, solve problems, and grow in confidence.</p></div>
+            </article>
+            <article>
+              <span className="why-sdg-number">SDG 9</span>
+              <div><h4>Industry, Innovation and Infrastructure</h4><p>Designing digital stories and building prototypes introduce students to technology and the process of testing and improving ideas.</p></div>
+            </article>
+            <article>
+              <span className="why-sdg-number">SDG 12</span>
+              <div><h4>Responsible Consumption and Production</h4><p>Upcycling projects invite students to reuse everyday materials, reduce waste, and think about the resources behind what they make.</p></div>
+            </article>
+            <article>
+              <span className="why-sdg-number">SDG 17</span>
+              <div><h4>Partnerships for the Goals</h4><p>Working with schools, educators, and peers connects different perspectives and helps students practise collaboration toward a shared outcome.</p></div>
+            </article>
+          </div>
+        </div>
       </div>
     </section>
   );
