@@ -144,12 +144,12 @@ function Heading({
   const shouldFold = fold ?? FOLD_TITLES.includes(title);
 
   return (
-    <header className="heading reveal">
+    <header className={`heading ${shouldFold ? '' : 'reveal'}`}>
       <div>
-        <span className="eyebrow">{eyebrow}</span>
+        <span className="eyebrow reveal">{eyebrow}</span>
         <h2>{shouldFold ? <FoldText text={title} trigger="scroll" /> : title}</h2>
       </div>
-      <p>{copy}</p>
+      <p className="reveal">{copy}</p>
     </header>
   );
 }

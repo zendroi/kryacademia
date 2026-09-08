@@ -277,7 +277,7 @@ export default function FoldText({
       return timelineRef.current;
     };
 
-    let scrollTrigger: ScrollTrigger | undefined;
+    let observer: IntersectionObserver | undefined;
     let hoverHandler: (() => void) | undefined;
 
     if (trigger === 'hover') {
@@ -286,20 +286,24 @@ export default function FoldText({
       root.addEventListener('mouseenter', hoverHandler);
     } else if (trigger === 'scroll') {
       gsap.set(pieces, fromVars);
-      scrollTrigger = ScrollTrigger.create({
-        trigger: root,
-        start: 'top 88%',
-        onEnter: () => play(false),
-        onEnterBack: () => play(false),
-        onLeave: () => {
-          killTimeline();
-          gsap.set(pieces, fromVars);
+
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry && entry.isIntersecting) {
+            play(false);
+          } else {
+            killTimeline();
+            gsap.set(pieces, fromVars);
+          }
         },
-        onLeaveBack: () => {
-          killTimeline();
-          gsap.set(pieces, fromVars);
+        {
+          threshold: 0.1,
+          rootMargin: '0px 0px -20px 0px'
         }
-      });
+      );
+
+      observer.observe(root);
+
       hoverHandler = () => {
         if (!timelineRef.current?.isActive()) {
           play(false);
@@ -314,7 +318,7 @@ export default function FoldText({
 
     return () => {
       if (hoverHandler) root.removeEventListener('mouseenter', hoverHandler);
-      scrollTrigger?.kill();
+      observer?.disconnect();
       killTimeline();
     };
   }, [
