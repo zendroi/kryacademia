@@ -22,10 +22,7 @@ export interface StaggeredMenuProps {
   displaySocials?: boolean;
   displayItemNumbering?: boolean;
   className?: string;
-  menuButtonColor?: string;
-  openMenuButtonColor?: string;
   accentColor?: string;
-  changeMenuColorOnOpen?: boolean;
   closeOnClickAway?: boolean;
   onMenuOpen?: () => void;
   onMenuClose?: () => void;
@@ -39,9 +36,6 @@ export default function StaggeredMenu({
   displaySocials = true,
   displayItemNumbering = true,
   className = '',
-  menuButtonColor = 'var(--navy)',
-  openMenuButtonColor = '#0b192c',
-  changeMenuColorOnOpen = true,
   accentColor = '#e8001b',
   closeOnClickAway = true,
   onMenuOpen,
@@ -54,20 +48,8 @@ export default function StaggeredMenu({
   const preLayersRef = useRef<HTMLDivElement | null>(null);
   const preLayerElsRef = useRef<HTMLElement[]>([]);
 
-  const plusHRef = useRef<HTMLSpanElement | null>(null);
-  const plusVRef = useRef<HTMLSpanElement | null>(null);
-  const iconRef = useRef<HTMLSpanElement | null>(null);
-
-  const textInnerRef = useRef<HTMLSpanElement | null>(null);
-  const [textLines, setTextLines] = useState<string[]>(['Menu', 'Close']);
-
   const openTlRef = useRef<gsap.core.Timeline | null>(null);
   const closeTweenRef = useRef<gsap.core.Tween | null>(null);
-  const spinTweenRef = useRef<gsap.core.Timeline | null>(null);
-  const textCycleAnimRef = useRef<gsap.core.Tween | null>(null);
-  const colorTweenRef = useRef<gsap.core.Tween | null>(null);
-
-  const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
   const busyRef = useRef(false);
 
   const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
@@ -76,13 +58,7 @@ export default function StaggeredMenu({
     const ctx = gsap.context(() => {
       const panel = panelRef.current;
       const preContainer = preLayersRef.current;
-
-      const plusH = plusHRef.current;
-      const plusV = plusVRef.current;
-      const icon = iconRef.current;
-      const textInner = textInnerRef.current;
-
-      if (!panel || !plusH || !plusV || !icon || !textInner) return;
+      if (!panel) return;
 
       let preLayers: HTMLElement[] = [];
       if (preContainer) {
@@ -95,17 +71,9 @@ export default function StaggeredMenu({
       if (preContainer) {
         gsap.set(preContainer, { xPercent: 0, opacity: 1 });
       }
-
-      gsap.set(plusH, { transformOrigin: '50% 50%', rotate: 0 });
-      gsap.set(plusV, { transformOrigin: '50% 50%', rotate: 90 });
-      gsap.set(icon, { rotate: 0, transformOrigin: '50% 50%' });
-
-      gsap.set(textInner, { yPercent: 0 });
-
-      if (toggleBtnRef.current) gsap.set(toggleBtnRef.current, { color: menuButtonColor });
     });
     return () => ctx.revert();
-  }, [menuButtonColor, position]);
+  }, [position]);
 
   const buildOpenTimeline = useCallback(() => {
     const panel = panelRef.current;
@@ -246,78 +214,6 @@ export default function StaggeredMenu({
     });
   }, [position]);
 
-  const animateIcon = useCallback((opening: boolean) => {
-    const icon = iconRef.current;
-    const h = plusHRef.current;
-    const v = plusVRef.current;
-    if (!icon || !h || !v) return;
-
-    spinTweenRef.current?.kill();
-
-    if (opening) {
-      gsap.set(icon, { rotate: 0, transformOrigin: '50% 50%' });
-      spinTweenRef.current = gsap
-        .timeline({ defaults: { ease: 'power4.out' } })
-        .to(h, { rotate: 45, duration: 0.45 }, 0)
-        .to(v, { rotate: -45, duration: 0.45 }, 0);
-    } else {
-      spinTweenRef.current = gsap
-        .timeline({ defaults: { ease: 'power3.inOut' } })
-        .to(h, { rotate: 0, duration: 0.3 }, 0)
-        .to(v, { rotate: 90, duration: 0.3 }, 0)
-        .to(icon, { rotate: 0, duration: 0.001 }, 0);
-    }
-  }, []);
-
-  const animateColor = useCallback(
-    (opening: boolean) => {
-      const btn = toggleBtnRef.current;
-      if (!btn) return;
-      colorTweenRef.current?.kill();
-      if (changeMenuColorOnOpen) {
-        const targetColor = opening ? openMenuButtonColor : menuButtonColor;
-        colorTweenRef.current = gsap.to(btn, { color: targetColor, delay: 0.15, duration: 0.25, ease: 'power2.out' });
-      } else {
-        gsap.set(btn, { color: menuButtonColor });
-      }
-    },
-    [openMenuButtonColor, menuButtonColor, changeMenuColorOnOpen]
-  );
-
-  useEffect(() => {
-    if (toggleBtnRef.current) {
-      if (changeMenuColorOnOpen) {
-        const targetColor = openRef.current ? openMenuButtonColor : menuButtonColor;
-        gsap.set(toggleBtnRef.current, { color: targetColor });
-      } else {
-        gsap.set(toggleBtnRef.current, { color: menuButtonColor });
-      }
-    }
-  }, [changeMenuColorOnOpen, menuButtonColor, openMenuButtonColor]);
-
-  const animateText = useCallback((opening: boolean) => {
-    const inner = textInnerRef.current;
-    if (!inner) return;
-
-    textCycleAnimRef.current?.kill();
-
-    const currentLabel = opening ? 'Menu' : 'Close';
-    const targetLabel = opening ? 'Close' : 'Menu';
-    const seq: string[] = [currentLabel, opening ? 'Open' : 'Back', targetLabel];
-
-    setTextLines(seq);
-    gsap.set(inner, { yPercent: 0 });
-
-    const lineCount = seq.length;
-    const finalShift = ((lineCount - 1) / lineCount) * 100;
-
-    textCycleAnimRef.current = gsap.to(inner, {
-      yPercent: -finalShift,
-      duration: 0.45,
-      ease: 'power4.out'
-    });
-  }, []);
-
   const toggleMenu = useCallback(() => {
     const target = !openRef.current;
     openRef.current = target;
@@ -330,11 +226,7 @@ export default function StaggeredMenu({
       onMenuClose?.();
       playClose();
     }
-
-    animateIcon(target);
-    animateColor(target);
-    animateText(target);
-  }, [playOpen, playClose, animateIcon, animateColor, animateText, onMenuOpen, onMenuClose]);
+  }, [playOpen, playClose, onMenuOpen, onMenuClose]);
 
   const closeMenu = useCallback(() => {
     if (openRef.current) {
@@ -342,21 +234,18 @@ export default function StaggeredMenu({
       setOpen(false);
       onMenuClose?.();
       playClose();
-      animateIcon(false);
-      animateColor(false);
-      animateText(false);
     }
-  }, [playClose, animateIcon, animateColor, animateText, onMenuClose]);
+  }, [playClose, onMenuClose]);
 
   useEffect(() => {
     if (!closeOnClickAway || !open) return;
 
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         panelRef.current &&
-        !panelRef.current.contains(event.target as Node) &&
-        toggleBtnRef.current &&
-        !toggleBtnRef.current.contains(event.target as Node)
+        !panelRef.current.contains(target) &&
+        !document.querySelector('.sm-burger-btn')?.contains(target)
       ) {
         closeMenu();
       }
@@ -378,29 +267,19 @@ export default function StaggeredMenu({
 
   return (
     <div className={`sm-container relative ${className}`.trim()}>
-      {/* 🌟 Staggered Menu Toggle Button (Sits in navbar next to login) */}
+      {/* 🌟 3-Line Hamburger Button (Garis Tiga) */}
       <button
-        ref={toggleBtnRef}
-        className="sm-toggle-btn group"
+        className={`sm-burger-btn ${open ? 'sm-open' : ''}`}
         aria-label={open ? 'Close menu' : 'Open menu'}
         aria-expanded={open}
         onClick={toggleMenu}
         type="button"
         title={open ? 'Close menu' : 'Menu'}
       >
-        <span className="sm-toggle-text-wrap" aria-hidden="true">
-          <span ref={textInnerRef} className="sm-toggle-text-inner">
-            {textLines.map((l, idx) => (
-              <span className="sm-toggle-line" key={idx}>
-                {l}
-              </span>
-            ))}
-          </span>
-        </span>
-
-        <span ref={iconRef} className="sm-toggle-icon" aria-hidden="true">
-          <span ref={plusHRef} className="sm-toggle-icon-h" />
-          <span ref={plusVRef} className="sm-toggle-icon-v" />
+        <span className="sm-burger-icon" aria-hidden="true">
+          <span className="sm-burger-line sm-line-top" />
+          <span className="sm-burger-line sm-line-mid" />
+          <span className="sm-burger-line sm-line-bot" />
         </span>
       </button>
 
@@ -491,71 +370,69 @@ export default function StaggeredMenu({
       </aside>
 
       <style jsx global>{`
-        .sm-toggle-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          height: 42px;
-          padding: 0 16px;
+        /* 🌟 Garis Tiga (3-line Hamburger) Button */
+        .sm-burger-btn {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
           background: rgba(23, 48, 81, 0.05);
           border: 1px solid rgba(23, 48, 81, 0.12);
-          border-radius: 999px;
-          font-weight: 600;
-          font-size: 13px;
-          letter-spacing: 0.02em;
-          color: var(--navy);
-          cursor: pointer;
-          transition: all 0.3s ease;
-          user-select: none;
-        }
-
-        .sm-toggle-btn:hover {
-          background: rgba(23, 48, 81, 0.1);
-          border-color: rgba(23, 48, 81, 0.25);
-          transform: translateY(-1px);
-        }
-
-        .sm-toggle-text-wrap {
-          display: inline-block;
-          height: 14px;
-          overflow: hidden;
-          line-height: 14px;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-        }
-
-        .sm-toggle-text-inner {
           display: flex;
-          flex-direction: column;
-        }
-
-        .sm-toggle-line {
-          display: block;
-          height: 14px;
-          line-height: 14px;
-        }
-
-        .sm-toggle-icon {
-          position: relative;
-          width: 16px;
-          height: 16px;
-          display: inline-flex;
           align-items: center;
           justify-content: center;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          color: var(--navy);
+          padding: 0;
+          outline: none;
         }
 
-        .sm-toggle-icon-h,
-        .sm-toggle-icon-v {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          width: 16px;
+        .sm-burger-btn:hover {
+          background: rgba(23, 48, 81, 0.1);
+          border-color: rgba(23, 48, 81, 0.25);
+          transform: scale(1.06);
+        }
+
+        .sm-burger-btn.sm-open {
+          background: rgba(232, 0, 27, 0.1);
+          border-color: rgba(232, 0, 27, 0.3);
+          color: #e8001b;
+        }
+
+        .sm-burger-icon {
+          position: relative;
+          width: 18px;
+          height: 12px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .sm-burger-line {
+          display: block;
+          width: 18px;
           height: 2px;
           background: currentColor;
           border-radius: 2px;
-          transform: translate(-50%, -50%);
-          will-change: transform;
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 0.2s ease,
+                      background-color 0.3s ease;
+          transform-origin: center;
+        }
+
+        /* Morphing lines into X when open */
+        .sm-burger-btn.sm-open .sm-line-top {
+          transform: translateY(5px) rotate(45deg);
+        }
+
+        .sm-burger-btn.sm-open .sm-line-mid {
+          opacity: 0;
+          transform: scaleX(0);
+        }
+
+        .sm-burger-btn.sm-open .sm-line-bot {
+          transform: translateY(-5px) rotate(-45deg);
         }
 
         /* 🌟 Backdrop */
