@@ -5,9 +5,9 @@ import dynamic from 'next/dynamic';
 import { events, faqs, img, klasses, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 
-const WhyKryacademiaYoga = dynamic(() => import('./WhyKryacademiaYoga'), {
+const WhyKryacademiaLens = dynamic(() => import('./WhyKryacademiaLens'), {
   ssr: false,
-  loading: () => <div className="why-yoga-canvas" aria-hidden="true" />,
+  loading: () => <div className="why-lens-canvas" aria-hidden="true" />,
 });
 
 const nav = [
@@ -351,7 +351,7 @@ function Klass() {
 function Purpose() {
   return (
     <section id="why" className="purpose">
-      <WhyKryacademiaYoga />
+      <WhyKryacademiaLens />
       <div className="sr-only">
         <h2>Why KRYAcademia</h2>
         <p>Learning should prepare young people to shape the world, not simply fit into it.</p>
@@ -361,7 +361,7 @@ function Purpose() {
           <li>Our mission: project-based learning for critical thinking, confidence, and collaboration.</li>
         </ul>
       </div>
-      <div className="why-yoga-footer reveal">
+      <div className="why-lens-footer reveal">
         <p>
           Every KRYAcademia project connects creative learning with the UN Sustainable Development Goals, helping students turn curiosity into responsible action.
         </p>
