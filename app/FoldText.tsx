@@ -289,9 +289,23 @@ export default function FoldText({
       scrollTrigger = ScrollTrigger.create({
         trigger: root,
         start: 'top 88%',
-        once: true,
-        onEnter: () => play(false)
+        onEnter: () => play(false),
+        onEnterBack: () => play(false),
+        onLeave: () => {
+          killTimeline();
+          gsap.set(pieces, fromVars);
+        },
+        onLeaveBack: () => {
+          killTimeline();
+          gsap.set(pieces, fromVars);
+        }
       });
+      hoverHandler = () => {
+        if (!timelineRef.current?.isActive()) {
+          play(false);
+        }
+      };
+      root.addEventListener('mouseenter', hoverHandler);
     } else if (trigger === 'loop') {
       play(true);
     } else {

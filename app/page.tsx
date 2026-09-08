@@ -64,29 +64,40 @@ function AnimatedCounter({ end, duration = 1500 }: { end: number; duration?: num
     const el = ref.current;
     if (!el) return;
 
+    let frameId: number;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          let startTime: number | null = null;
-          const step = (timestamp: number) => {
-            if (!startTime) startTime = timestamp;
-            const progress = Math.min((timestamp - startTime) / duration, 1);
-            // Ease out cubic
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
-            setCount(Math.floor(easeProgress * end));
-            if (progress < 1) {
-              requestAnimationFrame(step);
-            }
-          };
-          requestAnimationFrame(step);
+        if (entry.isIntersecting) {
+          if (!started.current) {
+            started.current = true;
+            let startTime: number | null = null;
+            const step = (timestamp: number) => {
+              if (!startTime) startTime = timestamp;
+              const progress = Math.min((timestamp - startTime) / duration, 1);
+              // Ease out cubic
+              const easeProgress = 1 - Math.pow(1 - progress, 3);
+              setCount(Math.floor(easeProgress * end));
+              if (progress < 1) {
+                frameId = requestAnimationFrame(step);
+              }
+            };
+            frameId = requestAnimationFrame(step);
+          }
+        } else {
+          started.current = false;
+          cancelAnimationFrame(frameId);
+          setCount(0);
         }
       },
       { threshold: 0.2 }
     );
 
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(frameId);
+      observer.disconnect();
+    };
   }, [end, duration]);
 
   return <b ref={ref}>{count}</b>;
@@ -843,7 +854,15 @@ export default function Home() {
 
   useEffect(() => {
     const o = new IntersectionObserver(
-      (es) => es.forEach((e) => e.isIntersecting && e.target.classList.add('visible')),
+      (es) => {
+        es.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+          } else {
+            e.target.classList.remove('visible');
+          }
+        });
+      },
       { threshold: 0.08 }
     );
     document.querySelectorAll('.reveal').forEach((x) => o.observe(x));
