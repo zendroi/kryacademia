@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import NextImage from 'next/image';
 import { events, faqs, img, klasses, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
+import FoldText from './FoldText';
 
 const WhyKryacademiaLens = dynamic(() => import('./WhyKryacademiaLens'), {
   ssr: false,
@@ -111,12 +112,31 @@ function Btn({ href, children, alt = false }: { href: string; children: React.Re
   );
 }
 
-function Heading({ eyebrow, title, copy }: { eyebrow: string; title: string; copy: string }) {
+const FOLD_TITLES = [
+  'Discover Your Next Klass',
+  'Learning Experiences for Every Journey',
+  'What’s Happening at KRYAcademia',
+  'Partner Schools',
+];
+
+function Heading({
+  eyebrow,
+  title,
+  copy,
+  fold,
+}: {
+  eyebrow: string;
+  title: string;
+  copy: string;
+  fold?: boolean;
+}) {
+  const shouldFold = fold ?? FOLD_TITLES.includes(title);
+
   return (
     <header className="heading reveal">
       <div>
         <span className="eyebrow">{eyebrow}</span>
-        <h2>{title}</h2>
+        <h2>{shouldFold ? <FoldText text={title} trigger="scroll" /> : title}</h2>
       </div>
       <p>{copy}</p>
     </header>
@@ -303,6 +323,7 @@ function Klass() {
         eyebrow="KRYAcademia Klass"
         title="Discover Your Next Klass"
         copy="Where creativity, technology, innovation, and practical learning meet—one meaningful project at a time."
+        fold
       />
       <div className="filters">
         <div className="tabs">
@@ -431,6 +452,7 @@ function Programs() {
         eyebrow="Programs"
         title="Learning Experiences for Every Journey"
         copy="Flexible formats for families, schools, and institutions—designed around active learning and purposeful outcomes."
+        fold
       />
       <div className="programgrid">
         {programs.map((x, i) => (
@@ -473,6 +495,7 @@ function Agenda() {
         eyebrow="Agenda"
         title="What’s Happening at KRYAcademia"
         copy="A preview of how workshops, open classes, exhibitions, and events will be discovered. All entries below are mock data."
+        fold
       />
       <div className="agendagrid">
         <div className="calendar reveal">
@@ -571,6 +594,7 @@ function Partners() {
         eyebrow="Together, further"
         title="Partner Schools"
         copy="We collaborate with schools to create innovative and sustainable learning experiences shaped around each community."
+        fold
       />
       <div className="logos">
         {partners.map((p) => (
