@@ -410,40 +410,18 @@ function Purpose() {
       </div>
       <div className="why-sdgs">
         <div className="why-content">
-          <header className="why-sdgs-intro">
-            <div>
-              <span className="why-label">Connected to the real world</span>
-              <h3>Small projects.<br />Shared global goals.</h3>
-            </div>
-            <div>
-              <p>The United Nations Sustainable Development Goals (SDGs) are 17 goals for a fairer, healthier, and more sustainable world by 2030.</p>
-              <p>At KRYAcademia, they provide a real-world context for creative learning: a coding project can explore a community need, an upcycling project can rethink waste, and a shared challenge can build teamwork. These are four ways our learning approach connects with the goals.</p>
-            </div>
-          </header>
-          <figure className="why-sdgs-figure">
-            <a href="/sdg-goals.png" target="_blank" rel="noreferrer" aria-label="View the full-size poster of the 17 Sustainable Development Goals">
-              <NextImage src="/sdg-goals.png" alt="The 17 United Nations Sustainable Development Goals, from No Poverty to Partnerships for the Goals." width={1350} height={500} unoptimized />
-            </a>
-            <figcaption>United Nations Sustainable Development Goals. <a href="https://sdgs.un.org/goals" target="_blank" rel="noreferrer">Explore all 17 goals <A /></a></figcaption>
+          <figure className="why-sdgs-figure reveal">
+            <NextImage
+              src="/sdg-goals.png"
+              alt="The 17 United Nations Sustainable Development Goals, from No Poverty to Partnerships for the Goals."
+              width={1350}
+              height={500}
+              loading="eager"
+              draggable={false}
+              unoptimized
+            />
+            <figcaption>KRYAcademia connects creative, project-based learning with the SDGs to inspire a more sustainable future.</figcaption>
           </figure>
-          <div className="why-sdg-connections">
-            <article>
-              <span className="why-sdg-number">SDG 4</span>
-              <div><h4>Quality Education</h4><p>Creative coding, art, and STEAM projects give students practical ways to learn, solve problems, and grow in confidence.</p></div>
-            </article>
-            <article>
-              <span className="why-sdg-number">SDG 9</span>
-              <div><h4>Industry, Innovation and Infrastructure</h4><p>Designing digital stories and building prototypes introduce students to technology and the process of testing and improving ideas.</p></div>
-            </article>
-            <article>
-              <span className="why-sdg-number">SDG 12</span>
-              <div><h4>Responsible Consumption and Production</h4><p>Upcycling projects invite students to reuse everyday materials, reduce waste, and think about the resources behind what they make.</p></div>
-            </article>
-            <article>
-              <span className="why-sdg-number">SDG 17</span>
-              <div><h4>Partnerships for the Goals</h4><p>Working with schools, educators, and peers connects different perspectives and helps students practise collaboration toward a shared outcome.</p></div>
-            </article>
-          </div>
         </div>
       </div>
     </section>

@@ -898,7 +898,7 @@ img {
   font-size: 16px;
   line-height: 1.8;
 }
-.why-intro, .why-sdgs-intro {
+.why-intro {
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: start;
@@ -958,70 +958,48 @@ img {
   line-height: 1.35;
 }
 .why-sdgs {
-  padding-block: 64px 72px;
+  padding-block: 56px;
   background: #fff;
   border-top: 1px solid var(--line);
 }
-.why-sdgs-intro h3 {
-  margin: 0;
-  color: var(--navy);
-  font-size: 36px;
-  font-weight: 800;
-  line-height: 1.25;
+.why-sdgs-figure {
+  max-width: 1120px;
+  margin: 0 auto;
+  text-align: center;
 }
-.why-sdgs-intro p + p { margin-top: 16px; }
-.why-sdgs-figure { margin: 32px 0 36px; }
+.why-sdgs-figure.reveal {
+  opacity: 1;
+  transform: none;
+  transition: none;
+  will-change: auto;
+}
 .why-sdgs-figure img {
   display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 1350 / 500;
   object-fit: contain;
+  cursor: default;
+  opacity: 0;
+  transform: translateY(28px) scale(0.97);
+  clip-path: inset(0 0 20% 0);
+  transition:
+    opacity 700ms ease-out,
+    transform 1100ms cubic-bezier(0.16, 1, 0.3, 1),
+    clip-path 1100ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.why-sdgs-figure.visible img {
+  opacity: 1;
+  transform: none;
+  clip-path: inset(0);
 }
 .why-sdgs-figure figcaption {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-top: 16px;
-  color: #40536a;
-  font-size: 13px;
-  line-height: 1.6;
-}
-.why-sdgs-figure a:focus-visible {
-  outline: 3px solid var(--red);
-  outline-offset: 4px;
-}
-.why-sdgs-figure figcaption a {
-  color: #a80019;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.why-sdg-connections {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 48px;
-}
-.why-sdg-connections article {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 20px;
-  padding-block: 26px;
-  border-top: 1px solid var(--line);
-}
-.why-sdg-number {
-  padding-top: 3px;
-  color: #b80019;
-  font-size: 14px;
-  font-weight: 800;
-}
-.why-sdg-connections h4 {
-  margin: 0 0 10px;
+  max-width: 720px;
+  margin: 24px auto 0;
   color: var(--navy);
   font-size: 18px;
-  font-weight: 700;
-  line-height: 1.5;
+  font-weight: 500;
+  line-height: 1.7;
 }
 .why-lens-fallback {
   height: 100%;
@@ -1968,7 +1946,7 @@ img {
   }
   .purpose { padding-top: 60px; }
   .why-content { width: auto; margin-inline: 22px; }
-  .why-intro, .why-sdgs-intro, .why-principles, .why-sdg-connections {
+  .why-intro, .why-principles {
     grid-template-columns: 1fr;
     gap: 24px;
   }
@@ -1977,13 +1955,7 @@ img {
   .why-principles { padding-block: 32px 44px; }
   .why-principles h3 { font-size: 23px; }
   .why-sdgs { padding-block: 44px; }
-  .why-sdgs-intro h3 { font-size: 28px; }
-  .why-sdgs-figure { margin-block: 24px; }
-  .why-sdg-connections { gap: 0; }
-  .why-sdg-connections article {
-    grid-template-columns: 52px minmax(0, 1fr);
-    gap: 14px;
-  }
+  .why-sdgs-figure figcaption { margin-top: 20px; font-size: 16px; }
   .program {
     grid-template-columns: 25px 120px 1fr;
     min-height: 275px;
@@ -2039,5 +2011,10 @@ img {
   .reveal {
     opacity: 1;
     transform: none;
+  }
+  .why-sdgs-figure img {
+    opacity: 1;
+    transform: none;
+    clip-path: none;
   }
 }
