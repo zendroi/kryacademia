@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { Menu, X } from 'lucide-react';
 
 export interface StaggeredMenuItem {
   label: string;
@@ -43,7 +42,6 @@ export default function StaggeredMenu({
   onMenuClose
 }: StaggeredMenuProps) {
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const openRef = useRef(false);
 
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -54,7 +52,9 @@ export default function StaggeredMenu({
   const closeTweenRef = useRef<gsap.core.Tween | null>(null);
   const busyRef = useRef(false);
 
-  useLayoutEffect(() => {
+  const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+  useIsomorphicLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const panel = panelRef.current;
       const preContainer = preLayersRef.current;
@@ -98,12 +98,11 @@ export default function StaggeredMenu({
     const panelStart = offscreen;
 
     if (itemEls.length) gsap.set(itemEls, { yPercent: 120, rotate: 6, opacity: 0 });
-    if (numberEls.length) gsap.set(numberEls, { '--sm-num-opacity': 0 });
+    if (numberEls.length) gsap.set(numberEls, { ['--sm-num-opacity' as any]: 0 });
     if (socialTitle) gsap.set(socialTitle, { opacity: 0 });
     if (socialLinks.length) gsap.set(socialLinks, { y: 20, opacity: 0 });
 
     const tl = gsap.timeline({ paused: true });
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) tl.timeScale(1000);
 
     layerStates.forEach((ls, i) => {
       tl.fromTo(ls.el, { xPercent: ls.start }, { xPercent: 0, duration: 0.45, ease: 'power4.out' }, i * 0.06);
@@ -133,7 +132,7 @@ export default function StaggeredMenu({
       if (numberEls.length) {
         tl.to(
           numberEls,
-          { duration: 0.5, ease: 'power2.out', '--sm-num-opacity': 1, stagger: { each: 0.05, from: 'start' } },
+          { duration: 0.5, ease: 'power2.out', ['--sm-num-opacity' as any]: 1, stagger: { each: 0.05, from: 'start' } },
           itemsStart + 0.08
         );
       }
@@ -193,7 +192,7 @@ export default function StaggeredMenu({
 
     closeTweenRef.current = gsap.to(all, {
       xPercent: offscreen,
-      duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 0.3,
+      duration: 0.3,
       ease: 'power3.in',
       overwrite: 'auto',
       onComplete: () => {
@@ -203,7 +202,7 @@ export default function StaggeredMenu({
         const numberEls = Array.from(
           panel.querySelectorAll('.sm-panel-list[data-numbering] .sm-panel-item')
         ) as HTMLElement[];
-        if (numberEls.length) gsap.set(numberEls, { '--sm-num-opacity': 0 });
+        if (numberEls.length) gsap.set(numberEls, { ['--sm-num-opacity' as any]: 0 });
 
         const socialTitle = panel.querySelector('.sm-socials-title') as HTMLElement | null;
         const socialLinks = Array.from(panel.querySelectorAll('.sm-socials-link')) as HTMLElement[];
@@ -266,28 +265,10 @@ export default function StaggeredMenu({
     };
   }, [closeOnClickAway, open, closeMenu]);
 
-  useEffect(() => {
-    if (!open) return;
-    const trigger = triggerRef.current;
-    const panel = panelRef.current;
-    const focusable = panel?.querySelectorAll<HTMLElement>('a[href], button');
-    const first = focusable?.[0];
-    const last = focusable?.[focusable.length - 1];
-    first?.focus();
-    const trap = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    };
-    document.addEventListener('keydown', trap);
-    return () => { document.removeEventListener('keydown', trap); trigger?.focus({ preventScroll: true }); };
-  }, [open]);
-
   return (
     <div className={`sm-container relative ${className}`.trim()}>
       {/* 🌟 3-Line Hamburger Button (Garis Tiga) */}
       <button
-        ref={triggerRef}
         className={`sm-burger-btn ${open ? 'sm-open' : ''}`}
         aria-label={open ? 'Close menu' : 'Open menu'}
         aria-expanded={open}
@@ -295,7 +276,11 @@ export default function StaggeredMenu({
         type="button"
         title={open ? 'Close menu' : 'Menu'}
       >
-        {open ? <X size={19} aria-hidden="true" /> : <Menu size={19} aria-hidden="true" />}
+        <span className="sm-burger-icon" aria-hidden="true">
+          <span className="sm-burger-line sm-line-top" />
+          <span className="sm-burger-line sm-line-mid" />
+          <span className="sm-burger-line sm-line-bot" />
+        </span>
       </button>
 
       {/* 🌟 Full-Screen Backdrop when open */}
@@ -326,12 +311,8 @@ export default function StaggeredMenu({
         ref={panelRef}
         className="sm-drawer-panel"
         data-position={position}
-        style={{ '--sm-accent': accentColor } as React.CSSProperties}
+        style={{ ['--sm-accent' as any]: accentColor }}
         aria-label="Navigation menu"
-        role="dialog"
-        aria-modal={open || undefined}
-        aria-hidden={!open}
-        inert={!open}
       >
         <div className="sm-panel-header">
           <span className="sm-panel-badge">KRYAcademia</span>
@@ -340,7 +321,7 @@ export default function StaggeredMenu({
             onClick={closeMenu}
             aria-label="Close menu"
           >
-            <X size={21} />
+            ×
           </button>
         </div>
 
@@ -590,9 +571,9 @@ export default function StaggeredMenu({
           display: flex;
           align-items: baseline;
           justify-content: space-between;
-          font-size: 32px;
+          font-size: clamp(1.6rem, 2.8vw, 2.2rem);
           font-weight: 800;
-          letter-spacing: 0;
+          letter-spacing: -0.03em;
           color: var(--navy);
           text-decoration: none;
           transition: color 0.2s ease, transform 0.2s ease;

@@ -6,7 +6,6 @@ import NextImage from 'next/image';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Image as DreiImage, Preload, Scroll, ScrollControls, Text, useScroll } from '@react-three/drei';
 import { activities } from './mockData';
-import SceneReady from './SceneReady';
 
 const CARDS_PER_PAGE = 3;
 const PAGE_COUNT = Math.ceil(activities.length / CARDS_PER_PAGE);
@@ -73,7 +72,7 @@ function ActivityImage({
     );
     material.grayscale = THREE.MathUtils.damp(
       material.grayscale,
-      0,
+      reducedMotion ? 0.12 : Math.max(0.04, 0.72 - velocity * 900),
       4,
       delta,
     );
@@ -87,20 +86,19 @@ function ActivityImage({
         url={item.url}
         scale={scale}
         radius={0.075}
-        grayscale={0}
-        transparent
+        grayscale={0.72}
         zoom={1.08}
         toneMapped={false}
       />
       <mesh position={[0, labelBottom + labelHeight / 2, 0.018]} renderOrder={1}>
         <planeGeometry args={[scale[0], labelHeight]} />
-        <meshBasicMaterial color="#172b23" transparent opacity={0.9} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial color="#071321" transparent opacity={0.82} depthWrite={false} toneMapped={false} />
       </mesh>
       <Text
         position={[labelLeft, labelBottom + labelHeight - 0.13, 0.035]}
         fontSize={0.1}
         font="/Inter-UI-Medium.ttf"
-        color="#ecebad"
+        color="#ff8996"
         anchorX="left"
         anchorY="top"
         renderOrder={2}
@@ -177,22 +175,19 @@ function FallbackGallery() {
   );
 }
 
-export default function ActivitiesInfiniteScroll({ active = true }: { active?: boolean }) {
+export default function ActivitiesInfiniteScroll() {
   const reducedMotion = useReducedMotion();
-  const [loaded, setLoaded] = useState(false);
 
   return (
     <div className="activities-gallery" role="region" aria-label="KRYAcademia activity gallery">
-      {!loaded && <div className="scene-poster"><FallbackGallery /></div>}
       <div className="activities-canvas" aria-hidden="true">
         <Canvas
-          frameloop={active ? 'always' : 'never'}
           camera={{ position: [0, 0, 6], fov: 52 }}
           dpr={[1, 1.5]}
           gl={{ antialias: false, powerPreference: 'high-performance' }}
           fallback={<FallbackGallery />}
         >
-          <color attach="background" args={['#223830']} />
+          <color attach="background" args={['#0b192c']} />
           <Suspense fallback={null}>
             <ScrollControls
               infinite
@@ -207,7 +202,6 @@ export default function ActivitiesInfiniteScroll({ active = true }: { active?: b
               </Scroll>
             </ScrollControls>
             <Preload all />
-            <SceneReady onReady={setLoaded} />
           </Suspense>
         </Canvas>
       </div>

@@ -169,28 +169,9 @@ const useAnimationLoop = (
       rafRef.current = requestAnimationFrame(animate);
     };
 
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let visible = false;
-    const updatePlayback = () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      lastTimestampRef.current = null;
-      if (visible && !document.hidden && !motion.matches && targetVelocity !== 0) {
-        rafRef.current = requestAnimationFrame(animate);
-      }
-    };
-    const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-      updatePlayback();
-    });
-    observer.observe(track.parentElement ?? track);
-    motion.addEventListener('change', updatePlayback);
-    document.addEventListener('visibilitychange', updatePlayback);
+    rafRef.current = requestAnimationFrame(animate);
 
     return () => {
-      observer.disconnect();
-      motion.removeEventListener('change', updatePlayback);
-      document.removeEventListener('visibilitychange', updatePlayback);
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
