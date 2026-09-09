@@ -1461,57 +1461,65 @@ img {
   border: 0;
 }
 
-/* 🌟 Partner School Logos */
-.logos {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-left: 1px solid var(--line);
-  border-top: 1px solid var(--line);
+/* Partner schools use the React Bits Logo Loop with KRYA-styled wordmarks. */
+.partner-logo-loop-shell {
+  margin-inline: -7vw;
+  padding-block: 18px;
+  border-block: 1px solid var(--line);
+  overflow: hidden;
 }
 
-.logos article {
-  height: 175px;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  display: grid;
-  place-content: center;
-  text-align: center;
-  gap: 14px;
-  padding: 20px;
-  background: white;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+.partner-logo-loop {
+  padding-block: 10px;
 }
 
-.logos article:hover {
-  background: var(--pale);
-  transform: translateY(-4px);
-  z-index: 2;
-  box-shadow: 0 15px 35px rgba(23, 48, 81, 0.1);
+.partner-school-mark {
+  width: 292px;
+  min-height: 92px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(23, 48, 81, 0.06);
+  transition: border-color 300ms ease, box-shadow 300ms ease;
 }
 
-.logos span {
-  margin: auto;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+.partner-school-monogram {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
   display: grid;
   place-items: center;
   background: var(--navy);
-  color: white;
-  font-family: Georgia, serif;
-  font-size: 18px;
-  box-shadow: 0 8px 20px rgba(23, 48, 81, 0.2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
 }
 
-.logos article:hover span {
-  background: var(--red);
-  transform: scale(1.1) rotate(5deg);
-}
-
-.logos strong {
-  font-size: 11px;
-  max-width: 160px;
+.partner-school-mark strong {
   color: var(--navy);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.partner-logo-loop.logoloop--scale-hover .logoloop__node {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.partner-logo-loop.logoloop--scale-hover .logoloop__item:hover .logoloop__node {
+  transform: translateY(-3px) scale(1.03);
+}
+
+.partner-logo-loop .logoloop__item:hover .partner-school-mark {
+  border-color: rgba(232, 0, 27, 0.45);
+  box-shadow: 0 14px 32px rgba(23, 48, 81, 0.12);
+}
+
+.partner-logo-loop .logoloop__item:hover .partner-school-monogram {
+  background: var(--red);
 }
 
 /* 🌟 FAQ Section */
@@ -1981,9 +1989,8 @@ img {
   .activities-fallback figure:not(:nth-child(2)) {
     display: none;
   }
-  .logos {
-    grid-template-columns: 1fr 1fr;
-  }
+  .partner-school-mark { width: 250px; min-height: 84px; padding: 14px 16px; }
+  .partner-school-monogram { width: 48px; height: 48px; flex-basis: 48px; }
   .contact form {
     grid-template-columns: 1fr;
     padding: 25px;

@@ -7,6 +7,7 @@ import { events, faqs, img, klasses, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 import FoldText from './FoldText';
 import StaggeredMenu from './StaggeredMenu';
+import LogoLoop, { type LogoItem } from '@/components/LogoLoop';
 
 const WhyKryacademiaLens = dynamic(() => import('./WhyKryacademiaLens'), {
   ssr: false,
@@ -23,6 +24,19 @@ const nav = [
   ['FAQ', 'faq'],
   ['Contact', 'contact'],
 ];
+
+const partnerLogoItems: LogoItem[] = partners.map((school) => ({
+  node: (
+    <span className="partner-school-mark">
+      <span className="partner-school-monogram" aria-hidden="true">
+        {school.split(' ').map((word) => word[0]).slice(0, 3).join('')}
+      </span>
+      <strong>{school}</strong>
+    </span>
+  ),
+  title: school,
+  ariaLabel: school,
+}));
 
 const A = () => <span aria-hidden className="inline-block transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1">↗</span>;
 
@@ -584,13 +598,19 @@ function Partners() {
         copy="We collaborate with schools to create innovative and sustainable learning experiences shaped around each community."
         fold
       />
-      <div className="logos">
-        {partners.map((p) => (
-          <article className="reveal" key={p}>
-            <span>{p.split(' ').map((x) => x[0]).slice(0, 3).join('')}</span>
-            <strong>{p}</strong>
-          </article>
-        ))}
+      <div className="partner-logo-loop-shell reveal">
+        <LogoLoop
+          logos={partnerLogoItems}
+          speed={48}
+          logoHeight={82}
+          gap={22}
+          pauseOnHover
+          fadeOut
+          fadeOutColor="#faf9f5"
+          scaleOnHover
+          ariaLabel="KRYAcademia partner schools"
+          className="partner-logo-loop"
+        />
       </div>
       <div className="center">
         <button className="btn group" onClick={go}>
