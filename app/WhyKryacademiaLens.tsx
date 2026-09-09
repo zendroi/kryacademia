@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber';
+import NextImage from 'next/image';
+import SceneReady from './SceneReady';
 import {
   Image as SceneImage,
   MeshTransmissionMaterial,
@@ -115,60 +117,41 @@ function ScrollImage({ url, position, scale, start, zoom = 0.22, reducedMotion =
 
 function Images({ reducedMotion }: { reducedMotion: boolean }) {
   const { width, height } = useThree((state) => state.viewport);
+  const compact = useThree((state) => state.size.width < 650);
 
   return (
     <group>
       <ScrollImage
         reducedMotion={reducedMotion}
-        url="/activities/collaboration.jpg"
-        position={[0, 0, 0]}
-        scale={[width * 0.88, height * 0.86]}
+        url="/activities/sustainability.jpg"
+        position={[compact ? 0 : -width * 0.16, 0, 0]}
+        scale={[width * (compact ? 0.9 : 0.62), height * 0.84]}
         start={0}
-        zoom={0.11}
+        zoom={0.08}
       />
-      <ScrollImage
+      {!compact && <ScrollImage
         reducedMotion={reducedMotion}
-        url="/activities/coding.png"
-        position={[width * 0.28, height * 0.1, 3]}
-        scale={[width * 0.28, height * 0.53]}
+        url="/activities/collaboration.jpg"
+        position={[width * 0.32, -height * 0.05, 0]}
+        scale={[width * 0.3, height * 0.65]}
         start={0.03}
-      />
+        zoom={0.06}
+      />}
       <ScrollImage
         reducedMotion={reducedMotion}
-        url="/activities/maker.png"
-        position={[-width * 0.28, -height * 0.76, 4]}
-        scale={[width * 0.28, height * 0.62]}
-        start={0.31}
-      />
-      <ScrollImage
-        reducedMotion={reducedMotion}
-        url="/activities/sustainability.jpg"
-        position={[-width * 0.02, -height * 0.76, 7]}
-        scale={[width * 0.28, height * 0.43]}
-        start={0.35}
-      />
-      <ScrollImage
-        reducedMotion={reducedMotion}
-        url="/activities/animation.png"
-        position={[width * 0.29, -height * 0.76, 9]}
-        scale={[width * 0.28, height * 0.62]}
-        start={0.39}
-      />
-      <ScrollImage
-        reducedMotion={reducedMotion}
-        url="/activities/ar.png"
-        position={[0, -height * 1.26, 5]}
-        scale={[width * 0.46, height * 0.76]}
-        start={0.61}
-        zoom={0.16}
+        url="/activities/collaboration.jpg"
+        position={[0, -height, 0]}
+        scale={[width * 0.9, height * 0.85]}
+        start={0.3}
+        zoom={0.08}
       />
       <ScrollImage
         reducedMotion={reducedMotion}
         url="/activities/sustainability.jpg"
-        position={[0, -height * 1.76, 0]}
-        scale={[width * 0.88, height * 0.74]}
-        start={0.72}
-        zoom={0.1}
+        position={[0, -height * 2, 0]}
+        scale={[width * 0.9, height * 0.85]}
+        start={0.66}
+        zoom={0.08}
       />
     </group>
   );
@@ -176,7 +159,7 @@ function Images({ reducedMotion }: { reducedMotion: boolean }) {
 
 function Scene({ reducedMotion }: { reducedMotion: boolean }) {
   return (
-    <ScrollControls pages={3} damping={reducedMotion ? 0 : 0.18} distance={0.62} style={{ scrollbarWidth: 'thin', scrollbarColor: '#173051 transparent' }}>
+    <ScrollControls pages={3} damping={reducedMotion ? 0 : 0.18} distance={1} style={{ scrollbarWidth: 'thin', scrollbarColor: '#708777 transparent' }}>
       <Lens reducedMotion={reducedMotion}>
         <Scroll>
           <Images reducedMotion={reducedMotion} />
@@ -196,25 +179,32 @@ function StaticFallback() {
   );
 }
 
-export default function WhyKryacademiaLens() {
+export default function WhyKryacademiaLens({ active = true }: { active?: boolean }) {
   const reducedMotion = useReducedMotion();
+  const [loaded, setLoaded] = useState(false);
 
   return (
     <div className="why-lens-experience" role="presentation">
+      {!loaded && <div className="scene-poster why-scene-poster">
+        <NextImage src="/activities/sustainability.jpg" alt="Students exploring creative coding together" width={1024} height={724} />
+        <NextImage src="/activities/collaboration.jpg" alt="A student and educator building a project" width={1500} height={1060} />
+      </div>}
       <div className="why-lens-canvas" aria-hidden="true">
         <Canvas
+          frameloop={active ? 'always' : 'never'}
           dpr={[1, 1.5]}
           camera={{ position: [0, 0, 20], fov: 15 }}
           gl={{ alpha: false, antialias: false, powerPreference: 'high-performance', stencil: false }}
           fallback={<StaticFallback />}
           onCreated={({ gl, scene }) => {
             const background = getComputedStyle(gl.domElement).getPropertyValue('--page-background').trim();
-            scene.background = new THREE.Color(background || '#faf9f5');
+            scene.background = new THREE.Color(background || '#f3f6f3');
             gl.setClearColor(scene.background);
           }}
         >
           <Suspense fallback={null}>
             <Scene reducedMotion={reducedMotion} />
+            <SceneReady onReady={setLoaded} />
           </Suspense>
         </Canvas>
       </div>

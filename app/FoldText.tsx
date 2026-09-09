@@ -167,10 +167,7 @@ export default function FoldText({
   const safePerspective = Math.max(120, perspective);
 
   const segments = useMemo(() => {
-    let segmentIndex = 0;
-
     const renderSegment = (content: string, key: string, split: SplitBy = splitBy): ReactNode => {
-      segmentIndex += 1;
       return (
         <span
           className="fold-text-segment"
