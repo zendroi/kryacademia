@@ -1,18 +1,15 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import NextImage from 'next/image';
+import Link from 'next/link';
+import { ArrowUpRight, Search as SearchIcon, X, Mail, MessageCircle } from 'lucide-react';
 import { events, faqs, img, klasses, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 import FoldText from './FoldText';
 import StaggeredMenu from './StaggeredMenu';
 import LogoLoop, { type LogoItem } from '@/components/LogoLoop';
-
-const WhyKryacademiaLens = dynamic(() => import('./WhyKryacademiaLens'), {
-  ssr: false,
-  loading: () => <div className="why-lens-experience" aria-hidden="true" />,
-});
+import AgendaCalendar from './AgendaCalendar';
 
 const nav = [
   ['Home', 'home'],
@@ -38,37 +35,7 @@ const partnerLogoItems: LogoItem[] = partners.map((school) => ({
   ariaLabel: school,
 }));
 
-const A = () => <span aria-hidden className="inline-block transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1">↗</span>;
-
-function CursorSpotlight() {
-  const [pos, setPos] = useState({ x: -600, y: -600 });
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      setPos({ x: e.clientX, y: e.clientY });
-      if (!visible) setVisible(true);
-    };
-    const onLeave = () => setVisible(false);
-    
-    window.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseleave', onLeave);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseleave', onLeave);
-    };
-  }, [visible]);
-
-  return (
-    <div
-      className="cursor-spotlight"
-      style={{
-        transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
-        opacity: visible ? 1 : 0,
-      }}
-    />
-  );
-}
+const A = () => <ArrowUpRight aria-hidden size={17} />;
 
 function AnimatedCounter({ end, duration = 1500 }: { end: number; duration?: number }) {
   const [count, setCount] = useState(0);
@@ -89,7 +56,7 @@ function AnimatedCounter({ end, duration = 1500 }: { end: number; duration?: num
             let startTime: number | null = null;
             const step = (timestamp: number) => {
               if (!startTime) startTime = timestamp;
-              const progress = Math.min((timestamp - startTime) / duration, 1);
+              const progress = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : Math.min((timestamp - startTime) / duration, 1);
               // Ease out cubic
               const easeProgress = 1 - Math.pow(1 - progress, 3);
               setCount(Math.floor(easeProgress * end));
@@ -120,12 +87,10 @@ function AnimatedCounter({ end, duration = 1500 }: { end: number; duration?: num
 
 function Brand({ light = false }: { light?: boolean }) {
   return (
-    <a className={'brand ' + (light ? 'light' : '')} href="https://krya.global/" target="_blank" rel="noreferrer">
-      <b>K</b>
-      <strong>
-        KRYA<small>GLOBAL</small>
-      </strong>
-    </a>
+    <Link className={'brand ' + (light ? 'light' : '')} href="/#home" aria-label="KRYAcademia home">
+      <NextImage src="/kryacademia-logo.png" alt="" width={48} height={48} priority />
+      <strong>KRYAcademia</strong>
+    </Link>
   );
 }
 
@@ -179,7 +144,7 @@ const staggeredSocialItems = [
   { label: 'Teacher & Admin Portal →', link: '/login' },
   { label: 'Instagram', link: 'https://instagram.com/krya.global' },
   { label: 'LinkedIn', link: 'https://linkedin.com/company/krya-global' },
-  { label: 'WhatsApp', link: 'https://wa.me/628172362236' },
+  { label: 'WhatsApp', link: 'https://wa.me/6285111212362' },
 ];
 
 function Navbar({ search }: { search: () => void }) {
@@ -213,7 +178,7 @@ function Navbar({ search }: { search: () => void }) {
       </nav>
       <div className="navact">
         <button aria-label="Search" onClick={search}>
-          ⌕
+          <SearchIcon size={19} aria-hidden />
         </button>
         <a className="login group" href="/login">
           Login <A />
@@ -274,12 +239,9 @@ function Search({ close }: { close: () => void }) {
 }
 
 function Hero() {
-  const [video, setVideo] = useState(false);
-
   return (
     <section id="home" className="hero">
-      <div className="ambient-orb ambient-orb-1" />
-      <div className="hero-copy reveal">
+      <div className="hero-copy">
         <span className="eyebrow">KRYAcademia</span>
         <h1>
           The 21st
@@ -291,54 +253,39 @@ function Hero() {
           critically, create confidently, and make a meaningful impact.
         </p>
         <div>
-          <Btn href="#klass">Find Your Klass</Btn>
-          <Btn href="#programs" alt>
-            Explore Programs
+          <Btn href="#klass">Klass</Btn>
+          <Btn href="#activities" alt>
+            See How We Learn
           </Btn>
         </div>
-        <button className="watch group" onClick={() => setVideo(true)}>
-          <span className="inline-block transition-transform duration-300 group-hover:scale-125">▶</span> &nbsp; See How We Learn
-        </button>
       </div>
 
-      <div className="hero-art reveal">
+      <div className="hero-art">
         <div>
-          <img src={img.hero} alt="Students collaborating in a creative learning activity" />
+          <NextImage src={img.hero} alt="Students collaborating in a creative learning activity" width={1500} height={1060} priority />
         </div>
         <i>IDEA → MAKE → IMPACT</i>
         <aside>
-          <small>Upcoming agenda</small>
+          <small>Sample agenda</small>
           <strong>
             Young Makers
             <br />
             Open Class
           </strong>
           <span>08 Sep · Online</span>
-          <a href="#agenda">See agenda →</a>
         </aside>
       </div>
 
-      {video && (
-        <div className="modal">
-          <button onClick={() => setVideo(false)}>×</button>
-          <article>
-            <b>▶</b>
-            <h3>Learning in action</h3>
-            <p>Video story coming soon.</p>
-          </article>
-        </div>
-      )}
     </section>
   );
 }
 
 function Klass() {
-  const [mode, setMode] = useState('Online');
+  const [mode, setMode] = useState('All modes');
   const [cat, setCat] = useState('All');
 
   const items = useMemo(() => {
-    const a = klasses.filter((x) => x[1] === mode && (cat === 'All' || x[2] === cat));
-    return [...a, ...klasses.filter((x) => x[1] === mode && !a.includes(x))].slice(0, 4);
+    return klasses.filter((x) => (mode === 'All modes' || x[1] === mode) && (cat === 'All' || x[2] === cat));
   }, [mode, cat]);
 
   return (
@@ -351,45 +298,42 @@ function Klass() {
       />
       <div className="filters">
         <div className="tabs">
-          {['Online', 'Onsite'].map((x) => (
-            <button className={mode === x ? 'on' : ''} onClick={() => setMode(x)} key={x}>
+          {['All modes', 'Online', 'Onsite'].map((x) => (
+            <button aria-pressed={mode === x} className={mode === x ? 'on' : ''} onClick={() => setMode(x)} key={x}>
               {x}
             </button>
           ))}
         </div>
         <div className="chips">
           {['All', 'Innovation & Creativity', 'Technology', 'Art & Language'].map((x) => (
-            <button className={cat === x ? 'on' : ''} onClick={() => setCat(x)} key={x}>
+            <button aria-pressed={cat === x} className={cat === x ? 'on' : ''} onClick={() => setCat(x)} key={x}>
               {x}
             </button>
           ))}
         </div>
       </div>
 
+      <p className="catalog-status" role="status">{items.length} Klass · Mode and schedule subject to confirmation.</p>
       <div className="klassgrid">
         {items.map((x) => (
-          <article className="card reveal group" key={x[0]}>
+          <article className="card klass-card group" key={x[0]}>
             <div className="photo">
-              <img src={x[4]} alt={x[0] + ' activity'} />
+              <NextImage src={x[4]} alt={x[0]} width={800} height={600} />
               {x[3] && <b>{x[3]}</b>}
-              <span>{x[1]}</span>
+              <span>{x[1] === 'To confirm' ? 'Mode to confirm' : x[1]}</span>
             </div>
             <div className="cardbody">
               <small>{x[2]}</small>
               <h3>{x[0]}</h3>
               <p>{x[5]}</p>
-              <a href="#contact">
+              <a href="#contact" onClick={() => dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'Klass', program: x[0] } }))}>
                 Explore Klass <A />
               </a>
             </div>
           </article>
         ))}
       </div>
-      <div className="center">
-        <Btn href="#contact" alt>
-          View All Klass
-        </Btn>
-      </div>
+      {items.length === 0 && <p className="catalog-empty">No Klass listed for this combination yet. <button onClick={() => { setMode('All modes'); setCat('All'); }}>View all Klass</button></p>}
     </section>
   );
 }
@@ -404,7 +348,10 @@ function Purpose() {
         </div>
         <p>Learning should prepare young people to shape the world, not simply fit into it. Through creative, project-based experiences, students turn curiosity into skills they can use beyond the classroom.</p>
       </header>
-      <WhyKryacademiaLens />
+      <figure className="why-photo why-content reveal">
+        <NextImage src="/activities/collaboration.jpg" alt="A student and mentor working on a hands-on KRYAcademia project" width={1500} height={1060} />
+        <figcaption>Real projects. <em>Meaningful learning.</em></figcaption>
+      </figure>
       <div className="why-principles why-content">
         <article>
           <span className="why-label">01 / Our background</span>
@@ -445,7 +392,7 @@ function Purpose() {
 function Programs() {
   const req = (p: string) => {
     dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'Program', program: p } }));
-    window.location.hash = 'contact';
+    window.location.assign('#contact');
   };
 
   return (
@@ -460,7 +407,7 @@ function Programs() {
         {programs.map((x, i) => (
           <article className="program reveal group" key={x[0]}>
             <small>0{i + 1}</small>
-            <img src={x[3]} alt={x[0]} />
+            <NextImage src={x[3]} alt={x[0]} width={600} height={424} />
             <div>
               <b>{x[1]}</b>
               <h3>{x[0]}</h3>
@@ -488,9 +435,6 @@ function Programs() {
 }
 
 function Agenda() {
-  const [day, setDay] = useState(8);
-  const [tab, setTab] = useState('Upcoming');
-
   return (
     <section id="agenda" className="section">
       <Heading
@@ -499,74 +443,7 @@ function Agenda() {
         copy="A preview of how workshops, open classes, exhibitions, and events will be discovered. All entries below are mock data."
         fold
       />
-      <div className="agendagrid">
-        <div className="calendar reveal">
-          <header>
-            <div>
-              <small>MOCK CALENDAR · 2026</small>
-              <h3>September 2026</h3>
-            </div>
-            <span>
-              <button>←</button>
-              <button>→</button>
-            </span>
-          </header>
-          <div className="week">
-            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((x) => (
-              <b key={x}>{x}</b>
-            ))}
-          </div>
-          <div className="days">
-            {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
-              <button
-                className={(day === d ? 'on ' : '') + (events.some((e) => +e[0] === d) ? 'event' : '')}
-                onClick={() => setDay(d)}
-                key={d}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
-          <footer>
-            <b>SEP {day}</b>
-            <span>{events.find((e) => +e[0] === day)?.[1] || 'No mock events scheduled on this date.'}</span>
-          </footer>
-        </div>
-
-        <div className="eventlist">
-          <div className="agendatabs">
-            {['Upcoming', 'Ongoing', 'Past'].map((x) => (
-              <button className={tab === x ? 'on' : ''} onClick={() => setTab(x)} key={x}>
-                {x}
-              </button>
-            ))}
-          </div>
-          {events.map((x) => (
-            <article className="eventcard reveal" key={x[1]}>
-              <div>
-                <strong>{x[0]}</strong>
-                <small>
-                  SEP
-                  <br />
-                  2026
-                </small>
-              </div>
-              <section>
-                <span>{x[2]} · {x[3]} · Mock event</span>
-                <h3>{x[1]}</h3>
-                <p>A sample event entry demonstrating KRYAcademia’s future agenda experience.</p>
-                <small>{x[4]} {x[3] !== 'Online' && '· Surabaya'}</small>
-              </section>
-              <button>{x[5]}</button>
-            </article>
-          ))}
-        </div>
-      </div>
-      <div className="center">
-        <Btn href="#contact" alt>
-          View All Agenda
-        </Btn>
-      </div>
+      <AgendaCalendar />
     </section>
   );
 }
@@ -587,7 +464,7 @@ function Activities() {
 function Partners() {
   const go = () => {
     dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'School Partnership' } }));
-    window.location.hash = 'contact';
+    window.location.assign('#contact');
   };
 
   return (
@@ -668,12 +545,16 @@ function Contact() {
   const [program, setProgram] = useState('');
   const [status, setStatus] = useState('idle');
   const [bad, setBad] = useState<string[]>([]);
+  const [affiliation, setAffiliation] = useState('');
 
   useEffect(() => {
     const h = (e: Event) => {
       const d = (e as CustomEvent).detail;
       setType(d.type);
       setProgram(d.program || '');
+      setStatus('idle');
+      setBad([]);
+      if (d.type === 'School Partnership') setAffiliation('Institution');
     };
     window.addEventListener('inquiry', h);
     return () => window.removeEventListener('inquiry', h);
@@ -682,7 +563,9 @@ function Contact() {
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const d = new FormData(e.currentTarget);
-    const m = ['name', 'email', 'phone', 'place', 'type', 'language', 'message', 'consent'].filter((x) => !d.get(x));
+    const required = ['name', 'email', 'phone', 'place', 'type', 'affiliation', 'message', 'consent'];
+    if (affiliation === 'Institution') required.push('institution');
+    const m = required.filter((x) => !String(d.get(x) || '').trim());
     setBad(m);
     if (m.length) return;
     setStatus('loading');
@@ -698,8 +581,8 @@ function Contact() {
           Tell us what you are looking for, and our team will help you find the right learning experience or
           collaboration opportunity.
         </p>
-        <strong>aha@krya.global</strong>
-        <strong>+62 817-2362-236</strong>
+        <a className="contact-link" href="mailto:aha@krya.global"><Mail size={20} aria-hidden />aha@krya.global</a>
+        <a className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362</a>
       </aside>
       <form onSubmit={submit} noValidate>
         {status === 'success' ? (
@@ -722,25 +605,37 @@ function Contact() {
             </Field>
             <Field bad={bad} name="place" label="City / Country" />
             <Field bad={bad} name="type" label="Inquiry Type">
-              <select name="type" value={type} onChange={(e) => setType(e.target.value)}>
+              <select name="type" value={type} onChange={(e) => { setType(e.target.value); setProgram(''); }}>
                 <option value="">Select one</option>
                 {['Workshop', 'Klass', 'Program', 'School Partnership', 'Event', 'Other'].map((x) => (
                   <option key={x}>{x}</option>
                 ))}
               </select>
             </Field>
-            <Field bad={bad} name="language" label="Preferred Language">
-              <select name="language">
-                <option value="">Select one</option>
-                <option>English</option>
-                <option>Indonesian</option>
-              </select>
-            </Field>
+            {affiliation === 'Institution' ? (
+              <div className="institution-field">
+                <Field bad={bad} name="institution" label="Institution Name">
+                  <input name="institution" placeholder="School or institution name" autoComplete="organization" autoFocus />
+                </Field>
+                <input type="hidden" name="affiliation" value="Institution" />
+                <button className="institution-reset" type="button" onClick={() => setAffiliation('')} aria-label="Change institution type" title="Change institution type"><X size={17} /></button>
+              </div>
+            ) : (
+              <Field bad={bad} name="affiliation" label="Institution">
+                <select name="affiliation" value={affiliation} onChange={(e) => setAffiliation(e.target.value)}>
+                  <option value="">Select one</option>
+                  <option>Institution</option>
+                  <option>Parent</option>
+                  <option>Non-institution</option>
+                </select>
+              </Field>
+            )}
             {type === 'Klass' && (
               <>
                 <label>
                   <span>Klass of Interest</span>
-                  <select>
+                  <select name="klass" value={program} onChange={(e) => setProgram(e.target.value)}>
+                    <option value="">Select a Klass</option>
                     {klasses.map((x) => (
                       <option key={x[0]}>{x[0]}</option>
                     ))}
@@ -748,7 +643,7 @@ function Contact() {
                 </label>
                 <label>
                   <span>Preferred Mode</span>
-                  <select>
+                  <select name="mode">
                     <option>Online</option>
                     <option>Onsite</option>
                   </select>
@@ -759,6 +654,7 @@ function Contact() {
               <label className="full">
                 <span>Program of Interest</span>
                 <select value={program} onChange={(e) => setProgram(e.target.value)}>
+                  <option value="">Select a program</option>
                   {programs.map((x) => (
                     <option key={x[0]}>{x[0]}</option>
                   ))}
@@ -768,10 +664,6 @@ function Contact() {
             )}
             {type === 'School Partnership' && (
               <>
-                <label>
-                  <span>School / Institution Name</span>
-                  <input />
-                </label>
                 <label>
                   <span>School Level</span>
                   <input />
@@ -815,7 +707,6 @@ function Footer() {
         <section>
           <Brand light />
           <p>Creative, project-based learning that equips young people to make meaningful impact.</p>
-          <small>An educational initiative by KRYA Global.</small>
         </section>
         <section>
           <h3>Explore</h3>
@@ -836,11 +727,11 @@ function Footer() {
           <h3>Visit us</h3>
           <p>AD Kavling 3, Jl. Kupang Jaya I, Sonokwijenan, Sukomanunggal, Surabaya, East Java 60189, Indonesia</p>
           <a href="mailto:aha@krya.global">aha@krya.global</a>
-          <a href="https://wa.me/628172362236">+62 817-2362-236</a>
+          <a href="https://wa.me/6285111212362" target="_blank" rel="noreferrer">+62 851-1121-2362</a>
         </section>
       </div>
       <aside>
-        © 2026 KRYA Global. All rights reserved. <a href="#home">Back to top ↑</a>
+        © 2026 KRYAcademia. All rights reserved. <a href="#home">Back to top ↑</a>
       </aside>
     </footer>
   );
@@ -868,7 +759,6 @@ export default function Home() {
 
   return (
     <>
-      <CursorSpotlight />
       <Navbar search={() => setS(true)} />
       {s && <Search close={() => setS(false)} />}
       <main>
@@ -883,14 +773,13 @@ export default function Home() {
             <span>Partner Schools</span>
           </div>
           <div>
-            <b>—</b>
-            <span>Programs · to be confirmed</span>
+            <AnimatedCounter end={programs.length} />
+            <span>Programs</span>
           </div>
-          <p>
-            Curiosity becomes capability
-            <br />
-            when students learn by doing.
-          </p>
+          <div>
+            <AnimatedCounter end={klasses.length} />
+            <span>Klass</span>
+          </div>
         </section>
         <Klass />
         <Purpose />

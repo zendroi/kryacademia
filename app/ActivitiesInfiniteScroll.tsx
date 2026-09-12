@@ -1,14 +1,12 @@
 'use client';
 
 import * as THREE from 'three';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState, type RefObject } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import NextImage from 'next/image';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Image as DreiImage, Preload, Scroll, ScrollControls, Text, useScroll } from '@react-three/drei';
+import { Image as DreiImage, Preload, Scroll, ScrollControls, useScroll } from '@react-three/drei';
 import { activities } from './mockData';
-
-const CARDS_PER_PAGE = 3;
-const PAGE_COUNT = Math.ceil(activities.length / CARDS_PER_PAGE);
 
 type GalleryItem = {
   index: number;
@@ -22,9 +20,6 @@ type ImageMaterial = THREE.ShaderMaterial & {
 };
 
 const galleryItems: GalleryItem[] = activities.map(([title, url], index) => ({ index, title, url }));
-const galleryPages: GalleryItem[][] = Array.from({ length: PAGE_COUNT }, (_, pageIndex) =>
-  Array.from({ length: CARDS_PER_PAGE }, (_, slotIndex) => galleryItems[(pageIndex * CARDS_PER_PAGE + slotIndex) % galleryItems.length]),
-);
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(false);
@@ -55,10 +50,6 @@ function ActivityImage({
   const group = useRef<THREE.Group>(null!);
   const scroll = useScroll();
   const baseZ = position[2];
-  const labelHeight = Math.min(0.96, scale[1] * 0.22);
-  const labelLeft = -scale[0] / 2 + 0.14;
-  const labelBottom = -scale[1] / 2;
-  const titleSize = scale[0] < 1.6 ? 0.14 : 0.17;
 
   useFrame((_, delta) => {
     const material = image.current.material as ImageMaterial;
@@ -72,7 +63,7 @@ function ActivityImage({
     );
     material.grayscale = THREE.MathUtils.damp(
       material.grayscale,
-      reducedMotion ? 0.12 : Math.max(0.04, 0.72 - velocity * 900),
+      reducedMotion ? 0 : Math.max(0, 0.15 - velocity * 900),
       4,
       delta,
     );
@@ -86,47 +77,19 @@ function ActivityImage({
         url={item.url}
         scale={scale}
         radius={0.075}
-        grayscale={0.72}
+        grayscale={0.15}
         zoom={1.08}
         toneMapped={false}
       />
-      <mesh position={[0, labelBottom + labelHeight / 2, 0.018]} renderOrder={1}>
-        <planeGeometry args={[scale[0], labelHeight]} />
-        <meshBasicMaterial color="#071321" transparent opacity={0.82} depthWrite={false} toneMapped={false} />
-      </mesh>
-      <Text
-        position={[labelLeft, labelBottom + labelHeight - 0.13, 0.035]}
-        fontSize={0.1}
-        font="/Inter-UI-Medium.ttf"
-        color="#ff8996"
-        anchorX="left"
-        anchorY="top"
-        renderOrder={2}
-      >
-        {String(item.index + 1).padStart(2, '0')}
-      </Text>
-      <Text
-        position={[labelLeft, labelBottom + labelHeight - 0.3, 0.035]}
-        fontSize={titleSize}
-        font="/Inter-UI-Medium.ttf"
-        maxWidth={scale[0] - 0.28}
-        lineHeight={1.12}
-        color="white"
-        anchorX="left"
-        anchorY="top"
-        renderOrder={2}
-      >
-        {item.title}
-      </Text>
     </group>
   );
 }
 
 function ActivityPage({ items, position, reducedMotion }: { items: GalleryItem[]; position: number; reducedMotion: boolean }) {
   const { width, height } = useThree((state) => state.viewport);
-  const compact = width < 7;
-  const spacing = width * (compact ? 0.48 : 0.335);
-  const cardWidth = Math.max(1.15, spacing - (compact ? 0.22 : 0.42));
+  const compact = items.length === 1;
+  const spacing = width * 0.335;
+  const cardWidth = compact ? width * 0.84 : Math.max(1.15, spacing - 0.42);
   const cardHeight = Math.min(4.75, height * (compact ? 0.78 : 0.82));
   const verticalOffsets = compact ? [0.34, -0.22, 0.18] : [0.42, -0.3, 0.22];
   const depthOffsets = [-0.55, 0.1, 0.62];
@@ -137,7 +100,7 @@ function ActivityPage({ items, position, reducedMotion }: { items: GalleryItem[]
         <ActivityImage
           key={`${position}-${slotIndex}-${item.index}`}
           item={item}
-          position={[(slotIndex - 1) * spacing, verticalOffsets[slotIndex], depthOffsets[slotIndex]]}
+          position={[compact ? 0 : (slotIndex - 1) * spacing, compact ? 0.12 : verticalOffsets[slotIndex], compact ? 0 : depthOffsets[slotIndex]]}
           scale={[cardWidth, cardHeight]}
           reducedMotion={reducedMotion}
         />
@@ -146,64 +109,98 @@ function ActivityPage({ items, position, reducedMotion }: { items: GalleryItem[]
   );
 }
 
-function ActivityPages({ reducedMotion }: { reducedMotion: boolean }) {
-  const positions = Array.from({ length: PAGE_COUNT * 2 + 2 }, (_, index) => index - 1);
+function ActivityPages({ reducedMotion, columns }: { reducedMotion: boolean; columns: number }) {
+  const pageCount = Math.ceil(galleryItems.length / columns);
+  const positions = Array.from({ length: pageCount * 2 + 2 }, (_, index) => index - 1);
 
   return (
     <>
       {positions.map((position) => {
-        const pageIndex = ((position % PAGE_COUNT) + PAGE_COUNT) % PAGE_COUNT;
-        return <ActivityPage key={position} position={position} items={galleryPages[pageIndex]} reducedMotion={reducedMotion} />;
+        const pageIndex = ((position % pageCount) + pageCount) % pageCount;
+        const items = Array.from({ length: columns }, (_, slot) => galleryItems[(pageIndex * columns + slot) % galleryItems.length]);
+        return <ActivityPage key={position} position={position} items={items} reducedMotion={reducedMotion} />;
       })}
     </>
   );
 }
 
-function FallbackGallery() {
+function FallbackGallery({ scrollRef }: { scrollRef?: RefObject<HTMLDivElement | null> }) {
   return (
-    <div className="activities-fallback">
-      {galleryPages[0].map((item) => (
+    <div className="activities-fallback" ref={scrollRef}>
+      {galleryItems.map((item) => (
         <figure key={item.index}>
           <NextImage src={item.url} alt={item.title} width={900} height={1200} />
-          <figcaption>
-            <small>{String(item.index + 1).padStart(2, '0')}</small>
-            <strong>{item.title}</strong>
-          </figcaption>
         </figure>
       ))}
     </div>
   );
 }
 
+function GalleryScroll({ scrollRef }: { scrollRef: RefObject<HTMLDivElement | null> }) {
+  const { el } = useScroll();
+  useEffect(() => {
+    scrollRef.current = el;
+    // Drei converts vertical wheel input to horizontal; leave vertical gestures to the page.
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) > Math.abs(event.deltaX) && !event.shiftKey) event.stopImmediatePropagation();
+    };
+    el.addEventListener('wheel', onWheel, { capture: true, passive: true });
+    return () => { el.removeEventListener('wheel', onWheel, true); scrollRef.current = null; };
+  }, [el, scrollRef]);
+  return null;
+}
+
+function GalleryScene({ reducedMotion, scrollRef }: { reducedMotion: boolean; scrollRef: RefObject<HTMLDivElement | null> }) {
+  const columns = useThree((state) => state.size.width < 720 ? 1 : 3);
+  const pageCount = Math.ceil(galleryItems.length / columns);
+  return (
+    <>
+      <ScrollControls key={columns} infinite horizontal pages={pageCount + 1} distance={1} damping={reducedMotion ? 0.01 : 0.22}
+        style={{ scrollbarWidth: 'none', overscrollBehaviorX: 'contain', overscrollBehaviorY: 'auto', touchAction: 'pan-x pan-y' }}>
+        <GalleryScroll scrollRef={scrollRef} />
+        <Scroll><ActivityPages reducedMotion={reducedMotion} columns={columns} /></Scroll>
+      </ScrollControls>
+      <Preload all />
+    </>
+  );
+}
+
 export default function ActivitiesInfiniteScroll() {
   const reducedMotion = useReducedMotion();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { rootMargin: '150px' });
+    if (galleryRef.current) observer.observe(galleryRef.current);
+    return () => observer.disconnect();
+  }, []);
+  const move = (direction: number) => {
+    const el = scrollRef.current;
+    if (el) el.scrollBy({ left: direction * el.clientWidth * 0.7, behavior: reducedMotion ? 'instant' : 'smooth' });
+  };
 
   return (
-    <div className="activities-gallery" role="region" aria-label="KRYAcademia activity gallery">
+    <div className="activities-gallery" ref={galleryRef} role="region" aria-label="KRYAcademia activity gallery">
+      {reducedMotion ? <FallbackGallery scrollRef={scrollRef} /> : (
       <div className="activities-canvas" aria-hidden="true">
         <Canvas
           camera={{ position: [0, 0, 6], fov: 52 }}
           dpr={[1, 1.5]}
+          frameloop={inView ? 'always' : 'never'}
           gl={{ antialias: false, powerPreference: 'high-performance' }}
-          fallback={<FallbackGallery />}
+          fallback={<FallbackGallery scrollRef={scrollRef} />}
         >
           <color attach="background" args={['#0b192c']} />
           <Suspense fallback={null}>
-            <ScrollControls
-              infinite
-              horizontal
-              pages={PAGE_COUNT + 1}
-              distance={1}
-              damping={reducedMotion ? 0.01 : 0.22}
-              style={{ scrollbarWidth: 'none', overscrollBehavior: 'contain', touchAction: 'pan-x pan-y' }}
-            >
-              <Scroll>
-                <ActivityPages reducedMotion={reducedMotion} />
-              </Scroll>
-            </ScrollControls>
-            <Preload all />
+            <GalleryScene reducedMotion={reducedMotion} scrollRef={scrollRef} />
           </Suspense>
         </Canvas>
+      </div>
+      )}
+      <div className="gallery-controls">
+        <button type="button" onClick={() => move(-1)} aria-label="Previous activity photos" title="Previous photos"><ChevronLeft size={20} /></button>
+        <button type="button" onClick={() => move(1)} aria-label="Next activity photos" title="Next photos"><ChevronRight size={20} /></button>
       </div>
 
       <ol className="sr-only">

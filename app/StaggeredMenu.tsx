@@ -2,6 +2,9 @@
 
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import { Menu, X } from 'lucide-react';
+
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export interface StaggeredMenuItem {
   label: string;
@@ -52,8 +55,6 @@ export default function StaggeredMenu({
   const closeTweenRef = useRef<gsap.core.Tween | null>(null);
   const busyRef = useRef(false);
 
-  const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
-
   useIsomorphicLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const panel = panelRef.current;
@@ -98,7 +99,7 @@ export default function StaggeredMenu({
     const panelStart = offscreen;
 
     if (itemEls.length) gsap.set(itemEls, { yPercent: 120, rotate: 6, opacity: 0 });
-    if (numberEls.length) gsap.set(numberEls, { ['--sm-num-opacity' as any]: 0 });
+    if (numberEls.length) gsap.set(numberEls, { '--sm-num-opacity': 0 });
     if (socialTitle) gsap.set(socialTitle, { opacity: 0 });
     if (socialLinks.length) gsap.set(socialLinks, { y: 20, opacity: 0 });
 
@@ -132,7 +133,7 @@ export default function StaggeredMenu({
       if (numberEls.length) {
         tl.to(
           numberEls,
-          { duration: 0.5, ease: 'power2.out', ['--sm-num-opacity' as any]: 1, stagger: { each: 0.05, from: 'start' } },
+          { duration: 0.5, ease: 'power2.out', '--sm-num-opacity': 1, stagger: { each: 0.05, from: 'start' } },
           itemsStart + 0.08
         );
       }
@@ -171,7 +172,8 @@ export default function StaggeredMenu({
       tl.eventCallback('onComplete', () => {
         busyRef.current = false;
       });
-      tl.play(0);
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) tl.progress(1);
+      else tl.play(0);
     } else {
       busyRef.current = false;
     }
@@ -192,7 +194,7 @@ export default function StaggeredMenu({
 
     closeTweenRef.current = gsap.to(all, {
       xPercent: offscreen,
-      duration: 0.3,
+      duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 0.3,
       ease: 'power3.in',
       overwrite: 'auto',
       onComplete: () => {
@@ -202,7 +204,7 @@ export default function StaggeredMenu({
         const numberEls = Array.from(
           panel.querySelectorAll('.sm-panel-list[data-numbering] .sm-panel-item')
         ) as HTMLElement[];
-        if (numberEls.length) gsap.set(numberEls, { ['--sm-num-opacity' as any]: 0 });
+        if (numberEls.length) gsap.set(numberEls, { '--sm-num-opacity': 0 });
 
         const socialTitle = panel.querySelector('.sm-socials-title') as HTMLElement | null;
         const socialLinks = Array.from(panel.querySelectorAll('.sm-socials-link')) as HTMLElement[];
@@ -239,6 +241,12 @@ export default function StaggeredMenu({
 
   useEffect(() => {
     if (!closeOnClickAway || !open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    panelRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    const desktop = window.matchMedia('(min-width: 1051px)');
+    const onResize = () => { if (desktop.matches) closeMenu(); };
+    desktop.addEventListener('change', onResize);
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -255,6 +263,14 @@ export default function StaggeredMenu({
       if (event.key === 'Escape') {
         closeMenu();
       }
+      if (event.key === 'Tab') {
+        const targets = panelRef.current?.querySelectorAll<HTMLElement>('a[href], button');
+        if (!targets?.length) return;
+        const first = targets[0];
+        const last = targets[targets.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -262,6 +278,9 @@ export default function StaggeredMenu({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEsc);
+      desktop.removeEventListener('change', onResize);
+      document.body.style.overflow = previousOverflow;
+      document.querySelector<HTMLButtonElement>('.sm-burger-btn')?.focus({ preventScroll: true });
     };
   }, [closeOnClickAway, open, closeMenu]);
 
@@ -276,11 +295,7 @@ export default function StaggeredMenu({
         type="button"
         title={open ? 'Close menu' : 'Menu'}
       >
-        <span className="sm-burger-icon" aria-hidden="true">
-          <span className="sm-burger-line sm-line-top" />
-          <span className="sm-burger-line sm-line-mid" />
-          <span className="sm-burger-line sm-line-bot" />
-        </span>
+        {open ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
       </button>
 
       {/* 🌟 Full-Screen Backdrop when open */}
@@ -311,7 +326,9 @@ export default function StaggeredMenu({
         ref={panelRef}
         className="sm-drawer-panel"
         data-position={position}
-        style={{ ['--sm-accent' as any]: accentColor }}
+        style={{ '--sm-accent': accentColor } as React.CSSProperties}
+        inert={!open}
+        aria-hidden={!open}
         aria-label="Navigation menu"
       >
         <div className="sm-panel-header">
@@ -321,7 +338,7 @@ export default function StaggeredMenu({
             onClick={closeMenu}
             aria-label="Close menu"
           >
-            ×
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
@@ -571,7 +588,7 @@ export default function StaggeredMenu({
           display: flex;
           align-items: baseline;
           justify-content: space-between;
-          font-size: clamp(1.6rem, 2.8vw, 2.2rem);
+          font-size: 28px;
           font-weight: 800;
           letter-spacing: -0.03em;
           color: var(--navy);
