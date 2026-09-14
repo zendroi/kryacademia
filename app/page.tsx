@@ -4,12 +4,13 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Search as SearchIcon, X, Mail, MessageCircle } from 'lucide-react';
-import { events, faqs, img, klasses, partners, programs } from './mockData';
+import { events, faqs, img, klasses, partnerLogos, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 import FoldText from './FoldText';
 import StaggeredMenu from './StaggeredMenu';
 import LogoLoop, { type LogoItem } from '@/components/LogoLoop';
 import AgendaCalendar from './AgendaCalendar';
+import ScrollExpand from '@/components/ScrollExpand';
 
 const nav = [
   ['Home', 'home'],
@@ -22,17 +23,9 @@ const nav = [
   ['Contact', 'contact'],
 ];
 
-const partnerLogoItems: LogoItem[] = partners.map((school) => ({
-  node: (
-    <span className="partner-school-mark">
-      <span className="partner-school-monogram" aria-hidden="true">
-        {school.split(' ').map((word) => word[0]).slice(0, 3).join('')}
-      </span>
-      <strong>{school}</strong>
-    </span>
-  ),
-  title: school,
-  ariaLabel: school,
+const partnerLogoItems: LogoItem[] = partners.map((school, index) => ({
+  src: partnerLogos[index],
+  alt: school,
 }));
 
 const A = () => <ArrowUpRight aria-hidden size={17} />;
@@ -348,10 +341,21 @@ function Purpose() {
         </div>
         <p>Learning should prepare young people to shape the world, not simply fit into it. Through creative, project-based experiences, students turn curiosity into skills they can use beyond the classroom.</p>
       </header>
-      <figure className="why-photo why-content reveal">
-        <NextImage src="/activities/collaboration.jpg" alt="A student and mentor working on a hands-on KRYAcademia project" width={1500} height={1060} />
-        <figcaption>Real projects. <em>Meaningful learning.</em></figcaption>
-      </figure>
+      <ScrollExpand
+        className="why-expand"
+        src="/activities/collaboration.jpg"
+        alt="A student and mentor working on a hands-on KRYAcademia project"
+        useWindowScroll
+        startWidth={72}
+        startHeight={80}
+        startRadius={8}
+        mediaZoom={1.12}
+        scrollDistance={0.45}
+        holdDistance={0}
+        overlayScrim={0.8}
+      >
+        <p>Real projects. <em>Meaningful learning.</em></p>
+      </ScrollExpand>
       <div className="why-principles why-content">
         <article>
           <span className="why-label">01 / Our background</span>
@@ -479,8 +483,8 @@ function Partners() {
         <LogoLoop
           logos={partnerLogoItems}
           speed={48}
-          logoHeight={82}
-          gap={22}
+          logoHeight={144}
+          gap={48}
           pauseOnHover
           fadeOut
           fadeOutColor="#faf9f5"
@@ -770,7 +774,7 @@ export default function Home() {
           </div>
           <div>
             <AnimatedCounter end={7} />
-            <span>Partner Schools</span>
+            <span>Partner Institution</span>
           </div>
           <div>
             <AnimatedCounter end={programs.length} />

@@ -34,21 +34,29 @@ body .klass-card h3 { font-size: 18px; overflow-wrap: anywhere; }
 .catalog-empty { padding: 36px 0; border-block: 1px solid var(--line); font-size: 14px; }
 .catalog-empty button { border: 0; background: none; color: var(--red); text-decoration: underline; }
 @keyframes klass-appear { from { opacity: .3; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-body .why-photo { margin-top: 40px; position: relative; height: 400px; }
-body .why-photo img { object-position: center 45%; }
-body .why-photo figcaption { position: absolute; bottom: 0; left: 0; padding: 60px 28px 24px; width: 100%; color: white; font-size: 28px; background: linear-gradient(transparent, rgba(8, 20, 34, .85)); }
-body .why-photo em { font-family: Georgia, serif; }
+body .why-expand { height: auto; }
+body .why-expand .scroll-expand__stage { top: 80px; height: min(64svh, 580px); min-height: 260px; }
+body .why-expand .scroll-expand__media { object-position: center 45%; }
+body .why-expand .scroll-expand__overlay { align-items: flex-start; justify-content: flex-end; text-align: left; padding: 28px 7%; }
+body .why-expand p { color: white; font-size: 28px; line-height: 1.3; }
+body .why-expand em { font-family: Georgia, serif; }
+body .partner-logo-loop .logoloop__item img { width: 180px; height: 144px; object-fit: contain; mix-blend-mode: multiply; }
+body .partner-logo-loop { mix-blend-mode: multiply; }
 body .activities { padding-block: 64px 30px; }
 body .activities .heading h2 { color: #fff; }
 body .activities > .heading { margin-bottom: 24px; }
 body .activities-gallery { height: 400px; min-height: 0; }
-body .activities-canvas { min-height: 0; }
+body .activities-canvas { min-height: 0; position: absolute; inset: 0; pointer-events: none; }
+.activities-carousel { position: absolute; inset: 0; overflow: hidden; cursor: grab; touch-action: pan-y pinch-zoom; }
+.activities-carousel:active { cursor: grabbing; }
+.activities-carousel:focus-visible { outline: 2px solid white; outline-offset: -3px; z-index: 2; }
+.activities-track { display: flex; height: 100%; touch-action: pan-y pinch-zoom; }
+.activity-slide { flex: 0 0 calc(100% / 3); min-width: 0; margin: 0; padding: 24px 14px 54px; }
+.activity-slide img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+.activities-carousel.has-canvas .activity-slide img { opacity: 0; }
 .gallery-controls { position: absolute; z-index: 3; right: 7%; bottom: 4px; display: flex; gap: 8px; }
 .gallery-controls button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #627083; background: #173051; color: white; display: grid; place-items: center; }
 .gallery-controls button:hover { background: #e8001b; }
-body .activities-fallback { display: flex; overflow-x: auto; height: 100%; padding: 24px 7% 54px; gap: 20px; scroll-snap-type: x mandatory; }
-body .activities-fallback figure, body .activities-fallback figure:not(:nth-child(2)) { display: block; flex: 0 0 36%; margin: 0; height: 100%; scroll-snap-align: center; }
-body .activities-fallback img { display: block; }
 body .contact .contact-link { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; width: fit-content; max-width: 100%; margin-top: 18px; overflow-wrap: anywhere; }
 .contact-link:hover { color: var(--red); text-decoration: underline; }
 .contact-link svg { flex-shrink: 0; }
@@ -125,19 +133,50 @@ body .contact form { border-radius: 8px; }
   body .heading h2, body .contact h2 { font-size: 36px; }
   body .faq h2 { font-size: 44px; }
   body .search h2 { font-size: 34px; }
-  body .why-photo { height: 290px; margin-top: 28px; }
-  body .why-photo figcaption { font-size: 22px; padding: 40px 18px 18px; }
+  body .why-expand .scroll-expand__stage { top: 74px; height: min(48svh, 380px); }
+  body .why-expand p { font-size: 22px; }
+  body .why-expand .scroll-expand__overlay { padding-bottom: 20px; }
+  body .partner-logo-loop .logoloop__item img { width: 144px; height: 112px; }
+  body .partner-logo-loop-shell { margin-inline: -22px; }
   body .activities { padding-top: 46px; padding-bottom: 22px; }
   body .activities-gallery { height: 320px; }
-  body .activities-fallback figure, body .activities-fallback figure:not(:nth-child(2)) { flex-basis: 82%; }
+  .activity-slide { flex-basis: 100%; padding-inline: 8%; }
   .agenda-calendar { grid-template-columns: minmax(0,1fr); gap: 28px; }
   .agenda-event { gap: 12px; padding-inline: 10px; }
   .agenda-filter { gap: 24px; }
   .institution-field { grid-column: 1 / -1; }
   body .contact .contact-link { font-size: 15px; }
-  body .program { grid-template-columns: 20px 90px minmax(0,1fr); gap: 12px; padding: 16px; border-radius: 8px; }
-  body .program > div { min-width: 0; }
-  body .program h3 { font-size: 18px; overflow-wrap: anywhere; }
+  body #klass, body #programs { padding: 48px 20px; }
+  body #klass .heading, body #programs .heading { margin-bottom: 24px; gap: 14px; }
+  body #klass .heading h2, body #programs .heading h2 { font-size: 30px; }
+  body #klass .heading p, body #programs .heading p { font-size: 13px; line-height: 1.6; }
+  body .filters { gap: 12px; margin-bottom: 22px; }
+  body .tabs { padding: 4px; }
+  body .tabs button { padding: 10px 16px; min-height: 40px; }
+  body .chips { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  body .chips button { flex-shrink: 0; min-height: 40px; padding: 8px 12px; }
+  body .catalog-status { font-size: 11px; margin-bottom: 16px; line-height: 1.5; }
+  body .klassgrid, body .programgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  body .klass-card .photo { height: 108px; }
+  body .klass-card .photo span, body .klass-card .photo b { top: 6px; right: 6px; padding: 5px 7px; font-size: 8px; }
+  body .klass-card .cardbody { padding: 12px 10px 4px; }
+  body .klass-card .cardbody > small { font-size: 9px; line-height: 1.5; }
+  body .klass-card h3 { font-size: 14px; margin: 6px 0; line-height: 1.4; }
+  body .klass-card p { font-size: 12px; line-height: 1.5; margin-block: 4px 8px; }
+  body .klass-card p, body .program p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  body .klass-card a { padding-top: 0; min-height: 40px; gap: 6px; font-size: 10px; }
+  body .klass-card a svg { flex-shrink: 0; width: 14px; }
+  body .klass-card:hover, body .program:hover { transform: none; }
+  body .program { display: flex; flex-direction: column; gap: 0; padding: 0; min-height: 0; border-radius: 8px; }
+  body .program > small { position: absolute; z-index: 1; top: 8px; left: 8px; padding: 4px 6px; font-size: 10px; background: white; border-radius: 4px; }
+  body .program > img { width: 100%; height: 108px; flex-shrink: 0; object-fit: cover; border-radius: 0; }
+  body .program > div { min-width: 0; padding: 12px 10px 6px; flex: 1; }
+  body .program > div > b { font-size: 9px; line-height: 1.5; }
+  body .program h3 { font-size: 16px; overflow-wrap: anywhere; margin: 6px 0; }
+  body .program p { font-size: 12px; line-height: 1.5; margin-block: 4px 12px; }
+  body .program > div > span { font-size: 10px; line-height: 1.5; }
+  body .program footer { gap: 0; margin-top: 10px; padding-top: 4px; align-items: stretch; }
+  body .program footer a, body .program footer button { min-height: 38px; display: flex; align-items: center; text-align: left; font-size: 9px; line-height: 1.5; }
   body .custom { flex-wrap: wrap; padding: 24px; border-radius: 8px; gap: 12px; }
   body .custom p { flex: 1; min-width: 160px; }
 }

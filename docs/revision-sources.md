@@ -22,8 +22,15 @@ Verified on 11 September 2026: https://krya.global/academia/
 
 - Montserrat is self-hosted through `@fontsource/montserrat`; Georgia is the retained editorial accent.
 - Agenda uses local calendar dates, Monday-first month alignment, a persistent animated selection disc, and a separate today outline. Event/date selection is bidirectional with no popup. All matching events receive the selected style.
-- Vertical wheel and touch scrolling remain available over the image-only activity gallery. Reduced-motion visitors receive a native horizontal photo strip.
+- Vertical wheel and touch scrolling remain available over the image-only activity gallery. Embla owns the infinite loop for both the WebGL view and the reduced-motion image view; all seven photos repeat in their original order without duplicate padding. Keyboard arrows and previous/next controls use the same engine.
 - Option 2 is intentionally untouched.
+
+## 14 September Follow-up
+
+- The hero statistic now reads "Partner Institution"; the Partner Schools section keeps its existing heading and navigation.
+- Seven original partner logos replace generated initials and written school names. Assets are unchanged downloads from `https://krya.global/wp-content/uploads/2025/09/`: `9.jpg` (Elyon), `4.jpg` (Xin Zhong), `5.jpg` (SMA Negeri 5 Surabaya), `92.png` (Petra), `81.png` (Sampoerna Academy), `6.jpg` (Gloria), and `8.jpg` (Dharma Mulya). Verified against the official School Collaboration section on 14 September 2026.
+- Why KRYAcademia uses `@react-bits/ScrollExpand-TS-CSS` from https://reactbits.dev/animations/scroll-expand. Adaptations: page scrolling, a bounded sticky stage, fixed font sizes, Next Image, and a fully expanded static view with no extra scroll distance for reduced motion.
+- Mobile Klass and Programs use compact two-column layouts. Program photos sit above the text on mobile only. Descriptions are three-line previews; complete source copy, titles, and both program inquiry actions are retained.
 
 ## Verification
 
