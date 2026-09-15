@@ -51,47 +51,16 @@ img {
 }
 
 /* 🌟 Cursor Spotlight & Ambient Orbs */
-.cursor-spotlight {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 600px;
-  height: 600px;
-  margin-top: -300px;
-  margin-left: -300px;
-  background: radial-gradient(circle, rgba(232, 0, 27, 0.08) 0%, rgba(23, 48, 81, 0.04) 45%, transparent 70%);
-  pointer-events: none;
-  z-index: 9999;
-  border-radius: 50%;
-  transition: transform 0.15s ease-out, opacity 0.3s ease;
-  mix-blend-mode: multiply;
+.fold-text, .fold-text-word, .fold-text-character { display: inline-block; }
+.fold-text-word { white-space: nowrap; }
+.fold-text-character {
+  opacity: 0;
+  transform: perspective(700px) rotateX(-88deg);
+  transform-origin: top;
+  transition: opacity .45s ease, transform .65s cubic-bezier(.16,1,.3,1);
 }
-
-.ambient-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  opacity: 0.5;
-  animation: ambientOrb 18s ease-in-out infinite alternate;
-}
-
-.ambient-orb-1 {
-  width: 450px;
-  height: 450px;
-  background: radial-gradient(circle, rgba(232, 0, 27, 0.25), transparent);
-  top: -100px;
-  right: -50px;
-}
-
-.ambient-orb-2 {
-  width: 550px;
-  height: 550px;
-  background: radial-gradient(circle, rgba(23, 48, 81, 0.2), transparent);
-  bottom: 10%;
-  left: -150px;
-  animation-delay: -9s;
-}
+.fold-text.is-visible .fold-text-character { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .fold-text-character { opacity: 1; transform: none; transition: none; } }
 
 /* 🌟 Navbar Glassmorphism */
 .navbar {
@@ -921,25 +890,6 @@ img {
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
-.why-lens-experience {
-  position: relative;
-  width: 100%;
-  height: 500px;
-  overflow: hidden;
-  background: var(--page-background);
-}
-.why-lens-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background: var(--page-background);
-}
-.why-lens-canvas canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
 .why-principles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1000,16 +950,6 @@ img {
   font-size: 18px;
   font-weight: 500;
   line-height: 1.7;
-}
-.why-lens-fallback {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 16px;
-  padding: 32px 7%;
-  background: var(--page-background);
-  color: var(--navy);
 }
 
 /* 🌟 Programs Section */
@@ -1959,7 +1899,6 @@ img {
     gap: 24px;
   }
   .purpose h2 { font-size: 32px; }
-  .why-lens-experience { height: 400px; }
   .why-principles { padding-block: 32px 44px; }
   .why-principles h3 { font-size: 23px; }
   .why-sdgs { padding-block: 44px; }
