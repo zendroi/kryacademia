@@ -30,6 +30,12 @@ const partnerLogoItems: LogoItem[] = partners.map((school, index) => ({
 
 const A = () => <ArrowUpRight aria-hidden size={17} />;
 
+const heroSlides = [
+  { type: 'Featured Klass', title: klasses[4][0], meta: `${klasses[4][1]} · ${klasses[4][2]}`, image: klasses[4][4], alt: klasses[4][5] },
+  { type: 'Upcoming Agenda', title: events[0][1], meta: `${events[0][0]} Sep · ${events[0][3]}`, image: img.hero, alt: 'Students collaborating during a KRYAcademia agenda' },
+  { type: 'Featured Program', title: programs[1][0], meta: `${programs[1][1]} · ${programs[1][2]}`, image: programs[1][3], alt: programs[1][4] },
+];
+
 function AnimatedCounter({ end, duration = 1500 }: { end: number; duration?: number }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLHeadingElement>(null);
@@ -232,6 +238,16 @@ function Search({ close }: { close: () => void }) {
 }
 
 function Hero() {
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const interval = window.setInterval(() => setActiveSlide(current => (current + 1) % heroSlides.length), 5000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const slide = heroSlides[activeSlide];
+
   return (
     <section id="home" className="hero">
       <div className="hero-copy">
@@ -254,18 +270,24 @@ function Hero() {
       </div>
 
       <div className="hero-art">
-        <div>
-          <NextImage src={img.hero} alt="Students collaborating in a creative learning activity" width={1500} height={1060} priority />
+        <div className="hero-art-media">
+          {heroSlides.map((item, index) => (
+            <NextImage
+              className={index === activeSlide ? 'active' : ''}
+              src={item.image}
+              alt={item.alt}
+              fill
+              sizes="(max-width: 720px) 100vw, 52vw"
+              priority={index === 0}
+              key={`${item.type}-${item.title}`}
+            />
+          ))}
         </div>
-        <i>IDEA → MAKE → IMPACT</i>
-        <aside>
-          <small>Sample agenda</small>
-          <strong>
-            Young Makers
-            <br />
-            Open Class
-          </strong>
-          <span>08 Sep · Online</span>
+        <i>INSPIRING → CREATING → DEDICATING</i>
+        <aside key={slide.title} className="hero-art-card">
+          <small>{slide.type}</small>
+          <strong>{slide.title}</strong>
+          <span>{slide.meta}</span>
         </aside>
       </div>
 
