@@ -608,7 +608,7 @@ function Contact() {
           collaboration opportunity.
         </p>
         <a className="contact-link" href="mailto:aha@krya.global"><Mail size={20} aria-hidden />aha@krya.global</a>
-        <a className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362</a>
+        <a className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362 (Admin KRYAcademia)</a>
       </aside>
       <form onSubmit={submit} noValidate>
         {status === 'success' ? (

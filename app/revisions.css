@@ -58,7 +58,7 @@ body .activities-canvas { min-height: 0; position: absolute; inset: 0; pointer-e
 .gallery-controls button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #627083; background: #173051; color: white; display: grid; place-items: center; }
 .gallery-controls button:hover { background: #e8001b; }
 body .contact .contact-link { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; width: fit-content; max-width: 100%; margin-top: 18px; overflow-wrap: anywhere; }
-.contact-link:hover { color: var(--red); text-decoration: underline; }
+.contact-link:hover { color: #2563eb; text-decoration: underline; }
 .contact-link svg { flex-shrink: 0; }
 .institution-field { position: relative; min-width: 0; }
 .institution-field label { display: block; }

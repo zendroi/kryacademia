@@ -17,7 +17,7 @@ export default function LogoLoop({
   const style = {
     '--logoloop-gap': `${gap}px`,
     '--logoloop-logo-height': `${logoHeight}px`,
-    '--logoloop-duration': `${Math.max(12, logos.length * 3200 / Math.max(speed, 1))}s`,
+    '--logoloop-duration': `${Math.max(12, logos.length * 200 / Math.max(speed, 1))}s`,
   } as CSSProperties;
   const classes = ['logoloop', pauseOnHover && 'pause-on-hover', fadeOut && 'fade', scaleOnHover && 'scale-on-hover', className]
     .filter(Boolean).join(' ');
