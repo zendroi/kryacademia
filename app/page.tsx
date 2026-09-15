@@ -11,6 +11,7 @@ import StaggeredMenu from './StaggeredMenu';
 import LogoLoop, { type LogoItem } from '@/components/LogoLoop';
 import AgendaCalendar from './AgendaCalendar';
 import ScrollExpand from '@/components/ScrollExpand';
+import BasicAccordion from '@/components/smoothui/basic-accordion';
 
 const nav = [
   ['Home', 'home'],
@@ -525,8 +526,6 @@ function Partners() {
 }
 
 function FAQ() {
-  const [open, setOpen] = useState(0);
-
   return (
     <section id="faq" className="section faq">
       <aside>
@@ -539,18 +538,11 @@ function FAQ() {
         <p>Can’t find what you need? Our team is ready to help.</p>
         <a href="#contact">Ask us directly →</a>
       </aside>
-      <div>
-        {faqs.map((x, i) => (
-          <article className={open === i ? 'open' : ''} key={x[0]}>
-            <button onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i}>
-              <small>0{i + 1}</small>
-              <strong>{x[0]}</strong>
-              <i>{open === i ? '−' : '+'}</i>
-            </button>
-            <p>{x[1]}</p>
-          </article>
-        ))}
-      </div>
+      <BasicAccordion
+        className="faq-accordion"
+        defaultExpandedIds={[0]}
+        items={faqs.map(([title, content], id) => ({ id, title, content: <p>{content}</p> }))}
+      />
     </section>
   );
 }

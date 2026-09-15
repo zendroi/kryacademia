@@ -1509,55 +1509,32 @@ img {
   color: var(--muted);
 }
 
-.faq article {
-  border-top: 1px solid #cbd1d6;
-  overflow: hidden;
-  transition: background 0.3s ease;
+.faq-accordion {
+  counter-reset: faq-item;
+  align-self: start;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
-.faq article button {
-  width: 100%;
-  border: 0;
-  background: none;
-  padding: 24px 0;
+.faq-accordion > div { border-top: 1px solid #cbd1d6; }
+.faq-accordion > div:last-child { border-bottom: 1px solid #cbd1d6; }
+.faq-accordion button {
+  counter-increment: faq-item;
   display: grid;
   grid-template-columns: 42px 1fr 30px;
+  width: 100%;
+  padding: 24px 0;
+  border: 0;
+  background: transparent;
+  color: var(--navy);
   text-align: left;
-  align-items: center;
 }
-
-.faq article button small {
-  color: var(--red);
-  font-weight: 800;
-}
-
-.faq article button strong {
-  font-size: 17px;
-  color: var(--navy);
-}
-
-.faq article button i {
-  text-align: right;
-  font-style: normal;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--navy);
-}
-
-.faq article p {
-  max-height: 0;
-  margin: 0 42px;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.8;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.faq article.open p {
-  max-height: 140px;
-  padding-bottom: 26px;
-}
+.faq-accordion button::before { content: '0' counter(faq-item); color: var(--red); font-size: 12px; font-weight: 800; }
+.faq-accordion button h3 { margin: 0; font-size: 17px; line-height: 1.45; }
+.faq-accordion button:hover { background: rgba(23, 48, 81, .04); }
+.faq-accordion [role='region'] > div { padding: 0 42px 26px; border: 0; background: transparent; }
+.faq-accordion [role='region'] p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
 
 /* 🌟 Contact Form Section */
 .contact {
