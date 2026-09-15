@@ -1994,7 +1994,8 @@ img {
 .contact .form-field small { color: var(--red); font-size: 9px; }
 .contact .form-field > div { width: 100%; }
 .contact .form-field input:not([type='hidden']) { width: 100%; padding: 16px 12px 10px; }
-.contact .form-dropdown button { border-color: #b8c1ca; border-radius: 8px; background: #fff; }
+.contact .form-dropdown { display: block; width: 100%; }
+.contact .form-dropdown button { width: 100%; border-color: #b8c1ca; border-radius: 8px; background: #fff; }
 .contact .form-field.bad .form-dropdown button { border-color: var(--red); }
 
 @theme inline {
