@@ -16,7 +16,7 @@ export function InteractiveHoverButton({
           {children}
         </span>
       </div>
-      <div className="absolute inset-0 z-10 flex translate-x-full items-center justify-center gap-2 text-white opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+      <div aria-hidden="true" className="absolute inset-0 z-10 flex translate-x-full items-center justify-center gap-2 text-white opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
         <span>{children}</span>
         <ArrowRight />
       </div>

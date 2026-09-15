@@ -1585,6 +1585,8 @@ img {
 }
 
 .contact form {
+  --animated-input-active: var(--red);
+  --animated-input-idle: var(--navy);
   background: white;
   color: var(--navy);
   border-radius: 28px;
@@ -1611,7 +1613,7 @@ img {
   color: var(--red);
 }
 
-.contact input, .contact select, .contact textarea {
+.contact select, .contact textarea {
   border: 0;
   border-bottom: 1.5px solid #b8c1ca;
   outline: 0;
@@ -1620,7 +1622,7 @@ img {
   transition: border-color 0.3s ease;
 }
 
-.contact input:focus, .contact select:focus, .contact textarea:focus {
+.contact select:focus, .contact textarea:focus {
   border-color: var(--red);
 }
 
@@ -1993,10 +1995,15 @@ img {
 
 .contact .form-field small { color: var(--red); font-size: 9px; }
 .contact .form-field > div { width: 100%; }
-.contact .form-field input:not([type='hidden']) { width: 100%; padding: 16px 12px 10px; }
+.contact .form-field input:not([type='hidden']) { width: 100%; padding: 16px 12px 10px; border: 0; outline: 0; background: transparent; box-shadow: none; color: var(--navy); }
+.contact .form-field input:not([type='hidden']):focus, .contact .form-field input:not([type='hidden']):focus-visible { border: 0; outline: 0; box-shadow: none; }
 .contact .form-dropdown { display: block; width: 100%; }
-.contact .form-dropdown button { width: 100%; border-color: #b8c1ca; border-radius: 8px; background: #fff; }
+.contact .form-dropdown button { width: 100%; border-color: transparent; border-radius: 8px; background: var(--navy); color: #fff; }
+.contact .form-dropdown button:hover, .contact .form-dropdown button:focus-visible { background: var(--navy-dark); box-shadow: 0 0 0 2px var(--red); }
 .contact .form-field.bad .form-dropdown button { border-color: var(--red); }
+.smooth-dropdown-menu { border-color: rgba(255, 255, 255, 0.16); background: var(--navy); color: #fff; }
+.smooth-dropdown-option { background: transparent; color: #fff; }
+.smooth-dropdown-option:hover, .smooth-dropdown-option.is-focused, .smooth-dropdown-option.is-selected { background: var(--red); color: #fff; }
 
 @theme inline {
   --color-brand: var(--brand, oklch(0.72 0.2 352.53));

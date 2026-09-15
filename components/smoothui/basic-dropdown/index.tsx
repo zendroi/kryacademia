@@ -2,7 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const ROTATION_ANGLE_OPEN = 180;
@@ -28,6 +28,7 @@ export default function BasicDropdown({
   className = "",
 }: BasicDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const listId = useId();
   const [selectedItem, setSelectedItem] = useState<DropdownItem | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -159,7 +160,7 @@ export default function BasicDropdown({
                 ? { opacity: 1 }
                 : { opacity: 1, scaleY: 1, y: 0 }
             }
-            className="fixed z-50 origin-top rounded-lg border bg-background shadow-lg"
+            className="smooth-dropdown-menu fixed z-50 origin-top overflow-hidden rounded-lg border shadow-lg"
             exit={
               shouldReduceMotion
                 ? { opacity: 0, transition: { duration: 0 } }
@@ -189,7 +190,7 @@ export default function BasicDropdown({
             <ul
               aria-label="Dropdown options"
               className="py-2"
-              id="dropdown-items"
+              id={listId}
             >
               {items.map((item, index) => (
                 <motion.li
@@ -224,11 +225,11 @@ export default function BasicDropdown({
                 >
                   <button
                     aria-label={item.label}
-                    className={`flex min-h-[44px] w-full items-center px-4 py-2 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                    className={`smooth-dropdown-option flex min-h-[44px] w-full items-center px-4 py-2 text-left text-sm transition-colors focus-visible:outline-none ${
                       selectedItem?.id === item.id
-                        ? "font-medium text-brand"
+                        ? "is-selected font-medium"
                         : ""
-                    } ${index === focusedIndex ? "bg-muted" : ""}`}
+                    } ${index === focusedIndex ? "is-focused" : ""}`}
                     onClick={() => handleItemSelect(item)}
                     onMouseEnter={() => setFocusedIndex(index)}
                     type="button"
@@ -284,11 +285,11 @@ export default function BasicDropdown({
     <>
       <div className={`relative inline-block ${className}`} ref={dropdownRef}>
         <button
+          aria-controls={listId}
           aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-label={selectedItem ? `${label}: ${selectedItem.label}` : label}
           className="flex min-h-[44px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border bg-background px-4 py-2 text-left transition-colors hover:bg-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          id="dropdown-button"
           onClick={handleToggle}
           ref={buttonRef}
           type="button"

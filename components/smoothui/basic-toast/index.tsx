@@ -61,6 +61,7 @@ export default function BasicToast({
     <AnimatePresence>
       {visible ? (
         <motion.div
+          aria-live="polite"
           animate={
             shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, x: 0 }
           }
@@ -80,6 +81,7 @@ export default function BasicToast({
               ? { opacity: 1 }
               : { opacity: 0, scale: 0.8, x: 50 }
           }
+          role="status"
           transition={
             shouldReduceMotion
               ? { duration: 0 }
@@ -89,6 +91,7 @@ export default function BasicToast({
           <div className="flex-shrink-0">{toastIcons[type]}</div>
           <p className="flex-1 text-sm">{message}</p>
           <button
+            aria-label="Close notification"
             className="flex-shrink-0 cursor-pointer rounded-full p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/10"
             onClick={() => {
               setVisible(false);
