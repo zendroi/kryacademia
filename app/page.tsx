@@ -12,6 +12,11 @@ import LogoLoop, { type LogoItem } from '@/components/LogoLoop';
 import AgendaCalendar from './AgendaCalendar';
 import ScrollExpand from '@/components/ScrollExpand';
 import BasicAccordion from '@/components/smoothui/basic-accordion';
+import AnimatedInput from '@/components/smoothui/animated-input';
+import BasicDropdown, { type DropdownItem } from '@/components/smoothui/basic-dropdown';
+import BasicToast from '@/components/smoothui/basic-toast';
+import Checkbox from '@/components/smoothui/checkbox';
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
 const nav = [
   ['Home', 'home'],
@@ -558,12 +563,35 @@ function Field({ bad, name, label, children }: { bad: string[]; name: string; la
   );
 }
 
+function AnimatedField({ bad, name, label, className = '', ...props }: { bad: string[]; name: string; label: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'defaultValue' | 'onChange' | 'value'>) {
+  return (
+    <div className={`form-field ${className} ${bad.includes(name) ? 'bad' : ''}`}>
+      <AnimatedInput {...props} name={name} label={`${label} *`} />
+      {bad.includes(name) && <small>This field is required.</small>}
+    </div>
+  );
+}
+
+function DropdownField({ bad, name, label, value, items, onChange, className = '' }: { bad: string[]; name: string; label: string; value: string; items: string[]; onChange: (value: string) => void; className?: string }) {
+  const options: DropdownItem[] = items.map((item) => ({ id: item, label: item }));
+  return (
+    <div className={`form-field ${className} ${bad.includes(name) ? 'bad' : ''}`}>
+      <span>{label} <b>*</b></span>
+      <BasicDropdown key={`${name}-${value}`} className="form-dropdown" label={value || 'Select one'} items={options} onChange={(item) => onChange(String(item.id))} />
+      <input name={name} type="hidden" value={value} />
+      {bad.includes(name) && <small>This field is required.</small>}
+    </div>
+  );
+}
+
 function Contact() {
   const [type, setType] = useState('');
   const [program, setProgram] = useState('');
+  const [mode, setMode] = useState('Online');
   const [status, setStatus] = useState('idle');
   const [bad, setBad] = useState<string[]>([]);
   const [affiliation, setAffiliation] = useState('');
+  const [consent, setConsent] = useState(false);
 
   useEffect(() => {
     const h = (e: Event) => {
@@ -572,6 +600,7 @@ function Contact() {
       setProgram(d.program || '');
       setStatus('idle');
       setBad([]);
+      setConsent(false);
       if (d.type === 'School Partnership') setAffiliation('Institution');
     };
     window.addEventListener('inquiry', h);
@@ -603,116 +632,51 @@ function Contact() {
         <a className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362 (Admin KRYAcademia)</a>
       </aside>
       <form onSubmit={submit} noValidate>
-        {status === 'success' ? (
-          <div className="success">
-            <b>✓</b>
-            <h3>Thank you for reaching out.</h3>
-            <p>This prototype inquiry has been captured locally. No information was sent.</p>
-            <button type="button" onClick={() => setStatus('idle')}>
-              Send another inquiry
-            </button>
-          </div>
-        ) : (
-          <>
-            <Field bad={bad} name="name" label="Full Name" />
-            <Field bad={bad} name="email" label="Email Address">
-              <input name="email" type="email" />
-            </Field>
-            <Field bad={bad} name="phone" label="WhatsApp Number">
-              <input name="phone" placeholder="+62 812 3456 7890" />
-            </Field>
-            <Field bad={bad} name="place" label="City / Country" />
-            <Field bad={bad} name="type" label="Inquiry Type">
-              <select name="type" value={type} onChange={(e) => { setType(e.target.value); setProgram(''); }}>
-                <option value="">Select one</option>
-                {['Workshop', 'Klass', 'Program', 'School Partnership', 'Event', 'Other'].map((x) => (
-                  <option key={x}>{x}</option>
-                ))}
-              </select>
-            </Field>
+        {status === 'success' && <BasicToast type="success" message="Inquiry saved in this prototype. No information was sent." onClose={() => setStatus('idle')} />}
+            <AnimatedField bad={bad} name="name" label="Full Name" autoComplete="name" />
+            <AnimatedField bad={bad} name="email" label="Email Address" type="email" autoComplete="email" />
+            <AnimatedField bad={bad} name="phone" label="WhatsApp Number" type="tel" placeholder="+62 812 3456 7890" autoComplete="tel" />
+            <AnimatedField bad={bad} name="place" label="City / Country" autoComplete="address-level2" />
+            <DropdownField bad={bad} name="type" label="Inquiry Type" value={type} items={['Workshop', 'Klass', 'Program', 'School Partnership', 'Event', 'Other']} onChange={(value) => { setType(value); setProgram(''); }} />
             {affiliation === 'Institution' ? (
               <div className="institution-field">
-                <Field bad={bad} name="institution" label="Institution Name">
-                  <input name="institution" placeholder="School or institution name" autoComplete="organization" autoFocus />
-                </Field>
+                <AnimatedField bad={bad} name="institution" label="Institution Name" placeholder="School or institution name" autoComplete="organization" autoFocus />
                 <input type="hidden" name="affiliation" value="Institution" />
                 <button className="institution-reset" type="button" onClick={() => setAffiliation('')} aria-label="Change institution type" title="Change institution type"><X size={17} /></button>
               </div>
             ) : (
-              <Field bad={bad} name="affiliation" label="Institution">
-                <select name="affiliation" value={affiliation} onChange={(e) => setAffiliation(e.target.value)}>
-                  <option value="">Select one</option>
-                  <option>Institution</option>
-                  <option>Parent</option>
-                  <option>Non-institution</option>
-                </select>
-              </Field>
+              <DropdownField bad={bad} name="affiliation" label="Institution" value={affiliation} items={['Institution', 'Parent', 'Non-institution']} onChange={setAffiliation} />
             )}
             {type === 'Klass' && (
               <>
-                <label>
-                  <span>Klass of Interest</span>
-                  <select name="klass" value={program} onChange={(e) => setProgram(e.target.value)}>
-                    <option value="">Select a Klass</option>
-                    {klasses.map((x) => (
-                      <option key={x[0]}>{x[0]}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Preferred Mode</span>
-                  <select name="mode">
-                    <option>Online</option>
-                    <option>Onsite</option>
-                  </select>
-                </label>
+                <DropdownField bad={bad} name="klass" label="Klass of Interest" value={program} items={klasses.map((x) => x[0])} onChange={setProgram} />
+                <DropdownField bad={bad} name="mode" label="Preferred Mode" value={mode} items={['Online', 'Onsite']} onChange={setMode} />
               </>
             )}
             {type === 'Program' && (
-              <label className="full">
-                <span>Program of Interest</span>
-                <select value={program} onChange={(e) => setProgram(e.target.value)}>
-                  <option value="">Select a program</option>
-                  {programs.map((x) => (
-                    <option key={x[0]}>{x[0]}</option>
-                  ))}
-                  <option>Custom Program</option>
-                </select>
-              </label>
+              <DropdownField bad={bad} className="full" name="program" label="Program of Interest" value={program} items={[...programs.map((x) => x[0]), 'Custom Program']} onChange={setProgram} />
             )}
             {type === 'School Partnership' && (
-              <>
-                <label>
-                  <span>School Level</span>
-                  <input />
-                </label>
-              </>
+              <AnimatedField bad={bad} name="school-level" label="School Level" />
             )}
             {['Workshop', 'Event', 'Other'].includes(type) && (
-              <label className="full">
-                <span>
-                  {type === 'Workshop'
+              <AnimatedField bad={bad} className="full" name="request" label={type === 'Workshop'
                     ? 'Workshop Topic or Request'
                     : type === 'Event'
                     ? 'Event of Interest'
-                    : 'Please Specify'}
-                </span>
-                <input />
-              </label>
+                    : 'Please Specify'} />
             )}
             <Field bad={bad} name="message" label="Message">
               <textarea name="message" rows={4} />
             </Field>
             <label className={'consent ' + (bad.includes('consent') ? 'bad' : '')}>
-              <input type="checkbox" name="consent" />
+              <Checkbox id="consent" name="consent" value="yes" checked={consent} onCheckedChange={setConsent} required />
               <span>I agree that KRYAcademia may use this information to respond. *</span>
             </label>
-            <button className="submit" disabled={status === 'loading'}>
-              {status === 'loading' ? 'Sending…' : 'Send Inquiry ↗'}
-            </button>
+            <InteractiveHoverButton className="submit" disabled={status === 'loading'} type="submit">
+              {status === 'loading' ? 'Sending…' : 'Send Inquiry'}
+            </InteractiveHoverButton>
             <p className="note">UI prototype only — no information is sent to a server.</p>
-          </>
-        )}
       </form>
     </section>
   );
