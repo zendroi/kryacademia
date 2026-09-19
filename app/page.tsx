@@ -36,11 +36,14 @@ const partnerLogoItems: LogoItem[] = partners.map((school, index) => ({
 
 const A = () => <ArrowUpRight aria-hidden size={17} />;
 
-const heroSlides = [
-  { type: 'Featured Klass', title: klasses[4][0], meta: `${klasses[4][1]} · ${klasses[4][2]}`, image: klasses[4][4], alt: klasses[4][5] },
-  { type: 'Upcoming Agenda', title: events[0][1], meta: `${events[0][0]} Sep · ${events[0][3]}`, image: img.hero, alt: 'Students collaborating during a KRYAcademia agenda' },
-  { type: 'Featured Program', title: programs[1][0], meta: `${programs[1][1]} · ${programs[1][2]}`, image: programs[1][3], alt: programs[1][4] },
-];
+const agendaImages = [img.hero, img.maker, img.animation, img.purpose];
+const heroSlides = events.map((event, index) => ({
+  type: 'Upcoming Agenda',
+  title: event[1],
+  meta: `${event[0]} Sep · ${event[3]} · ${event[4]}`,
+  image: agendaImages[index % agendaImages.length],
+  alt: `${event[1]} at KRYAcademia`,
+}));
 
 function AnimatedCounter({ end, duration = 1500 }: { end: number; duration?: number }) {
   const [count, setCount] = useState(0);
@@ -341,7 +344,7 @@ function Klass() {
             <div className="photo">
               <NextImage src={x[4]} alt={x[0]} width={800} height={600} />
               {x[3] && <b>{x[3]}</b>}
-              <span>{x[1] === 'To confirm' ? 'Mode to confirm' : x[1]}</span>
+              <span>{x[1]}</span>
             </div>
             <div className="cardbody">
               <small>{x[2]}</small>
@@ -422,6 +425,14 @@ function Purpose() {
 }
 
 function Programs() {
+  const [selected, setSelected] = useState<number | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const activeProgram = selected === null ? null : programs[selected];
+
+  useEffect(() => {
+    if (activeProgram && !dialog.current?.open) dialog.current?.showModal();
+  }, [activeProgram]);
+
   const req = (p: string) => {
     dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'Program', program: p } }));
     window.location.assign('#contact');
@@ -437,7 +448,7 @@ function Programs() {
       />
       <div className="programgrid">
         {programs.map((x, i) => (
-          <article className="program reveal group" key={x[0]}>
+          <button type="button" className="program reveal group" key={x[0]} onClick={() => setSelected(i)} aria-haspopup="dialog">
             <small>0{i + 1}</small>
             <NextImage src={x[3]} alt={x[0]} width={600} height={424} />
             <div>
@@ -445,14 +456,28 @@ function Programs() {
               <h3>{x[0]}</h3>
               <p>{x[4]}</p>
               <span>◉ {x[2]}</span>
-              <footer>
-                <a href="#contact">Explore Program</a>
-                <button onClick={() => req(x[0])}>Request This Program ↗</button>
-              </footer>
             </div>
-          </article>
+          </button>
         ))}
       </div>
+      <dialog ref={dialog} className="program-dialog" aria-labelledby="program-dialog-title" aria-describedby="program-dialog-description" onClose={() => setSelected(null)} onClick={(event) => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
+      }}>
+        {activeProgram && (
+          <div>
+            <button className="program-dialog-close" type="button" onClick={() => dialog.current?.close()} aria-label="Close program details" title="Close"><X size={20} /></button>
+            <NextImage src={activeProgram[3]} alt="" width={760} height={430} />
+            <small>Program details</small>
+            <h3 id="program-dialog-title">{activeProgram[0]}</h3>
+            <p id="program-dialog-description">{activeProgram[4]}</p>
+            <dl>
+              <div><dt>Designed for</dt><dd>{activeProgram[1]}</dd></div>
+              <div><dt>Format</dt><dd>{activeProgram[2]}</dd></div>
+            </dl>
+            <button className="program-dialog-action" type="button" onClick={() => { dialog.current?.close(); req(activeProgram[0]); }}>Request This Program <A /></button>
+          </div>
+        )}
+      </dialog>
       <aside className="custom">
         <b>✦</b>
         <p>

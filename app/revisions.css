@@ -67,6 +67,21 @@ body .institution-field input { width: 100%; padding-right: 42px; }
 .institution-reset { position: absolute; right: 6px; top: 31px; width: 32px; height: 32px; display: grid; place-items: center; background: none; border: none; color: var(--navy); }
 .institution-reset:hover { color: var(--red); }
 body .contact form { border-radius: 8px; }
+.program { border: 0; color: var(--navy); font: inherit; text-align: left; cursor: pointer; }
+.program:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+.program-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100svh - 32px); padding: 0; border: 0; border-radius: 8px; color: var(--navy); box-shadow: 0 30px 90px rgba(7, 19, 36, .35); }
+.program-dialog::backdrop { background: rgba(7, 19, 36, .72); backdrop-filter: blur(5px); }
+.program-dialog > div { position: relative; padding: 28px; }
+.program-dialog img { display: block; width: calc(100% + 56px); height: 230px; margin: -28px -28px 24px; object-fit: cover; }
+.program-dialog > div > small { color: var(--red); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.program-dialog h3 { margin: 8px 0 12px; font-size: 30px; }
+.program-dialog p { color: var(--muted); font-size: 14px; line-height: 1.75; }
+.program-dialog dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 22px 0; }
+.program-dialog dl div { padding: 14px; background: var(--pale); border-radius: 6px; }
+.program-dialog dt { margin-bottom: 5px; color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; }
+.program-dialog dd { margin: 0; font-size: 12px; font-weight: 700; }
+.program-dialog-close { position: absolute; z-index: 1; top: 12px; right: 12px; width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 50%; background: white; color: var(--navy); }
+.program-dialog-action { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 48px; border: 0; border-radius: 99px; background: var(--red); color: white; font-size: 11px; font-weight: 800; text-transform: uppercase; }
 .agenda-calendar { display: grid; grid-template-columns: minmax(320px, .8fr) minmax(0, 1.2fr); gap: 48px; align-items: start; }
 .agenda-month { background: var(--pale); padding: 28px; border-radius: 8px; }
 .agenda-month header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -77,7 +92,7 @@ body .contact form { border-radius: 8px; }
 .month-controls button:hover { color: var(--red); }
 .agenda-week, .agenda-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; }
 .agenda-week { margin-top: 22px; padding-block: 10px; color: var(--muted); font-size: 11px; font-weight: 700; }
-.agenda-days { position: relative; grid-auto-rows: 44px; isolation: isolate; }
+.agenda-days { --agenda-row-height: 44px; --agenda-disc-radius: 17px; position: relative; grid-auto-rows: var(--agenda-row-height); isolation: isolate; }
 .selected-day-disc { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: var(--navy); pointer-events: none; transition: left .45s cubic-bezier(.22,.8,.25,1), top .45s cubic-bezier(.22,.8,.25,1), opacity .2s; }
 .agenda-days button { position: relative; display: grid; place-items: center; padding: 0; border: none; background: transparent; color: var(--ink); font-size: 12px; font-weight: 600; }
 .agenda-days button > span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid transparent; transition: color .3s, background .3s; }
@@ -141,9 +156,29 @@ body .contact form { border-radius: 8px; }
   body .activities { padding-top: 46px; padding-bottom: 22px; }
   body .activities-gallery { height: 320px; }
   .activity-slide { flex-basis: 100%; padding-inline: 8%; }
-  .agenda-calendar { grid-template-columns: minmax(0,1fr); gap: 28px; }
-  .agenda-event { gap: 12px; padding-inline: 10px; }
-  .agenda-filter { gap: 24px; }
+  .agenda-calendar { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 10px; }
+  .agenda-month { padding: 12px 8px; }
+  .agenda-month header { align-items: flex-start; }
+  .agenda-month header small, .today-legend { display: none; }
+  .agenda-month h3 { margin-top: 0; font-size: 13px; }
+  .month-controls { gap: 2px; }
+  .month-controls button { width: 26px; height: 26px; }
+  .agenda-week { margin-top: 8px; padding-block: 6px; font-size: 8px; }
+  .agenda-days { --agenda-row-height: 30px; --agenda-disc-radius: 12px; }
+  .selected-day-disc { top: var(--agenda-mobile-top) !important; }
+  .agenda-days button { font-size: 9px; }
+  .agenda-days button > span, .selected-day-disc { width: 24px; height: 24px; }
+  .agenda-month footer { justify-content: flex-end; margin-top: 6px; padding-top: 6px; font-size: 9px; }
+  .agenda-filter { gap: 12px; overflow-x: auto; }
+  .agenda-filter button { flex: 0 0 auto; padding-bottom: 9px; font-size: 9px; }
+  .agenda-selection { align-items: flex-start; min-height: 0; padding: 6px 0; font-size: 9px; }
+  .agenda-event-rows { max-height: 270px; overflow-y: auto; }
+  .agenda-event { grid-template-columns: 30px minmax(0,1fr); gap: 6px; padding: 10px 4px; }
+  .agenda-event > svg { display: none; }
+  .event-date strong { font-size: 20px; }
+  .event-date small, .event-details small, .event-details > span { font-size: 8px; }
+  .event-details { gap: 4px; }
+  .event-details strong { font-size: 10px; line-height: 1.3; }
   .institution-field { grid-column: 1 / -1; }
   body .contact .contact-link { font-size: 15px; }
   body #klass, body #programs { padding: 48px 20px; }
@@ -187,9 +222,9 @@ body .contact form { border-radius: 8px; }
   body .navact { gap: 8px; }
   body .heading h2, body .contact h2 { font-size: 30px; }
   body .tabs button { padding-inline: 16px; }
-  .agenda-month { padding: 16px; }
-  .agenda-month h3 { font-size: 16px; }
-  .agenda-filter { gap: 18px; }
+  .agenda-month { padding: 10px 6px; }
+  .agenda-month h3 { font-size: 12px; }
+  .agenda-filter { gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   body .selected-day-disc, body .agenda-event, body .klass-card { transition: none; animation: none; }

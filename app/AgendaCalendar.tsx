@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { agendaEvents, dateKey, eventsOnDate, monthCells, parseDate } from './agendaData';
 
@@ -24,10 +24,12 @@ export default function AgendaCalendar() {
   const cells = monthCells(month);
   const selectedIndex = cells.indexOf(selected);
   const matching = eventsOnDate(agendaEvents, selected);
-  const visibleEvents = agendaEvents.filter((event) => event.date.startsWith(month) && (
-    tab === 'All' || (tab === 'Upcoming' && event.date > today) ||
-    (tab === 'Today' && event.date === today) || (tab === 'Past' && event.date < today)
-  ));
+  const visibleEvents = agendaEvents
+    .filter((event) => event.date.startsWith(month) && (
+      tab === 'All' || (tab === 'Upcoming' && event.date > today) ||
+      (tab === 'Today' && event.date === today) || (tab === 'Past' && event.date < today)
+    ))
+    .sort((a, b) => Number(b.date === selected) - Number(a.date === selected));
 
   function select(date: string) {
     setSelected(date);
@@ -66,9 +68,10 @@ export default function AgendaCalendar() {
         <div className="agenda-days" ref={days} role="group" aria-label="Choose a date">
           <span className="selected-day-disc" aria-hidden="true" style={{
             opacity: selectedIndex < 0 ? 0 : 1,
-            left: `calc(${((Math.max(0, selectedIndex) % 7) + 0.5) * 100 / 7}% - 17px)`,
+            left: `calc(${((Math.max(0, selectedIndex) % 7) + 0.5) * 100 / 7}% - var(--agenda-disc-radius, 17px))`,
             top: `${Math.floor(Math.max(0, selectedIndex) / 7) * 44 + 5}px`,
-          }} />
+            '--agenda-mobile-top': `${Math.floor(Math.max(0, selectedIndex) / 7) * 30 + 3}px`,
+          } as CSSProperties} />
           {cells.map((date, index) => date ? (
             <button type="button" key={date} data-date={date} onClick={() => select(date)} onKeyDown={(event) => onDayKey(event, date)}
               aria-label={`${formatDay(date)}${eventsOnDate(agendaEvents, date).length ? ', has events' : ''}`}
