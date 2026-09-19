@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, Search as SearchIcon, X, Mail, MessageCircle } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight, Search as SearchIcon, X, Mail, MessageCircle } from 'lucide-react';
 import { activities, events, faqs, img, klasses, partnerLogos, partners, programs, updates } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 import FoldText from './FoldText';
@@ -36,7 +36,7 @@ const partnerLogoItems: LogoItem[] = partners.map((school, index) => ({
 
 const A = () => <ArrowUpRight aria-hidden size={17} />;
 
-const agendaImages = [img.hero, img.maker, img.animation, img.purpose];
+const agendaImages = [img.makerSet, img.codingKlass, img.innovation, img.hero];
 const heroSlides = events.map((event, index) => ({
   type: 'Upcoming Agenda',
   title: event[1],
@@ -591,6 +591,8 @@ function FAQ() {
 }
 
 function Updates() {
+  const scroller = useRef<HTMLDivElement>(null);
+
   return (
     <section id="updates" className="section updates">
       <Heading
@@ -599,7 +601,11 @@ function Updates() {
         copy="News, opportunities, and learning moments from the KRYAcademia community."
         fold
       />
-      <div className="updates-grid">
+      <div className="updates-controls" aria-label="KRYAcademia Updates navigation">
+        <button type="button" onClick={() => scroller.current?.scrollBy({ left: -scroller.current.clientWidth * .9, behavior: 'smooth' })} aria-label="Previous updates"><ChevronLeft size={20} /></button>
+        <button type="button" onClick={() => scroller.current?.scrollBy({ left: scroller.current.clientWidth * .9, behavior: 'smooth' })} aria-label="Next updates"><ChevronRight size={20} /></button>
+      </div>
+      <div className="updates-grid" ref={scroller}>
         {updates.map(([category, title, excerpt, image, href]) => (
           <a className="update-card reveal group" href={href} target="_blank" rel="noreferrer" key={title}>
             <div className="update-card-image">
