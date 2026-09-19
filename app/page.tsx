@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Search as SearchIcon, X, Mail, MessageCircle } from 'lucide-react';
-import { activities, events, faqs, img, klasses, partnerLogos, partners, programs } from './mockData';
+import { activities, events, faqs, img, klasses, partnerLogos, partners, programs, updates } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 import FoldText from './FoldText';
 import StaggeredMenu from './StaggeredMenu';
@@ -428,7 +428,7 @@ function Programs() {
   const [selected, setSelected] = useState<number | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const activeProgram = selected === null ? null : programs[selected];
-  const documentation = selected === null ? [] : activities.slice(selected, selected + 3);
+  const documentation = activeProgram ? [[activeProgram[0], activeProgram[3]], ...activities.slice(selected!, selected! + 2)] : [];
 
   useEffect(() => {
     if (activeProgram && !dialog.current?.open) dialog.current?.showModal();
@@ -586,6 +586,34 @@ function FAQ() {
         defaultExpandedIds={[0]}
         items={faqs.map(([title, content], id) => ({ id, title, content: <p>{content}</p> }))}
       />
+    </section>
+  );
+}
+
+function Updates() {
+  return (
+    <section id="updates" className="section updates">
+      <Heading
+        eyebrow="Latest stories"
+        title="KRYAcademia Updates"
+        copy="News, opportunities, and learning moments from the KRYAcademia community."
+        fold
+      />
+      <div className="updates-grid">
+        {updates.map(([category, title, excerpt, image, href]) => (
+          <a className="update-card reveal group" href={href} target="_blank" rel="noreferrer" key={title}>
+            <div className="update-card-image">
+              <NextImage src={image} alt="" width={768} height={960} />
+            </div>
+            <div className="update-card-copy">
+              <small>{category}</small>
+              <h3>{title}</h3>
+              <p>{excerpt}</p>
+              <span>Read update <A /></span>
+            </div>
+          </a>
+        ))}
+      </div>
     </section>
   );
 }
@@ -807,6 +835,7 @@ export default function Home() {
         <Agenda />
         <Activities />
         <Partners />
+        <Updates />
         <FAQ />
         <Contact />
       </main>
