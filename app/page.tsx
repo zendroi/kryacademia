@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Search as SearchIcon, X, Mail, MessageCircle } from 'lucide-react';
-import { events, faqs, img, klasses, partnerLogos, partners, programs } from './mockData';
+import { activities, events, faqs, img, klasses, partnerLogos, partners, programs } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 import FoldText from './FoldText';
 import StaggeredMenu from './StaggeredMenu';
@@ -428,6 +428,7 @@ function Programs() {
   const [selected, setSelected] = useState<number | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const activeProgram = selected === null ? null : programs[selected];
+  const documentation = selected === null ? [] : activities.slice(selected, selected + 3);
 
   useEffect(() => {
     if (activeProgram && !dialog.current?.open) dialog.current?.showModal();
@@ -464,17 +465,29 @@ function Programs() {
         if (event.target === event.currentTarget) event.currentTarget.close();
       }}>
         {activeProgram && (
-          <div>
+          <div className="program-dialog-shell">
             <button className="program-dialog-close" type="button" onClick={() => dialog.current?.close()} aria-label="Close program details" title="Close"><X size={20} /></button>
-            <NextImage src={activeProgram[3]} alt="" width={760} height={430} />
-            <small>Program details</small>
-            <h3 id="program-dialog-title">{activeProgram[0]}</h3>
-            <p id="program-dialog-description">{activeProgram[4]}</p>
-            <dl>
-              <div><dt>Designed for</dt><dd>{activeProgram[1]}</dd></div>
-              <div><dt>Format</dt><dd>{activeProgram[2]}</dd></div>
-            </dl>
-            <button className="program-dialog-action" type="button" onClick={() => { dialog.current?.close(); req(activeProgram[0]); }}>Request This Program <A /></button>
+            <div className="program-dialog-gallery" aria-label="Program documentation">
+              {documentation.map(([alt, src], index) => (
+                <figure className={index === 0 ? 'featured' : ''} key={src}>
+                  <NextImage src={src} alt={alt} width={900} height={700} />
+                </figure>
+              ))}
+            </div>
+            <div className="program-dialog-content">
+              <small>Program details</small>
+              <h3 id="program-dialog-title">{activeProgram[0]}</h3>
+              <p id="program-dialog-description">{activeProgram[4]}</p>
+              <section>
+                <h4>What participants experience</h4>
+                <p>Every program combines guided exploration, hands-on creation, teamwork, and reflection. Activities can be adjusted to suit the participants’ age, learning goals, available time, and school context.</p>
+              </section>
+              <dl>
+                <div><dt>Designed for</dt><dd>{activeProgram[1]}</dd></div>
+                <div><dt>Format</dt><dd>{activeProgram[2]}</dd></div>
+              </dl>
+              <button className="program-dialog-action" type="button" onClick={() => { dialog.current?.close(); req(activeProgram[0]); }}>Request This Program <A /></button>
+            </div>
           </div>
         )}
       </dialog>
