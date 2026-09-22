@@ -19,7 +19,6 @@ const { mkdirSync } = require('node:fs');
       const slideCount = await page.locator('.hero-art-media img').count();
       for (let i = 1; i <= slideCount; i++) {
         await next.click();
-        assert.equal(await page.locator('.hero-slide-controls span').innerText(), `${i % slideCount + 1} / ${slideCount}`);
         const image = page.locator('.hero-art-media img.active');
         assert.match(await image.getAttribute('alt'), new RegExp(await page.locator('.hero-slide-copy strong').innerText()));
         assert.equal(await image.getAttribute('aria-hidden'), 'false');
@@ -27,7 +26,8 @@ const { mkdirSync } = require('node:fs');
       assert.equal(await page.locator('.hero-slide-copy strong').innerText(), initialTitle);
       await previous.focus();
       await page.keyboard.press('Enter');
-      assert.equal(await page.locator('.hero-slide-controls span').innerText(), `${slideCount} / ${slideCount}`);
+      assert.notEqual(await page.locator('.hero-slide-copy strong').innerText(), initialTitle);
+      assert.equal(await page.locator('.hero-slide-controls span').count(), 0);
       assert.ok(await page.locator('.hero-slide-controls').evaluate(controls => {
         const card = document.querySelector('.hero-art-card').getBoundingClientRect();
         const image = document.querySelector('.hero-art-media').getBoundingClientRect();
@@ -62,8 +62,8 @@ const { mkdirSync } = require('node:fs');
       await page.locator('.program').first().click();
       await page.getByRole('dialog').waitFor();
       await page.getByRole('button', { name: 'Close program details' }).click();
-      assert.match(await page.locator('#contact').evaluate(e => getComputedStyle(e).backgroundImage), /63, 113, 128/);
-      assert.equal(await page.locator('#contact h2').evaluate(e => getComputedStyle(e).color), 'rgb(255, 255, 255)');
+      assert.equal(await page.locator('#contact').evaluate(e => getComputedStyle(e).backgroundColor), 'rgb(255, 255, 255)');
+      assert.equal(await page.locator('#contact h2').evaluate(e => getComputedStyle(e).color), 'rgb(23, 48, 81)');
       if (width > 720 && width <= 1050) {
         assert.equal(await page.locator('.footer > div').evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), 2);
         await page.locator('.footer').scrollIntoViewIfNeeded();

@@ -1573,8 +1573,8 @@ img {
 .contact {
   scroll-margin-top: 70px;
   padding: 10vw 7vw;
-  background: linear-gradient(135deg, #3f7180 0%, #285267 100%);
-  color: white;
+  background: white;
+  color: var(--navy);
   display: grid;
   grid-template-columns: 0.7fr 1.3fr;
   gap: 8vw;
@@ -1583,7 +1583,7 @@ img {
 }
 
 .contact aside > p {
-  color: #d8e3ef;
+  color: var(--muted);
   line-height: 1.8;
   font-size: 15px;
 }

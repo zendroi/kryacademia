@@ -18,7 +18,6 @@ body .hero-art > aside.hero-art-card { border-radius: 8px; width: min(290px, 90%
 .hero-slide-copy { display: grid; gap: 8px; }
 .hero-slide-controls { position: absolute; z-index: 4; top: 48%; left: 10%; right: 7%; display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none; transform: translateY(-50%); }
 .hero-slide-controls button { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid rgba(255, 255, 255, .8); border-radius: 50%; background: rgba(255, 255, 255, .92); color: var(--navy); box-shadow: 0 10px 28px rgba(7, 19, 36, .18); pointer-events: auto; backdrop-filter: blur(10px); }
-.hero-slide-controls span { padding: 7px 12px; border-radius: 99px; background: rgba(255, 255, 255, .9); color: var(--navy); font-size: 10px; font-weight: 800; box-shadow: 0 8px 20px rgba(7, 19, 36, .12); }
 .hero-slide-controls button:hover { background: var(--navy); color: white; }
 body .hero-copy .btn { white-space: nowrap; }
 body .impact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -63,9 +62,9 @@ body .activities-canvas { min-height: 0; position: absolute; inset: 0; pointer-e
 .gallery-controls button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #627083; background: #173051; color: white; display: grid; place-items: center; }
 .gallery-controls button:hover { background: #e8001b; }
 body .contact .contact-link { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; width: fit-content; max-width: 100%; margin-top: 18px; overflow-wrap: anywhere; }
-.contact-link:hover { color: #c7dfff; text-decoration: underline; }
-body .contact aside > .eyebrow { color: #c7dfff; }
-body .contact h2 { color: white; }
+.contact-link:hover { color: var(--red); text-decoration: underline; }
+body .contact aside > .eyebrow { color: var(--red); }
+body .contact h2 { color: var(--navy); }
 .contact-link svg { flex-shrink: 0; }
 .updates { background: #fff; }
 .updates-controls { display: flex; justify-content: flex-end; gap: 8px; margin: -18px 0 18px; }
@@ -89,7 +88,7 @@ body .contact h2 { color: white; }
 body .institution-field input { width: 100%; padding-right: 42px; }
 .institution-reset { position: absolute; right: 6px; top: 31px; width: 32px; height: 32px; display: grid; place-items: center; background: none; border: none; color: var(--navy); }
 .institution-reset:hover { color: var(--red); }
-body .contact form { border-radius: 8px; }
+body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 24px 60px rgba(23, 48, 81, .12); }
 .program { border: 0; color: var(--navy); font: inherit; text-align: left; cursor: pointer; }
 .program:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
 .program-dialog { position: fixed; inset: 50% auto auto 50%; width: min(980px, calc(100vw - 48px)); height: min(700px, calc(100svh - 48px)); margin: 0; padding: 0; overflow: hidden; transform: translate(-50%, -50%); border: 0; border-radius: 8px; color: var(--navy); box-shadow: 0 30px 90px rgba(7, 19, 36, .35); }
