@@ -2,12 +2,15 @@
 html body { font-family: 'Montserrat', sans-serif; }
 body *, body *::before, body *::after { letter-spacing: 0 !important; }
 body .brand { gap: 6px; flex-shrink: 0; }
-body .brand img { width: 44px; height: 48px; object-fit: contain; }
-body .brand strong { font-size: 18px; line-height: 1.2; }
-body .navbar { gap: 22px; }
+body .brand img { width: 52px; height: 56px; object-fit: contain; }
+body .brand strong { font-size: 21px; line-height: 1.2; }
+body .navbar { height: 92px; gap: 24px; }
+body .navbar.scrolled { height: 80px; }
 body .navbar:has(.sm-open) { backdrop-filter: none; -webkit-backdrop-filter: none; }
-body .navbar > nav { gap: 18px; }
-body .navbar > nav a { font-size: 10px; white-space: nowrap; }
+body .navbar > nav { gap: 20px; }
+body .navbar > nav a { font-size: 12px; white-space: nowrap; }
+body .navact > button { width: 50px; height: 50px; }
+body .navbar .login, body .hero-copy .btn { min-height: 54px; font-size: 12px; }
 body .sm-container { display: none; }
 body .sm-panel-item { font-size: 28px; }
 body .sm-drawer-panel[inert] { visibility: hidden; transition: visibility 0s .3s; }
@@ -26,15 +29,20 @@ body .impact b { font-size: 52px; min-height: 52px; font-variant-numeric: tabula
 body .heading h2, body .contact h2 { font-size: 54px; line-height: 1.1; overflow-wrap: anywhere; }
 body .search h2 { font-size: 48px; }
 body .faq h2 { font-size: 60px; }
+body .heading p { font-size: 16px; }
 body .filters { flex-wrap: wrap; align-items: center; }
-body .tabs button { padding-inline: 20px; }
-.catalog-status { font-size: 12px; color: var(--muted); margin: -12px 0 24px; }
+body .tabs button { padding-inline: 22px; font-size: 13px; }
+body .chips button { font-size: 11px; }
+.catalog-status { font-size: 13px; color: var(--muted); margin: -12px 0 24px; }
 body .klassgrid { align-items: stretch; }
 body .klass-card { border-radius: 8px; display: flex; flex-direction: column; animation: klass-appear .35s ease both; }
 body .klass-card .cardbody { flex: 1; display: flex; flex-direction: column; }
 body .klass-card a { margin-top: auto; padding-top: 18px; }
 body .klass-card .photo { height: 210px; flex-shrink: 0; }
-body .klass-card h3 { font-size: 18px; overflow-wrap: anywhere; }
+body .klass-card h3 { font-size: 20px; overflow-wrap: anywhere; }
+body .card p, body .program p { font-size: 14px; }
+body .card a { font-size: 12px; }
+body .cardbody > small, body .photo b, body .photo span { font-size: 10px; }
 .catalog-empty { padding: 36px 0; border-block: 1px solid var(--line); font-size: 14px; }
 .catalog-empty button { border: 0; background: none; color: var(--red); text-decoration: underline; }
 @keyframes klass-appear { from { opacity: .3; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -44,6 +52,8 @@ body .why-expand .scroll-expand__media { object-position: center 45%; }
 body .why-expand .scroll-expand__overlay { align-items: flex-start; justify-content: flex-end; text-align: left; padding: 28px 7%; }
 body .why-expand p { color: white; font-size: 28px; line-height: 1.3; }
 body .why-expand em { font-family: Georgia, serif; }
+body .why-sdgs-figure { max-width: none; }
+body .why-sdgs-figure img { aspect-ratio: 966 / 500; object-fit: cover; object-position: center; }
 body .partner-logo-loop .logoloop-list img { width: 180px; height: 144px; object-fit: contain; mix-blend-mode: multiply; }
 body .partner-logo-loop { mix-blend-mode: multiply; }
 body .activities { padding-block: 64px 30px; }
@@ -179,7 +189,8 @@ body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shad
   body .program > div { min-width: 0; padding: 22px; flex: 1; }
 }
 @media (max-width: 720px) {
-  body .navbar { padding-inline: 20px; }
+  body .navbar { height: 78px; padding-inline: 20px; }
+  body .navbar.scrolled { height: 72px; background: linear-gradient(180deg, rgba(250, 249, 245, .98) 0%, rgba(250, 249, 245, .68) 62%, transparent 100%); border-bottom: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
   body .brand strong { font-size: 16px; }
   body .hero { padding: 110px 22px 40px; gap: 28px; }
   body .hero h1 { font-size: 48px; }
@@ -221,7 +232,6 @@ body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shad
   body #klass, body #programs { padding: 48px 22px; }
   body .why-sdgs { padding: 40px 22px; }
   body .why-sdgs .why-content { width: 100%; margin: 0; }
-  body .why-sdgs-figure img { aspect-ratio: 966 / 500; object-fit: cover; }
   body .why-sdgs-figure figcaption { text-align: left; }
   body #klass .heading, body #programs .heading { margin-bottom: 24px; gap: 14px; }
   body #klass .heading h2, body #programs .heading h2 { font-size: 30px; }

@@ -38,6 +38,21 @@ const { mkdirSync } = require('node:fs');
             !(center.x >= card.x && center.x <= card.right && center.y >= card.y && center.y <= card.bottom);
         });
       }), `hero controls overlay image outside card at ${width}px`);
+      const sdgEdges = await page.locator('.why-sdgs-figure').evaluate(figure => {
+        const intro = document.querySelector('.why-intro').getBoundingClientRect();
+        const rect = figure.getBoundingClientRect();
+        return { left: Math.abs(rect.left - intro.left), right: Math.abs(rect.right - intro.right) };
+      });
+      assert.ok(sdgEdges.left < 1 && sdgEdges.right < 1, `SDG aligns with content at ${width}px: ${JSON.stringify(sdgEdges)}`);
+      if (width > 1050) {
+        assert.ok(await page.locator('.navbar > nav a').first().evaluate(e => parseFloat(getComputedStyle(e).fontSize) >= 12));
+        assert.ok(await page.locator('.brand strong').first().evaluate(e => parseFloat(getComputedStyle(e).fontSize) >= 20));
+      }
+      if (width <= 720) {
+        await page.evaluate(() => scrollTo(0, 500));
+        assert.match(await page.locator('.navbar').evaluate(e => getComputedStyle(e).backgroundImage), /linear-gradient/);
+        assert.equal(await page.locator('.navbar').evaluate(e => getComputedStyle(e).boxShadow), 'none');
+      }
       for (const selector of ['.klassgrid', '.programgrid', '.agenda-calendar']) {
         const expected = width <= 720 ? 1 : selector === '.klassgrid' && width > 1050 ? 4 : 2;
         assert.equal(await page.locator(selector).evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), expected, `${selector} at ${width}px`);
