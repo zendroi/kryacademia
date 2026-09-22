@@ -1018,7 +1018,7 @@ img {
   border-radius: 26px;
   padding: 20px;
   display: grid;
-  grid-template-columns: 36px 180px 1fr;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
   gap: 20px;
   min-height: 260px;
   box-shadow: 0 8px 30px rgba(23, 48, 81, 0.05);
@@ -1033,7 +1033,10 @@ img {
 }
 
 .program > img {
-  border-radius: 18px;
+  border-radius: 8px;
+  aspect-ratio: 600 / 424;
+  height: auto;
+  align-self: start;
   transition: transform 0.5s ease;
 }
 
@@ -1042,7 +1045,14 @@ img {
 }
 
 .program > small {
-  color: var(--red);
+  position: absolute;
+  z-index: 1;
+  top: 32px;
+  left: 32px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--navy);
+  color: white;
   font-size: 14px;
   font-weight: 800;
 }
@@ -1563,7 +1573,7 @@ img {
 .contact {
   scroll-margin-top: 70px;
   padding: 10vw 7vw;
-  background: linear-gradient(135deg, var(--red) 0%, #b80015 100%);
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
   color: white;
   display: grid;
   grid-template-columns: 0.7fr 1.3fr;
@@ -1573,7 +1583,7 @@ img {
 }
 
 .contact aside > p {
-  color: #ffdae0;
+  color: #d8e3ef;
   line-height: 1.8;
   font-size: 15px;
 }
@@ -1836,9 +1846,6 @@ img {
   .klassgrid {
     grid-template-columns: 1fr 1fr;
   }
-  .program {
-    grid-template-columns: 30px 140px 1fr;
-  }
   .footer > div {
     grid-template-columns: 1.4fr repeat(3, 1fr);
   }
@@ -1931,10 +1938,6 @@ img {
   .why-principles h3 { font-size: 23px; }
   .why-sdgs { padding-block: 44px; }
   .why-sdgs-figure figcaption { margin-top: 20px; font-size: 16px; }
-  .program {
-    grid-template-columns: 25px 120px 1fr;
-    min-height: 275px;
-  }
   .program footer {
     flex-direction: column;
     gap: 10px;

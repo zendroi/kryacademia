@@ -249,12 +249,6 @@ function Search({ close }: { close: () => void }) {
 function Hero() {
   const [activeSlide, setActiveSlide] = useState(0);
 
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const interval = window.setInterval(() => setActiveSlide(current => (current + 1) % heroSlides.length), 5000);
-    return () => window.clearInterval(interval);
-  }, []);
-
   const slide = heroSlides[activeSlide];
 
   return (
@@ -271,20 +265,21 @@ function Hero() {
           critically, create confidently, and make a meaningful impact.
         </p>
         <div>
-          <Btn href="#klass">Klass</Btn>
+          <Btn href="#klass">Explore Klass</Btn>
           <Btn href="#activities" alt>
             See How We Learn
           </Btn>
         </div>
       </div>
 
-      <div className="hero-art">
+      <div className="hero-art" role="region" aria-roledescription="carousel" aria-label="Upcoming programs">
         <div className="hero-art-media">
           {heroSlides.map((item, index) => (
             <NextImage
               className={index === activeSlide ? 'active' : ''}
               src={item.image}
               alt={item.alt}
+              aria-hidden={index !== activeSlide}
               fill
               sizes="(max-width: 720px) 100vw, 52vw"
               priority={index === 0}
@@ -293,10 +288,17 @@ function Hero() {
           ))}
         </div>
         <i>INSPIRING → CREATING → DEDICATING</i>
-        <aside key={slide.title} className="hero-art-card">
-          <small>{slide.type}</small>
-          <strong>{slide.title}</strong>
-          <span>{slide.meta}</span>
+        <aside className="hero-art-card">
+          <div className="hero-slide-copy" aria-live="polite" aria-atomic="true">
+            <small>{slide.type}</small>
+            <strong>{slide.title}</strong>
+            <span>{slide.meta}</span>
+          </div>
+          <nav className="hero-slide-controls" aria-label="Upcoming program navigation">
+            <button type="button" aria-label="Previous upcoming program" onClick={() => setActiveSlide(current => (current - 1 + heroSlides.length) % heroSlides.length)}><ChevronLeft size={18} aria-hidden /></button>
+            <span>{activeSlide + 1} / {heroSlides.length}</span>
+            <button type="button" aria-label="Next upcoming program" onClick={() => setActiveSlide(current => (current + 1) % heroSlides.length)}><ChevronRight size={18} aria-hidden /></button>
+          </nav>
         </aside>
       </div>
 

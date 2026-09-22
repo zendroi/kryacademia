@@ -14,7 +14,11 @@ body .sm-drawer-panel[inert] { visibility: hidden; transition: visibility 0s .3s
 body .hero { min-height: 0; padding-top: 130px; padding-bottom: 66px; background: var(--page-background); }
 body .hero h1 { font-size: 76px; line-height: 1.02; }
 body .hero-art { height: 570px; }
-body .hero-art > aside { border-radius: 8px; }
+body .hero-art > aside.hero-art-card { border-radius: 8px; width: min(290px, 90%); animation: none; }
+.hero-slide-copy { display: grid; gap: 8px; }
+.hero-slide-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.hero-slide-controls button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: white; color: var(--navy); }
+.hero-slide-controls button:hover { background: var(--navy); color: white; }
 body .hero-copy .btn { white-space: nowrap; }
 body .impact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 body .impact > div { display: grid; gap: 12px; }
@@ -58,7 +62,9 @@ body .activities-canvas { min-height: 0; position: absolute; inset: 0; pointer-e
 .gallery-controls button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #627083; background: #173051; color: white; display: grid; place-items: center; }
 .gallery-controls button:hover { background: #e8001b; }
 body .contact .contact-link { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 700; width: fit-content; max-width: 100%; margin-top: 18px; overflow-wrap: anywhere; }
-.contact-link:hover { color: #2563eb; text-decoration: underline; }
+.contact-link:hover { color: #c7dfff; text-decoration: underline; }
+body .contact aside > .eyebrow { color: #c7dfff; }
+body .contact h2 { color: white; }
 .contact-link svg { flex-shrink: 0; }
 .updates { background: #fff; }
 .updates-controls { display: flex; justify-content: flex-end; gap: 8px; margin: -18px 0 18px; }
@@ -166,15 +172,20 @@ body .contact form { border-radius: 8px; }
   .agenda-calendar { grid-template-columns: minmax(300px, .9fr) minmax(0, 1.1fr); gap: 24px; }
   .agenda-month { padding: 20px; }
   .agenda-month h3 { font-size: 18px; }
+  body .klassgrid, body .programgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body .program { display: flex; flex-direction: column; gap: 0; padding: 0; min-height: 0; border-radius: 8px; }
+  body .program > small { top: 12px; left: 12px; }
+  body .program > img { width: 100%; height: auto; aspect-ratio: 600 / 424; flex-shrink: 0; object-fit: cover; border-radius: 0; }
+  body .program > div { min-width: 0; padding: 22px; flex: 1; }
 }
 @media (max-width: 720px) {
   body .navbar { padding-inline: 20px; }
   body .brand strong { font-size: 16px; }
   body .hero { padding: 110px 22px 40px; gap: 28px; }
   body .hero h1 { font-size: 48px; }
-  body .hero-art { height: 320px; }
+  body .hero-art { height: 440px; }
   body .hero-copy > div { margin-top: 24px; }
-  body .hero-art > aside { display: none; }
+  body .hero-art > aside.hero-art-card { display: grid; right: 0; bottom: 0; padding: 18px; }
   body .impact { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px 16px; }
   body .impact b { font-size: 38px; min-height: 38px; }
   body .impact span { font-size: 10px; }
@@ -198,32 +209,19 @@ body .contact form { border-radius: 8px; }
   .program-dialog-content section { margin-top: 18px; padding-top: 16px; }
   .program-dialog dl { gap: 10px; margin: 18px 0; padding-block: 14px; }
   .program-dialog-close { top: 12px; right: 12px; width: 36px; height: 36px; }
-  .agenda-calendar { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 10px; }
-  .agenda-month { padding: 12px 8px; }
-  .agenda-month header { align-items: flex-start; }
-  .agenda-month header small, .today-legend { display: none; }
-  .agenda-month h3 { margin-top: 0; font-size: 13px; }
-  .month-controls { gap: 2px; }
-  .month-controls button { width: 26px; height: 26px; }
-  .agenda-week { margin-top: 8px; padding-block: 6px; font-size: 8px; }
-  .agenda-days { --agenda-row-height: 30px; --agenda-disc-radius: 12px; }
-  .selected-day-disc { top: var(--agenda-mobile-top) !important; }
-  .agenda-days button { font-size: 9px; }
-  .agenda-days button > span, .selected-day-disc { width: 24px; height: 24px; }
-  .agenda-month footer { justify-content: flex-end; margin-top: 6px; padding-top: 6px; font-size: 9px; }
-  .agenda-filter { gap: 12px; overflow-x: auto; }
-  .agenda-filter button { flex: 0 0 auto; padding-bottom: 9px; font-size: 9px; }
-  .agenda-selection { align-items: flex-start; min-height: 0; padding: 6px 0; font-size: 9px; }
-  .agenda-event-rows { max-height: 270px; overflow-y: auto; }
-  .agenda-event { grid-template-columns: 30px minmax(0,1fr); gap: 6px; padding: 10px 4px; }
-  .agenda-event > svg { display: none; }
-  .event-date strong { font-size: 20px; }
-  .event-date small, .event-details small, .event-details > span { font-size: 8px; }
-  .event-details { gap: 4px; }
-  .event-details strong { font-size: 10px; line-height: 1.3; }
+  .agenda-calendar { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .agenda-month { padding: 20px 16px; }
+  .month-controls button { width: 40px; height: 40px; }
+  .agenda-filter { justify-content: space-between; gap: 12px; }
+  .agenda-event { grid-template-columns: 40px minmax(0, 1fr) 18px; gap: 12px; padding: 20px 8px; }
+  .event-details strong { font-size: 14px; }
   .institution-field { grid-column: 1 / -1; }
   body .contact .contact-link { font-size: 15px; }
-  body #klass, body #programs { padding: 48px 20px; }
+  body #klass, body #programs { padding: 48px 22px; }
+  body .why-sdgs { padding: 40px 22px; }
+  body .why-sdgs .why-content { width: 100%; margin: 0; }
+  body .why-sdgs-figure img { aspect-ratio: 966 / 500; object-fit: cover; }
+  body .why-sdgs-figure figcaption { text-align: left; }
   body #klass .heading, body #programs .heading { margin-bottom: 24px; gap: 14px; }
   body #klass .heading h2, body #programs .heading h2 { font-size: 30px; }
   body #klass .heading p, body #programs .heading p { font-size: 13px; line-height: 1.6; }
@@ -233,24 +231,16 @@ body .contact form { border-radius: 8px; }
   body .chips { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
   body .chips button { flex-shrink: 0; min-height: 40px; padding: 8px 12px; }
   body .catalog-status { font-size: 11px; margin-bottom: 16px; line-height: 1.5; }
-  body .klassgrid, body .programgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  body .klass-card .photo { height: 108px; }
-  body .klass-card .photo span, body .klass-card .photo b { top: 6px; right: 6px; padding: 5px 7px; font-size: 8px; }
-  body .klass-card .cardbody { padding: 12px 10px 4px; }
-  body .klass-card .cardbody > small { font-size: 9px; line-height: 1.5; }
-  body .klass-card h3 { font-size: 14px; margin: 6px 0; line-height: 1.4; }
-  body .klass-card p { font-size: 12px; line-height: 1.5; margin-block: 4px 8px; }
-  body .klass-card p, body .program p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  body .klass-card a { padding-top: 0; min-height: 40px; gap: 6px; font-size: 10px; }
+  body .klassgrid, body .programgrid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  body .klass-card .photo { height: auto; aspect-ratio: 4 / 3; }
+  body .klass-card .cardbody { padding: 22px; }
+  body .klass-card h3 { font-size: 20px; }
+  body .klass-card p { font-size: 14px; }
+  body .klass-card a { min-height: 44px; gap: 6px; }
   body .klass-card a svg { flex-shrink: 0; width: 14px; }
   body .klass-card:hover, body .program:hover { transform: none; }
-  body .program { display: flex; flex-direction: column; gap: 0; padding: 0; min-height: 0; border-radius: 8px; }
-  body .program > small { position: absolute; z-index: 1; top: 8px; left: 8px; padding: 4px 6px; font-size: 10px; background: white; border-radius: 4px; }
-  body .program > img { width: 100%; height: 108px; flex-shrink: 0; object-fit: cover; border-radius: 0; }
-  body .program > div { min-width: 0; padding: 12px 10px 6px; flex: 1; }
-  body .program > div > b { font-size: 9px; line-height: 1.5; }
-  body .program h3 { font-size: 16px; overflow-wrap: anywhere; margin: 6px 0; }
-  body .program p { font-size: 12px; line-height: 1.5; margin-block: 4px 12px; }
+  body .program h3 { font-size: 22px; overflow-wrap: anywhere; }
+  body .program p { font-size: 14px; line-height: 1.7; }
   body .program > div > span { font-size: 10px; line-height: 1.5; }
   body .program footer { gap: 0; margin-top: 10px; padding-top: 4px; align-items: stretch; }
   body .program footer a, body .program footer button { min-height: 38px; display: flex; align-items: center; text-align: left; font-size: 9px; line-height: 1.5; }
@@ -268,8 +258,6 @@ body .contact form { border-radius: 8px; }
   body .navact { gap: 8px; }
   body .heading h2, body .contact h2 { font-size: 30px; }
   body .tabs button { padding-inline: 16px; }
-  .agenda-month { padding: 10px 6px; }
-  .agenda-month h3 { font-size: 12px; }
   .agenda-filter { gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
