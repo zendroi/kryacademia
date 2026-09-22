@@ -16,8 +16,9 @@ body .hero h1 { font-size: 76px; line-height: 1.02; }
 body .hero-art { height: 570px; }
 body .hero-art > aside.hero-art-card { border-radius: 8px; width: min(290px, 90%); animation: none; }
 .hero-slide-copy { display: grid; gap: 8px; }
-.hero-slide-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
-.hero-slide-controls button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: white; color: var(--navy); }
+.hero-slide-controls { position: absolute; z-index: 4; top: 48%; left: 10%; right: 7%; display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none; transform: translateY(-50%); }
+.hero-slide-controls button { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid rgba(255, 255, 255, .8); border-radius: 50%; background: rgba(255, 255, 255, .92); color: var(--navy); box-shadow: 0 10px 28px rgba(7, 19, 36, .18); pointer-events: auto; backdrop-filter: blur(10px); }
+.hero-slide-controls span { padding: 7px 12px; border-radius: 99px; background: rgba(255, 255, 255, .9); color: var(--navy); font-size: 10px; font-weight: 800; box-shadow: 0 8px 20px rgba(7, 19, 36, .12); }
 .hero-slide-controls button:hover { background: var(--navy); color: white; }
 body .hero-copy .btn { white-space: nowrap; }
 body .impact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -186,6 +187,7 @@ body .contact form { border-radius: 8px; }
   body .hero-art { height: 440px; }
   body .hero-copy > div { margin-top: 24px; }
   body .hero-art > aside.hero-art-card { display: grid; right: 0; bottom: 0; padding: 18px; }
+  .hero-slide-controls { top: 43%; left: 4%; right: 4%; }
   body .impact { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px 16px; }
   body .impact b { font-size: 38px; min-height: 38px; }
   body .impact span { font-size: 10px; }

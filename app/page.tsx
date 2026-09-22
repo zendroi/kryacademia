@@ -294,12 +294,12 @@ function Hero() {
             <strong>{slide.title}</strong>
             <span>{slide.meta}</span>
           </div>
-          <nav className="hero-slide-controls" aria-label="Upcoming program navigation">
-            <button type="button" aria-label="Previous upcoming program" onClick={() => setActiveSlide(current => (current - 1 + heroSlides.length) % heroSlides.length)}><ChevronLeft size={18} aria-hidden /></button>
-            <span>{activeSlide + 1} / {heroSlides.length}</span>
-            <button type="button" aria-label="Next upcoming program" onClick={() => setActiveSlide(current => (current + 1) % heroSlides.length)}><ChevronRight size={18} aria-hidden /></button>
-          </nav>
         </aside>
+        <nav className="hero-slide-controls" aria-label="Upcoming program navigation">
+          <button type="button" aria-label="Previous upcoming program" onClick={() => setActiveSlide(current => (current - 1 + heroSlides.length) % heroSlides.length)}><ChevronLeft size={18} aria-hidden /></button>
+          <span>{activeSlide + 1} / {heroSlides.length}</span>
+          <button type="button" aria-label="Next upcoming program" onClick={() => setActiveSlide(current => (current + 1) % heroSlides.length)}><ChevronRight size={18} aria-hidden /></button>
+        </nav>
       </div>
 
     </section>

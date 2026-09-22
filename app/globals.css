@@ -1573,7 +1573,7 @@ img {
 .contact {
   scroll-margin-top: 70px;
   padding: 10vw 7vw;
-  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
+  background: linear-gradient(135deg, #3f7180 0%, #285267 100%);
   color: white;
   display: grid;
   grid-template-columns: 0.7fr 1.3fr;
@@ -1847,8 +1847,9 @@ img {
     grid-template-columns: 1fr 1fr;
   }
   .footer > div {
-    grid-template-columns: 1.4fr repeat(3, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .footer section:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 720px) {

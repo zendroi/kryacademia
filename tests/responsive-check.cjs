@@ -28,11 +28,21 @@ const { mkdirSync } = require('node:fs');
       await previous.focus();
       await page.keyboard.press('Enter');
       assert.equal(await page.locator('.hero-slide-controls span').innerText(), `${slideCount} / ${slideCount}`);
+      assert.ok(await page.locator('.hero-slide-controls').evaluate(controls => {
+        const card = document.querySelector('.hero-art-card').getBoundingClientRect();
+        const image = document.querySelector('.hero-art-media').getBoundingClientRect();
+        return [...controls.querySelectorAll('button')].every(button => {
+          const rect = button.getBoundingClientRect();
+          const center = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+          return center.x >= image.x && center.x <= image.right && center.y >= image.y && center.y <= image.bottom &&
+            !(center.x >= card.x && center.x <= card.right && center.y >= card.y && center.y <= card.bottom);
+        });
+      }), `hero controls overlay image outside card at ${width}px`);
       for (const selector of ['.klassgrid', '.programgrid', '.agenda-calendar']) {
         const expected = width <= 720 ? 1 : selector === '.klassgrid' && width > 1050 ? 4 : 2;
         assert.equal(await page.locator(selector).evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), expected, `${selector} at ${width}px`);
       }
-      for (const selector of ['#home', '#klass', '.why-sdgs', '#programs', '#agenda', '#contact']) {
+      for (const selector of ['#home', '#klass', '.why-sdgs', '#programs', '#agenda', '#contact', '.footer']) {
         const section = page.locator(selector);
         await section.scrollIntoViewIfNeeded();
         await section.locator('img').evaluateAll(images => Promise.all(images.map(img => img.decode())));
@@ -52,8 +62,13 @@ const { mkdirSync } = require('node:fs');
       await page.locator('.program').first().click();
       await page.getByRole('dialog').waitFor();
       await page.getByRole('button', { name: 'Close program details' }).click();
-      assert.match(await page.locator('#contact').evaluate(e => getComputedStyle(e).backgroundImage), /23, 48, 81/);
+      assert.match(await page.locator('#contact').evaluate(e => getComputedStyle(e).backgroundImage), /63, 113, 128/);
       assert.equal(await page.locator('#contact h2').evaluate(e => getComputedStyle(e).color), 'rgb(255, 255, 255)');
+      if (width > 720 && width <= 1050) {
+        assert.equal(await page.locator('.footer > div').evaluate(e => getComputedStyle(e).gridTemplateColumns.split(' ').length), 2);
+        await page.locator('.footer').scrollIntoViewIfNeeded();
+        assert.ok(await page.locator('.footer').isVisible(), `footer visible at ${width}px`);
+      }
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `overflow at ${width}px`);
       await page.close();
       console.log(`${width}px: hero navigation, grids, images, SDG padding, program dialog, contact and overflow passed`);
