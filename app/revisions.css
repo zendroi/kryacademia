@@ -1,6 +1,8 @@
 /* Brand and interaction revisions, preserving the approved page composition. */
 html body { font-family: 'Montserrat', sans-serif; }
 body *, body *::before, body *::after { letter-spacing: 0 !important; }
+.cursor-glow { --cursor-x: 50vw; --cursor-y: 30vh; position: fixed; z-index: 40; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle 280px at var(--cursor-x) var(--cursor-y), rgba(255,184,0,.13), rgba(232,0,27,.08) 38%, rgba(23,48,81,.035) 58%, transparent 76%); transition: opacity .25s ease; }
+.cursor-glow[data-active='true'] { opacity: 1; }
 body .brand { gap: 6px; flex-shrink: 0; }
 body .brand img { width: 52px; height: 56px; object-fit: contain; }
 body .brand strong { font-size: 21px; line-height: 1.2; }
@@ -273,4 +275,6 @@ body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shad
 }
 @media (prefers-reduced-motion: reduce) {
   body .selected-day-disc, body .agenda-event, body .klass-card, body .program-dialog, body .program-dialog::backdrop, body .program-dialog-gallery figure, body .update-card, body .update-card-image img { transition: none; animation: none; }
+  .cursor-glow { display: none; }
 }
+@media (pointer: coarse) { .cursor-glow { display: none; } }

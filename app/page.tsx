@@ -794,6 +794,7 @@ function Footer() {
 
 export default function Home() {
   const [s, setS] = useState(false);
+  const cursorGlow = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const o = new IntersectionObserver(
@@ -812,8 +813,29 @@ export default function Home() {
     return () => o.disconnect();
   }, []);
 
+  useEffect(() => {
+    const glow = cursorGlow.current;
+    if (!glow || matchMedia('(pointer: coarse)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let frame = 0;
+    const move = ({ clientX, clientY }: PointerEvent) => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        glow.style.setProperty('--cursor-x', `${clientX}px`);
+        glow.style.setProperty('--cursor-y', `${clientY}px`);
+        glow.dataset.active = 'true';
+      });
+    };
+    window.addEventListener('pointermove', move, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('pointermove', move);
+    };
+  }, []);
+
   return (
     <>
+      <div ref={cursorGlow} className="cursor-glow" aria-hidden="true" />
       <Navbar search={() => setS(true)} />
       {s && <Search close={() => setS(false)} />}
       <main>
