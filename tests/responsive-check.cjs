@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 const { mkdirSync } = require('node:fs');
+const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000';
 
 // Run after npm run build and node work/serve-export.cjs.
 (async () => {
@@ -11,8 +12,8 @@ const { mkdirSync } = require('node:fs');
     for (const width of [360, 390, 720, 768, 1024, 1440]) {
       const page = await browser.newPage({ viewport: { width, height: 960 }, reducedMotion: 'reduce' });
       page.on('pageerror', error => errors.push(error.message));
-      await page.goto('http://127.0.0.1:3000');
-      await page.getByRole('link', { name: 'Explore Klass', exact: true }).first().waitFor();
+      await page.goto(baseUrl);
+      await page.getByRole('button', { name: 'View Klass Details', exact: true }).first().waitFor();
       const next = page.getByRole('button', { name: 'Next upcoming program', exact: true });
       const previous = page.getByRole('button', { name: 'Previous upcoming program', exact: true });
       const initialTitle = await page.locator('.hero-slide-copy strong').innerText();
@@ -38,18 +39,19 @@ const { mkdirSync } = require('node:fs');
             !(center.x >= card.x && center.x <= card.right && center.y >= card.y && center.y <= card.bottom);
         });
       }), `hero controls overlay image outside card at ${width}px`);
-      const sdgEdges = await page.locator('.why-sdgs-figure').evaluate(figure => {
+      const sdgSize = await page.locator('.why-sdgs-figure').evaluate(figure => {
         const intro = document.querySelector('.why-intro').getBoundingClientRect();
         const rect = figure.getBoundingClientRect();
-        return { left: Math.abs(rect.left - intro.left), right: Math.abs(rect.right - intro.right) };
+        return { width: rect.width, withinContent: rect.left >= intro.left - 1 && rect.right <= intro.right + 1 };
       });
-      assert.ok(sdgEdges.left < 1 && sdgEdges.right < 1, `SDG aligns with content at ${width}px: ${JSON.stringify(sdgEdges)}`);
+      assert.ok(sdgSize.width <= 901 && sdgSize.withinContent, `SDG size at ${width}px: ${JSON.stringify(sdgSize)}`);
       if (width > 1050) {
         assert.ok(await page.locator('.navbar > nav a').first().evaluate(e => parseFloat(getComputedStyle(e).fontSize) >= 12));
         assert.ok(await page.locator('.brand strong').first().evaluate(e => parseFloat(getComputedStyle(e).fontSize) >= 20));
       }
       if (width <= 720) {
         await page.evaluate(() => scrollTo(0, 500));
+        await page.waitForTimeout(100);
         assert.match(await page.locator('.navbar').evaluate(e => getComputedStyle(e).backgroundImage), /linear-gradient/);
         assert.equal(await page.locator('.navbar').evaluate(e => getComputedStyle(e).boxShadow), 'none');
       }
@@ -77,6 +79,29 @@ const { mkdirSync } = require('node:fs');
       await page.locator('.program').first().click();
       await page.getByRole('dialog').waitFor();
       await page.getByRole('button', { name: 'Close program details' }).click();
+      await page.getByRole('button', { name: 'View Klass Details', exact: true }).first().click();
+      await page.locator('.klass-dialog[open]').waitFor();
+      assert.equal(await page.locator('.klass-teaching-team article').count(), 3);
+      const galleryBefore = await page.locator('.klass-gallery-controls span').innerText();
+      await page.getByRole('button', { name: 'Next photo' }).click();
+      assert.notEqual(await page.locator('.klass-gallery-controls span').innerText(), galleryBefore);
+      await page.getByRole('button', { name: 'Close Klass details' }).click();
+      assert.equal(await page.locator('.coach-card').count(), 3);
+      if (width === 1440) {
+        assert.ok(await page.getByRole('link', { name: 'Updates', exact: true }).isVisible());
+        await page.locator('.updates-grid').scrollIntoViewIfNeeded();
+        const wheelBefore = await page.evaluate(() => ({ top: scrollY, left: document.querySelector('.updates-grid').scrollLeft }));
+        const box = await page.locator('.updates-grid').boundingBox();
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.wheel(0, 240);
+        await page.waitForTimeout(100);
+        const wheelAfter = await page.evaluate(() => ({ top: scrollY, left: document.querySelector('.updates-grid').scrollLeft }));
+        assert.ok(wheelAfter.top > wheelBefore.top, 'vertical wheel moves page over Updates');
+        assert.equal(wheelAfter.left, wheelBefore.left, 'vertical wheel does not move update cards');
+        await page.locator('.language-picker select').selectOption('id');
+        await page.locator('#klass h2').filter({ hasText: 'Temukan Klass Berikutnya' }).waitFor();
+        await page.locator('.language-picker select').selectOption('en');
+      }
       assert.equal(await page.locator('#contact').evaluate(e => getComputedStyle(e).backgroundColor), 'rgb(255, 255, 255)');
       assert.equal(await page.locator('#contact h2').evaluate(e => getComputedStyle(e).color), 'rgb(23, 48, 81)');
       if (width > 720 && width <= 1050) {
@@ -86,7 +111,7 @@ const { mkdirSync } = require('node:fs');
       }
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `overflow at ${width}px`);
       await page.close();
-      console.log(`${width}px: hero navigation, grids, images, SDG padding, program dialog, contact and overflow passed`);
+      console.log(`${width}px: layout, SDG, dialogs, coaches, contact and overflow passed`);
     }
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }

@@ -39,4 +39,21 @@ export const activities = [
 export const partners=['Elyon Christian School Surabaya','Xin Zhong School','SMA Negeri 5 Surabaya','Petra Christian School','Sampoerna Academy','Gloria Christian School','Dharma Mulya'];
 // Original school logos from the official School Collaboration section, checked 2026-09-14.
 export const partnerLogos = ['/partners/9.jpg', '/partners/4.jpg', '/partners/5.jpg', '/partners/92.png', '/partners/81.png', '/partners/6.jpg', '/partners/8.jpg'];
+export const coachProfiles = [
+  ['Liza Stephanie', 'Head of KRYAcademia', 'Learning program direction', 'Leads the development of purposeful learning experiences that connect creativity, projects, and real-world impact.', '/coaches/liza-stephanie.jpg'],
+  ['Sintowati S.', 'Chief of Educators Professional Development & HR', 'Educator development', 'Supports educators in creating thoughtful, structured, and engaging learning experiences for young people.', '/coaches/sintowati.jpg'],
+  ['Jeremy Nathanael R.', 'KRYAcademia Staff', 'Learning facilitation', 'Supports hands-on sessions and helps learners move from curiosity to confident project creation.', '/coaches/jeremy-nathanael.jpg'],
+] as const;
+export const klassGalleries: Record<string, readonly string[]> = {
+  'STEAMaker Upcycling Project': [img.steamaker, '/activities/maker.png', '/activities/learning-12.jpg'],
+  'Innovation Klass': [img.innovation, '/activities/collaboration.jpg', '/activities/learning-33.jpg'],
+  'Kryative Maker Set': [img.makerSet, '/activities/maker-set.png', '/activities/learning-26.jpg'],
+  Biotechnology: [img.biotechnology, '/activities/sustainability.jpg', '/activities/learning-11.jpg'],
+  'Digitechnology Coding Klass': [img.codingKlass, '/activities/coding.png', '/activities/learning-16.jpg'],
+  'Digitechnology Krya x EDU:bit': [img.edubit, '/activities/coding.png', '/activities/collaboration.jpg'],
+  'Digitechnology AR Storytelling': [img.arStorytelling, '/activities/ar.png', '/activities/learning-33.jpg'],
+  'Digital Animation': [img.digitalAnimation, '/activities/animation.png', '/activities/learning-12.jpg'],
+  'Anime Drawing': [img.animeDrawing, '/activities/anime.png', '/activities/learning-26.jpg'],
+  'Architecture and Interior': [img.visualThinking, '/activities/architecture.png', '/activities/learning-11.jpg'],
+};
 export const faqs=[['Who can join KRYAcademia?','Learning experiences are designed for elementary through high-school students, with the appropriate level varying by Klass or program.'],['Are learning experiences available online and onsite?','Online and onsite options vary by Klass. Please confirm your preferred mode and schedule with our team.'],['Where do onsite programs take place?','Locations vary by program and school partnership. The team confirms venue details before registration.'],['Can a school design a custom program?','Yes. We work with schools to shape programs around learning goals, age groups, schedules, and context.'],['How do I register for a Klass?','Choose the Klass you are interested in and send an inquiry. Our team will follow up with availability and guidance.'],['How can I contact the team?','Use the inquiry form, email aha@krya.global, or WhatsApp +62 851-1121-2362.']];

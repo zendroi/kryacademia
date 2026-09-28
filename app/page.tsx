@@ -1,10 +1,10 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState, type WheelEvent } from 'react';
 import NextImage from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, ChevronLeft, ChevronRight, Search as SearchIcon, X, Mail, MessageCircle } from 'lucide-react';
-import { activities, events, faqs, img, klasses, partnerLogos, partners, programs, updates } from './mockData';
+import { ArrowUpRight, ChevronLeft, ChevronRight, Languages, X, Mail, MessageCircle } from 'lucide-react';
+import { activities, coachProfiles, events, img, klasses, klassGalleries, partnerLogos, partners, programs, updates } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
 import FoldText from './FoldText';
 import StaggeredMenu from './StaggeredMenu';
@@ -17,17 +17,9 @@ import BasicDropdown, { type DropdownItem } from '@/components/smoothui/basic-dr
 import BasicToast from '@/components/smoothui/basic-toast';
 import Checkbox from '@/components/smoothui/checkbox';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
+import { LanguageProvider, useLanguage, type Language } from './i18n';
 
-const nav = [
-  ['Home', 'home'],
-  ['Klass', 'klass'],
-  ['Programs', 'programs'],
-  ['Agenda', 'agenda'],
-  ['Activities', 'activities'],
-  ['Partner Schools', 'partners'],
-  ['FAQ', 'faq'],
-  ['Contact', 'contact'],
-];
+const nav = ['home', 'klass', 'programs', 'agenda', 'activities', 'partners', 'updates', 'faq', 'contact'] as const;
 
 const partnerLogoItems: LogoItem[] = partners.map((school, index) => ({
   src: partnerLogos[index],
@@ -38,7 +30,6 @@ const A = () => <ArrowUpRight aria-hidden size={17} />;
 
 const agendaImages = [img.makerSet, img.codingKlass, img.innovation, img.hero];
 const heroSlides = events.map((event, index) => ({
-  type: 'Upcoming Agenda',
   title: event[1],
   meta: `${event[0]} Sep · ${event[3]} · ${event[4]}`,
   image: agendaImages[index % agendaImages.length],
@@ -111,13 +102,6 @@ function Btn({ href, children, alt = false }: { href: string; children: React.Re
   );
 }
 
-const FOLD_TITLES = [
-  'Discover Your Next Klass',
-  'Learning Experiences for Every Journey',
-  'What’s Happening at KRYAcademia',
-  'Partner Schools',
-];
-
 function Heading({
   eyebrow,
   title,
@@ -129,7 +113,7 @@ function Heading({
   copy: string;
   fold?: boolean;
 }) {
-  const shouldFold = fold ?? FOLD_TITLES.includes(title);
+  const shouldFold = fold ?? false;
 
   return (
     <header className={`heading ${shouldFold ? '' : 'reveal'}`}>
@@ -142,28 +126,23 @@ function Heading({
   );
 }
 
-const staggeredNavItems = nav.map(([label, id]) => ({
-  label,
-  ariaLabel: `Navigate to ${label}`,
-  link: `#${id}`,
-}));
-
-const staggeredSocialItems = [
-  { label: 'Teacher & Admin Portal →', link: '/login' },
-  { label: 'Instagram', link: 'https://instagram.com/krya.global' },
-  { label: 'LinkedIn', link: 'https://linkedin.com/company/krya-global' },
-  { label: 'WhatsApp', link: 'https://wa.me/6285111212362' },
-];
-
-function Navbar({ search }: { search: () => void }) {
+function Navbar() {
   const [active, setActive] = useState('home');
   const [scrolled, setScrolled] = useState(false);
+  const { language, setLanguage, copy } = useLanguage();
+  const staggeredNavItems = nav.map((id) => ({ label: copy.nav[id], ariaLabel: `Navigate to ${copy.nav[id]}`, link: `#${id}` }));
+  const staggeredSocialItems = [
+    { label: `${copy.footer.portal} ->`, link: '/login' },
+    { label: 'Instagram', link: 'https://instagram.com/krya.global' },
+    { label: 'LinkedIn', link: 'https://linkedin.com/company/krya-global' },
+    { label: 'WhatsApp', link: 'https://wa.me/6285111212362' },
+  ];
 
   useEffect(() => {
     const h = () => {
       setScrolled(window.scrollY > 30);
       let c = 'home';
-      nav.forEach(([, id]) => {
+      nav.forEach((id) => {
         const el = document.getElementById(id);
         if (el && el.getBoundingClientRect().top < 220) c = id;
       });
@@ -178,16 +157,22 @@ function Navbar({ search }: { search: () => void }) {
     <header className={'navbar ' + (scrolled ? 'scrolled' : '')}>
       <Brand />
       <nav>
-        {nav.map(([n, id]) => (
+        {nav.map((id) => (
           <a className={active === id ? 'active' : ''} href={'#' + id} key={id}>
-            {n}
+            {copy.nav[id]}
           </a>
         ))}
       </nav>
       <div className="navact">
-        <button aria-label="Search" onClick={search}>
-          <SearchIcon size={19} aria-hidden />
-        </button>
+        <label className="language-picker">
+          <Languages size={19} aria-hidden />
+          <span className="sr-only">Language</span>
+          <select value={language} onChange={(event) => setLanguage(event.target.value as Language)} aria-label="Language">
+            <option value="en">EN</option>
+            <option value="id">ID</option>
+            <option value="zh">中文</option>
+          </select>
+        </label>
         <a className="login group" href="/login">
           Login <A />
         </a>
@@ -202,72 +187,26 @@ function Navbar({ search }: { search: () => void }) {
   );
 }
 
-function Search({ close }: { close: () => void }) {
-  const [q, setQ] = useState('');
-  const ref = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    ref.current?.focus();
-  }, []);
-
-  const data = useMemo(() => {
-    return [
-      ...klasses.map((x) => ['Klass', x[0], 'klass']),
-      ...programs.map((x) => ['Program', x[0], 'programs']),
-      ...events.map((x) => ['Event', x[1], 'agenda']),
-      ...partners.map((x) => ['Partner School', x, 'partners']),
-    ]
-      .filter((x) => x[1].toLowerCase().includes(q.toLowerCase()))
-      .slice(0, 8);
-  }, [q]);
-
-  return (
-    <div className="search" role="dialog">
-      <header>
-        <Brand />
-        <button onClick={close}>Close ×</button>
-      </header>
-      <main>
-        <span className="eyebrow">Discover KRYAcademia</span>
-        <h2>What would you like to explore?</h2>
-        <label>
-          <span>⌕</span>
-          <input ref={ref} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Try “coding” or “holiday”" />
-        </label>
-        {data.map((x, i) => (
-          <a href={'#' + x[2]} onClick={close} key={i} className="group">
-            <small>{x[0]}</small>
-            <strong>{x[1]}</strong>
-            <A />
-          </a>
-        ))}
-      </main>
-    </div>
-  );
-}
-
 function Hero() {
   const [activeSlide, setActiveSlide] = useState(0);
+  const { copy } = useLanguage();
 
   const slide = heroSlides[activeSlide];
 
   return (
     <section id="home" className="hero">
       <div className="hero-copy">
-        <span className="eyebrow">KRYAcademia</span>
+        <span className="eyebrow">{copy.hero.eyebrow}</span>
         <h1>
-          The 21st
+          {copy.hero.first}
           <br />
-          <em>Education</em> Center
+          <em>{copy.hero.accent}</em> {copy.hero.last}
         </h1>
-        <p>
-          KRYAcademia creates innovative, project-based learning experiences that empower young people to think
-          critically, create confidently, and make a meaningful impact.
-        </p>
+        <p>{copy.hero.copy}</p>
         <div>
-          <Btn href="#klass">Explore Klass</Btn>
+          <Btn href="#klass">{copy.hero.klass}</Btn>
           <Btn href="#activities" alt>
-            See How We Learn
+            {copy.hero.learn}
           </Btn>
         </div>
       </div>
@@ -283,14 +222,14 @@ function Hero() {
               fill
               sizes="(max-width: 720px) 100vw, 52vw"
               priority={index === 0}
-              key={`${item.type}-${item.title}`}
+              key={item.title}
             />
           ))}
         </div>
         <i>INSPIRING → CREATING → DEDICATING</i>
         <aside className="hero-art-card">
           <div className="hero-slide-copy" aria-live="polite" aria-atomic="true">
-            <small>{slide.type}</small>
+            <small>{copy.hero.upcoming}</small>
             <strong>{slide.title}</strong>
             <span>{slide.meta}</span>
           </div>
@@ -308,70 +247,125 @@ function Hero() {
 function Klass() {
   const [mode, setMode] = useState('All modes');
   const [cat, setCat] = useState('All');
+  const [selected, setSelected] = useState<string | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const { copy, localize } = useLanguage();
+  const activeKlass = klasses.find((item) => item[0] === selected);
+  const gallery = activeKlass ? klassGalleries[activeKlass[0]] || [activeKlass[4]] : [];
 
   const items = useMemo(() => {
     return klasses.filter((x) => (mode === 'All modes' || x[1] === mode) && (cat === 'All' || x[2] === cat));
   }, [mode, cat]);
 
+  useEffect(() => {
+    if (activeKlass && !dialog.current?.open) dialog.current?.showModal();
+  }, [activeKlass]);
+
+  const inquiry = () => {
+    if (!activeKlass) return;
+    dialog.current?.close();
+    dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'Klass', program: activeKlass[0] } }));
+    window.location.assign('#contact');
+  };
+
   return (
     <section id="klass" className="section">
       <Heading
-        eyebrow="KRYAcademia Klass"
-        title="Discover Your Next Klass"
-        copy="Where creativity, technology, innovation, and practical learning meet—one meaningful project at a time."
+        eyebrow={copy.klass.eyebrow}
+        title={copy.klass.title}
+        copy={copy.klass.copy}
         fold
       />
       <div className="filters">
         <div className="tabs">
-          {['All modes', 'Online', 'Onsite'].map((x) => (
-            <button aria-pressed={mode === x} className={mode === x ? 'on' : ''} onClick={() => setMode(x)} key={x}>
-              {x}
+          {[['All modes', copy.klass.allModes], ['Online', copy.klass.online], ['Onsite', copy.klass.onsite]].map(([value, label]) => (
+            <button aria-pressed={mode === value} className={mode === value ? 'on' : ''} onClick={() => setMode(value)} key={value}>
+              {label}
             </button>
           ))}
         </div>
         <div className="chips">
-          {['All', 'Innovation & Creativity', 'Technology', 'Art & Language'].map((x) => (
-            <button aria-pressed={cat === x} className={cat === x ? 'on' : ''} onClick={() => setCat(x)} key={x}>
-              {x}
+          {[['All', copy.klass.all], ['Innovation & Creativity', copy.klass.innovation], ['Technology', copy.klass.technology], ['Art & Language', copy.klass.art]].map(([value, label]) => (
+            <button aria-pressed={cat === value} className={cat === value ? 'on' : ''} onClick={() => setCat(value)} key={value}>
+              {label}
             </button>
           ))}
         </div>
       </div>
 
-      <p className="catalog-status" role="status">{items.length} Klass · Mode and schedule subject to confirmation.</p>
+      <p className="catalog-status" role="status">{items.length} {copy.klass.count} · {copy.klass.status}</p>
       <div className="klassgrid">
         {items.map((x) => (
           <article className="card klass-card group" key={x[0]}>
             <div className="photo">
               <NextImage src={x[4]} alt={x[0]} width={800} height={600} />
               {x[3] && <b>{x[3]}</b>}
-              <span>{x[1]}</span>
+              <span>{x[1] === 'Online' ? copy.klass.online : copy.klass.onsite}</span>
             </div>
             <div className="cardbody">
-              <small>{x[2]}</small>
+              <small>{x[2] === 'Technology' ? copy.klass.technology : x[2] === 'Art & Language' ? copy.klass.art : copy.klass.innovation}</small>
               <h3>{x[0]}</h3>
-              <p>{x[5]}</p>
-              <a href="#contact" onClick={() => dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'Klass', program: x[0] } }))}>
-                Explore Klass <A />
-              </a>
+              <p>{localize(x[5])}</p>
+              <button className="klass-details-trigger" type="button" onClick={() => { setGalleryIndex(0); setSelected(x[0]); }}>
+                {copy.klass.explore} <A />
+              </button>
             </div>
           </article>
         ))}
       </div>
-      {items.length === 0 && <p className="catalog-empty">No Klass listed for this combination yet. <button onClick={() => { setMode('All modes'); setCat('All'); }}>View all Klass</button></p>}
+      {items.length === 0 && <p className="catalog-empty">{copy.klass.empty} <button onClick={() => { setMode('All modes'); setCat('All'); }}>{copy.klass.viewAll}</button></p>}
+      <dialog ref={dialog} className="program-dialog klass-dialog" aria-labelledby="klass-dialog-title" onClose={() => setSelected(null)} onClick={(event) => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
+      }}>
+        {activeKlass && (
+          <div className="program-dialog-shell klass-dialog-shell">
+            <button className="program-dialog-close" type="button" onClick={() => dialog.current?.close()} aria-label={copy.klass.close} title={copy.klass.close}><X size={20} /></button>
+            <div className="klass-dialog-gallery" aria-label={copy.klass.documentation}>
+              <NextImage src={gallery[galleryIndex]} alt={`${activeKlass[0]} documentation ${galleryIndex + 1}`} fill sizes="(max-width: 720px) 100vw, 54vw" />
+              <div className="klass-gallery-controls">
+                <button type="button" aria-label={copy.klass.previous} title={copy.klass.previous} onClick={() => setGalleryIndex((galleryIndex - 1 + gallery.length) % gallery.length)}><ChevronLeft size={20} /></button>
+                <span>{galleryIndex + 1} / {gallery.length}</span>
+                <button type="button" aria-label={copy.klass.next} title={copy.klass.next} onClick={() => setGalleryIndex((galleryIndex + 1) % gallery.length)}><ChevronRight size={20} /></button>
+              </div>
+            </div>
+            <div className="program-dialog-content klass-dialog-content">
+              <small>{copy.klass.details}</small>
+              <h3 id="klass-dialog-title">{activeKlass[0]}</h3>
+              <p>{localize(activeKlass[5])}</p>
+              <dl>
+                <div><dt>{copy.klass.availability}</dt><dd>{activeKlass[1] === 'Online' ? copy.klass.online : copy.klass.onsite}</dd></div>
+                <div><dt>{copy.klass.count}</dt><dd>{activeKlass[2] === 'Technology' ? copy.klass.technology : activeKlass[2] === 'Art & Language' ? copy.klass.art : copy.klass.innovation}</dd></div>
+              </dl>
+              <section className="klass-teaching-team">
+                <h4>{copy.klass.teachingTeam}</h4>
+                <div>{coachProfiles.map((coach) => (
+                  <article key={coach[0]}>
+                    <NextImage src={coach[4]} alt={coach[0]} width={46} height={46} />
+                    <span><strong>{coach[0]}</strong><small>{coach[1]}</small></span>
+                  </article>
+                ))}</div>
+                <p>{copy.klass.teacherNote}</p>
+              </section>
+              <button className="program-dialog-action" type="button" onClick={inquiry}>{copy.klass.ask} <A /></button>
+            </div>
+          </div>
+        )}
+      </dialog>
     </section>
   );
 }
 
 function Purpose() {
+  const { copy } = useLanguage();
   return (
     <section id="why" className="purpose" aria-labelledby="why-title">
       <header className="why-intro why-content">
         <div>
-          <span className="why-label">Learning with purpose</span>
-          <h2 id="why-title">Why KRYAcademia</h2>
+          <span className="why-label">{copy.why.label}</span>
+          <h2 id="why-title">{copy.why.title}</h2>
         </div>
-        <p>Learning should prepare young people to shape the world, not simply fit into it. Through creative, project-based experiences, students turn curiosity into skills they can use beyond the classroom.</p>
+        <p>{copy.why.intro}</p>
       </header>
       <ScrollExpand
         className="why-expand"
@@ -386,23 +380,23 @@ function Purpose() {
         holdDistance={0}
         overlayScrim={0.8}
       >
-        <p>Real projects. <em>Meaningful learning.</em></p>
+        <p>{copy.why.overlay} <em>{copy.why.overlayAccent}</em></p>
       </ScrollExpand>
       <div className="why-principles why-content">
         <article>
-          <span className="why-label">01 / Our background</span>
-          <h3>Curiosity becomes capability.</h3>
-          <p>Young people need opportunities to connect what they learn with the world around them. KRYAcademia brings technology, art, and hands-on making together, using real challenges to build practical skills and a sense of purpose.</p>
+          <span className="why-label">{copy.why.backgroundLabel}</span>
+          <h3>{copy.why.backgroundTitle}</h3>
+          <p>{copy.why.background}</p>
         </article>
         <article>
-          <span className="why-label">02 / Our vision</span>
-          <h3>A future made by doing.</h3>
-          <p>We envision thoughtful, confident creators who can contribute to a sustainable future. Students learn to question, imagine possibilities, and consider how their ideas affect other people and the environment.</p>
+          <span className="why-label">{copy.why.visionLabel}</span>
+          <h3>{copy.why.visionTitle}</h3>
+          <p>{copy.why.vision}</p>
         </article>
         <article>
-          <span className="why-label">03 / Our mission</span>
-          <h3>Learn, make, and share.</h3>
-          <p>Our mission is to develop critical thinking, creativity, confidence, and collaboration through project-based learning. Students explore a challenge, build and test their ideas, improve their work, and share what they discover.</p>
+          <span className="why-label">{copy.why.missionLabel}</span>
+          <h3>{copy.why.missionTitle}</h3>
+          <p>{copy.why.mission}</p>
         </article>
       </div>
       <div className="why-sdgs">
@@ -417,7 +411,7 @@ function Purpose() {
               draggable={false}
               unoptimized
             />
-            <figcaption>KRYAcademia connects creative, project-based learning with the SDGs to inspire a more sustainable future.</figcaption>
+            <figcaption>{copy.why.sdgs}</figcaption>
           </figure>
         </div>
       </div>
@@ -430,6 +424,7 @@ function Programs() {
   const dialog = useRef<HTMLDialogElement>(null);
   const activeProgram = selected === null ? null : programs[selected];
   const documentation = activeProgram ? [[activeProgram[0], activeProgram[3]], ...activities.slice(selected!, selected! + 2)] : [];
+  const { copy, localize } = useLanguage();
 
   useEffect(() => {
     if (activeProgram && !dialog.current?.open) dialog.current?.showModal();
@@ -443,9 +438,9 @@ function Programs() {
   return (
     <section id="programs" className="section soft">
       <Heading
-        eyebrow="Programs"
-        title="Learning Experiences for Every Journey"
-        copy="Flexible formats for families, schools, and institutions—designed around active learning and purposeful outcomes."
+        eyebrow={copy.programs.eyebrow}
+        title={copy.programs.title}
+        copy={copy.programs.copy}
         fold
       />
       <div className="programgrid">
@@ -454,10 +449,10 @@ function Programs() {
             <small>0{i + 1}</small>
             <NextImage src={x[3]} alt={x[0]} width={600} height={424} />
             <div>
-              <b>{x[1]}</b>
+              <b>{localize(x[1])}</b>
               <h3>{x[0]}</h3>
-              <p>{x[4]}</p>
-              <span>◉ {x[2]}</span>
+              <p>{localize(x[4])}</p>
+              <span>◉ {localize(x[2])}</span>
             </div>
           </button>
         ))}
@@ -476,18 +471,18 @@ function Programs() {
               ))}
             </div>
             <div className="program-dialog-content">
-              <small>Program details</small>
+              <small>{copy.programs.details}</small>
               <h3 id="program-dialog-title">{activeProgram[0]}</h3>
-              <p id="program-dialog-description">{activeProgram[4]}</p>
+              <p id="program-dialog-description">{localize(activeProgram[4])}</p>
               <section>
-                <h4>What participants experience</h4>
-                <p>Every program combines guided exploration, hands-on creation, teamwork, and reflection. Activities can be adjusted to suit the participants’ age, learning goals, available time, and school context.</p>
+                <h4>{copy.programs.experience}</h4>
+                <p>{copy.programs.experienceCopy}</p>
               </section>
               <dl>
-                <div><dt>Designed for</dt><dd>{activeProgram[1]}</dd></div>
-                <div><dt>Format</dt><dd>{activeProgram[2]}</dd></div>
+                <div><dt>{copy.programs.designed}</dt><dd>{localize(activeProgram[1])}</dd></div>
+                <div><dt>{copy.programs.format}</dt><dd>{localize(activeProgram[2])}</dd></div>
               </dl>
-              <button className="program-dialog-action" type="button" onClick={() => { dialog.current?.close(); req(activeProgram[0]); }}>Request This Program <A /></button>
+              <button className="program-dialog-action" type="button" onClick={() => { dialog.current?.close(); req(activeProgram[0]); }}>{copy.programs.request} <A /></button>
             </div>
           </div>
         )}
@@ -495,23 +490,47 @@ function Programs() {
       <aside className="custom">
         <b>✦</b>
         <p>
-          <strong>Have something different in mind?</strong>
+          <strong>{copy.programs.customTitle}</strong>
           <br />
-          We can design custom learning experiences with schools and institutions.
+          {copy.programs.customCopy}
         </p>
-        <button onClick={() => req('Custom Program')}>Start a conversation →</button>
+        <button onClick={() => req('Custom Program')}>{copy.programs.customAction} →</button>
       </aside>
     </section>
   );
 }
 
+function Coaches() {
+  const { copy, localize } = useLanguage();
+  return (
+    <section id="coaches" className="section coaches">
+      <Heading eyebrow={copy.coaches.eyebrow} title={copy.coaches.title} copy={copy.coaches.copy} fold />
+      <div className="coach-grid">
+        {coachProfiles.map((coach) => (
+          <article className="coach-card reveal" key={coach[0]}>
+            <NextImage src={coach[4]} alt={coach[0]} width={800} height={800} />
+            <div>
+              <small>{coach[1]}</small>
+              <h3>{coach[0]}</h3>
+              <strong>{copy.coaches.focus}: {localize(coach[2])}</strong>
+              <p>{localize(coach[3])}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+      <p className="coach-note">{copy.coaches.note}</p>
+    </section>
+  );
+}
+
 function Agenda() {
+  const { copy } = useLanguage();
   return (
     <section id="agenda" className="section">
       <Heading
-        eyebrow="Agenda"
-        title="What’s Happening at KRYAcademia"
-        copy="A preview of how workshops, open classes, exhibitions, and events will be discovered. All entries below are mock data."
+        eyebrow={copy.agenda.eyebrow}
+        title={copy.agenda.title}
+        copy={copy.agenda.copy}
         fold
       />
       <AgendaCalendar />
@@ -520,12 +539,13 @@ function Agenda() {
 }
 
 function Activities() {
+  const { copy } = useLanguage();
   return (
     <section id="activities" className="activities">
       <Heading
-        eyebrow="Inside KRYAcademia"
-        title="Our Activities"
-        copy="Discover inspiring moments of creativity, collaboration, and meaningful learning at KRYAcademia."
+        eyebrow={copy.activities.eyebrow}
+        title={copy.activities.title}
+        copy={copy.activities.copy}
       />
       <ActivitiesInfiniteScroll />
     </section>
@@ -533,6 +553,7 @@ function Activities() {
 }
 
 function Partners() {
+  const { copy } = useLanguage();
   const go = () => {
     dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'School Partnership' } }));
     window.location.assign('#contact');
@@ -541,9 +562,9 @@ function Partners() {
   return (
     <section id="partners" className="section">
       <Heading
-        eyebrow="Together, further"
-        title="Partner Schools"
-        copy="We collaborate with schools to create innovative and sustainable learning experiences shaped around each community."
+        eyebrow={copy.partners.eyebrow}
+        title={copy.partners.title}
+        copy={copy.partners.copy}
         fold
       />
       <div className="partner-logo-loop-shell reveal">
@@ -556,13 +577,13 @@ function Partners() {
           fadeOut
           fadeOutColor="#faf9f5"
           scaleOnHover
-          ariaLabel="KRYAcademia partner schools"
+          ariaLabel={copy.partners.aria}
           className="partner-logo-loop"
         />
       </div>
       <div className="center">
         <button className="btn group" onClick={go}>
-          Partner With KRYAcademia <A />
+          {copy.partners.action} <A />
         </button>
       </div>
     </section>
@@ -570,22 +591,23 @@ function Partners() {
 }
 
 function FAQ() {
+  const { copy } = useLanguage();
   return (
     <section id="faq" className="section faq">
       <aside>
-        <span className="eyebrow">Good to know</span>
+        <span className="eyebrow">{copy.faq.eyebrow}</span>
         <h2>
-          Questions,
+          {copy.faq.title}
           <br />
-          <em>answered.</em>
+          <em>{copy.faq.accent}</em>
         </h2>
-        <p>Can’t find what you need? Our team is ready to help.</p>
-        <a href="#contact">Ask us directly →</a>
+        <p>{copy.faq.copy}</p>
+        <a href="#contact">{copy.faq.ask} →</a>
       </aside>
       <BasicAccordion
         className="faq-accordion"
         defaultExpandedIds={[0]}
-        items={faqs.map(([title, content], id) => ({ id, title, content: <p>{content}</p> }))}
+        items={copy.faq.items.map(([title, content], id) => ({ id, title, content: <p>{content}</p> }))}
       />
     </section>
   );
@@ -593,20 +615,26 @@ function FAQ() {
 
 function Updates() {
   const scroller = useRef<HTMLDivElement>(null);
+  const { copy } = useLanguage();
+  const keepPageScrolling = (event: WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.preventDefault();
+    window.scrollBy({ top: event.deltaY });
+  };
 
   return (
     <section id="updates" className="section updates">
       <Heading
-        eyebrow="Latest stories"
-        title="KRYAcademia Updates"
-        copy="News, opportunities, and learning moments from the KRYAcademia community."
+        eyebrow={copy.updates.eyebrow}
+        title={copy.updates.title}
+        copy={copy.updates.copy}
         fold
       />
       <div className="updates-controls" aria-label="KRYAcademia Updates navigation">
-        <button type="button" onClick={() => scroller.current?.scrollBy({ left: -scroller.current.clientWidth * .9, behavior: 'smooth' })} aria-label="Previous updates"><ChevronLeft size={20} /></button>
-        <button type="button" onClick={() => scroller.current?.scrollBy({ left: scroller.current.clientWidth * .9, behavior: 'smooth' })} aria-label="Next updates"><ChevronRight size={20} /></button>
+        <button type="button" onClick={() => scroller.current?.scrollBy({ left: -scroller.current.clientWidth * .9, behavior: 'smooth' })} aria-label={copy.updates.previous}><ChevronLeft size={20} /></button>
+        <button type="button" onClick={() => scroller.current?.scrollBy({ left: scroller.current.clientWidth * .9, behavior: 'smooth' })} aria-label={copy.updates.next}><ChevronRight size={20} /></button>
       </div>
-      <div className="updates-grid" ref={scroller}>
+      <div className="updates-grid" ref={scroller} onWheel={keepPageScrolling}>
         {updates.map(([category, title, excerpt, image, href]) => (
           <a className="update-card reveal group" href={href} target="_blank" rel="noreferrer" key={title}>
             <div className="update-card-image">
@@ -616,7 +644,7 @@ function Updates() {
               <small>{category}</small>
               <h3>{title}</h3>
               <p>{excerpt}</p>
-              <span>Read update <A /></span>
+              <span>{copy.updates.read} <A /></span>
             </div>
           </a>
         ))}
@@ -626,33 +654,37 @@ function Updates() {
 }
 
 function Field({ bad, name, label, children }: { bad: string[]; name: string; label: string; children?: React.ReactNode }) {
+  const { copy } = useLanguage();
   return (
     <label className={bad.includes(name) ? 'bad' : ''}>
       <span>
         {label} <b>*</b>
       </span>
-      {children || <input name={name} />} {bad.includes(name) && <small>This field is required.</small>}
+      {children || <input name={name} />} {bad.includes(name) && <small>{copy.contact.required}</small>}
     </label>
   );
 }
 
 function AnimatedField({ bad, name, label, className = '', ...props }: { bad: string[]; name: string; label: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'defaultValue' | 'onChange' | 'value'>) {
+  const { copy } = useLanguage();
   return (
     <div className={`form-field ${className} ${bad.includes(name) ? 'bad' : ''}`}>
       <AnimatedInput {...props} name={name} label={`${label} *`} />
-      {bad.includes(name) && <small>This field is required.</small>}
+      {bad.includes(name) && <small>{copy.contact.required}</small>}
     </div>
   );
 }
 
-function DropdownField({ bad, name, label, value, items, onChange, className = '' }: { bad: string[]; name: string; label: string; value: string; items: string[]; onChange: (value: string) => void; className?: string }) {
-  const options: DropdownItem[] = items.map((item) => ({ id: item, label: item }));
+function DropdownField({ bad, name, label, value, items, onChange, className = '' }: { bad: string[]; name: string; label: string; value: string; items: readonly (string | readonly [string, string])[]; onChange: (value: string) => void; className?: string }) {
+  const { copy } = useLanguage();
+  const options: DropdownItem[] = items.map((item) => Array.isArray(item) ? ({ id: item[0], label: item[1] }) : ({ id: item, label: item }));
+  const selectedLabel = options.find((item) => item.id === value)?.label;
   return (
     <div className={`form-field ${className} ${bad.includes(name) ? 'bad' : ''}`}>
       <span>{label} <b>*</b></span>
-      <BasicDropdown key={`${name}-${value}`} className="form-dropdown" label={value || 'Select one'} items={options} onChange={(item) => onChange(String(item.id))} />
+      <BasicDropdown key={`${name}-${value}`} className="form-dropdown" label={selectedLabel || copy.contact.select} items={options} onChange={(item) => onChange(String(item.id))} />
       <input name={name} type="hidden" value={value} />
-      {bad.includes(name) && <small>This field is required.</small>}
+      {bad.includes(name) && <small>{copy.contact.required}</small>}
     </div>
   );
 }
@@ -665,6 +697,7 @@ function Contact() {
   const [bad, setBad] = useState<string[]>([]);
   const [affiliation, setAffiliation] = useState('');
   const [consent, setConsent] = useState(false);
+  const { copy } = useLanguage();
 
   useEffect(() => {
     const h = (e: Event) => {
@@ -695,106 +728,104 @@ function Contact() {
   return (
     <section id="contact" className="contact">
       <aside>
-        <span className="eyebrow">Let’s talk</span>
-        <h2>Get in Touch</h2>
-        <p>
-          Tell us what you are looking for, and our team will help you find the right learning experience or
-          collaboration opportunity.
-        </p>
+        <span className="eyebrow">{copy.contact.eyebrow}</span>
+        <h2>{copy.contact.title}</h2>
+        <p>{copy.contact.copy}</p>
         <a className="contact-link" href="mailto:aha@krya.global"><Mail size={20} aria-hidden />aha@krya.global</a>
-        <a className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362 (Admin KRYAcademia)</a>
+        <a className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362 ({copy.contact.cleo})</a>
       </aside>
       <form onSubmit={submit} noValidate>
-        {status === 'success' && <BasicToast type="success" message="Inquiry saved in this prototype. No information was sent." onClose={() => setStatus('idle')} />}
-            <AnimatedField bad={bad} name="name" label="Full Name" autoComplete="name" />
-            <AnimatedField bad={bad} name="email" label="Email Address" type="email" autoComplete="email" />
-            <AnimatedField bad={bad} name="phone" label="WhatsApp Number" type="tel" placeholder="+62 812 3456 7890" autoComplete="tel" />
-            <AnimatedField bad={bad} name="place" label="City / Country" autoComplete="address-level2" />
-            <DropdownField bad={bad} name="type" label="Inquiry Type" value={type} items={['Workshop', 'Klass', 'Program', 'School Partnership', 'Event', 'Other']} onChange={(value) => { setType(value); setProgram(''); }} />
+        {status === 'success' && <BasicToast type="success" message={copy.contact.success} onClose={() => setStatus('idle')} />}
+            <AnimatedField bad={bad} name="name" label={copy.contact.name} autoComplete="name" />
+            <AnimatedField bad={bad} name="email" label={copy.contact.email} type="email" autoComplete="email" />
+            <AnimatedField bad={bad} name="phone" label={copy.contact.phone} type="tel" placeholder="+62 812 3456 7890" autoComplete="tel" />
+            <AnimatedField bad={bad} name="place" label={copy.contact.place} autoComplete="address-level2" />
+            <DropdownField bad={bad} name="type" label={copy.contact.type} value={type} items={['Workshop', 'Klass', 'Program', 'School Partnership', 'Event', ['Other', copy.contact.other]]} onChange={(value) => { setType(value); setProgram(''); }} />
             {affiliation === 'Institution' ? (
               <div className="institution-field">
-                <AnimatedField bad={bad} name="institution" label="Institution Name" placeholder="School or institution name" autoComplete="organization" autoFocus />
+                <AnimatedField bad={bad} name="institution" label={copy.contact.institutionName} placeholder={copy.contact.institutionPlaceholder} autoComplete="organization" autoFocus />
                 <input type="hidden" name="affiliation" value="Institution" />
-                <button className="institution-reset" type="button" onClick={() => setAffiliation('')} aria-label="Change institution type" title="Change institution type"><X size={17} /></button>
+                <button className="institution-reset" type="button" onClick={() => setAffiliation('')} aria-label={copy.contact.changeInstitution} title={copy.contact.changeInstitution}><X size={17} /></button>
               </div>
             ) : (
-              <DropdownField bad={bad} name="affiliation" label="Institution" value={affiliation} items={['Institution', 'Parent', 'Non-institution']} onChange={setAffiliation} />
+              <DropdownField bad={bad} name="affiliation" label={copy.contact.institution} value={affiliation} items={['Institution', ['Parent', copy.contact.parent], ['Non-institution', copy.contact.nonInstitution]]} onChange={setAffiliation} />
             )}
             {type === 'Klass' && (
               <>
-                <DropdownField bad={bad} name="klass" label="Klass of Interest" value={program} items={klasses.map((x) => x[0])} onChange={setProgram} />
-                <DropdownField bad={bad} name="mode" label="Preferred Mode" value={mode} items={['Online', 'Onsite']} onChange={setMode} />
+                <DropdownField bad={bad} name="klass" label={copy.contact.klass} value={program} items={klasses.map((x) => x[0])} onChange={setProgram} />
+                <DropdownField bad={bad} name="mode" label={copy.contact.mode} value={mode} items={['Online', 'Onsite']} onChange={setMode} />
               </>
             )}
             {type === 'Program' && (
-              <DropdownField bad={bad} className="full" name="program" label="Program of Interest" value={program} items={[...programs.map((x) => x[0]), 'Custom Program']} onChange={setProgram} />
+              <DropdownField bad={bad} className="full" name="program" label={copy.contact.program} value={program} items={[...programs.map((x) => x[0]), ['Custom Program', copy.contact.customProgram]]} onChange={setProgram} />
             )}
             {type === 'School Partnership' && (
-              <AnimatedField bad={bad} name="school-level" label="School Level" />
+              <AnimatedField bad={bad} name="school-level" label={copy.contact.schoolLevel} />
             )}
             {['Workshop', 'Event', 'Other'].includes(type) && (
               <AnimatedField bad={bad} className="full" name="request" label={type === 'Workshop'
-                    ? 'Workshop Topic or Request'
+                    ? copy.contact.workshop
                     : type === 'Event'
-                    ? 'Event of Interest'
-                    : 'Please Specify'} />
+                    ? copy.contact.event
+                    : copy.contact.specify} />
             )}
-            <Field bad={bad} name="message" label="Message">
+            <Field bad={bad} name="message" label={copy.contact.message}>
               <textarea name="message" rows={4} />
             </Field>
             <label className={'consent ' + (bad.includes('consent') ? 'bad' : '')}>
               <Checkbox id="consent" name="consent" value="yes" checked={consent} onCheckedChange={setConsent} required />
-              <span>I agree that KRYAcademia may use this information to respond. *</span>
+              <span>{copy.contact.consent} *</span>
             </label>
             <InteractiveHoverButton className="submit" disabled={status === 'loading'} type="submit">
-              {status === 'loading' ? 'Sending…' : 'Send Inquiry'}
+              {status === 'loading' ? copy.contact.sending : copy.contact.send}
             </InteractiveHoverButton>
-            <p className="note">UI prototype only — no information is sent to a server.</p>
+            <p className="note">{copy.contact.note}</p>
       </form>
     </section>
   );
 }
 
 function Footer() {
+  const { copy } = useLanguage();
   return (
     <footer className="footer">
       <div>
         <section>
           <Brand light />
-          <p>Creative, project-based learning that equips young people to make meaningful impact.</p>
+          <p>{copy.footer.copy}</p>
         </section>
         <section>
-          <h3>Explore</h3>
-          {nav.slice(0, 5).map((x) => (
-            <a href={'#' + x[1]} key={x[1]}>
-              {x[0]}
+          <h3>{copy.footer.explore}</h3>
+          {nav.slice(0, 5).map((id) => (
+            <a href={'#' + id} key={id}>
+              {copy.nav[id]}
             </a>
           ))}
         </section>
         <section>
-          <h3>Discover</h3>
-          <a href="#klass">Online Klass</a>
-          <a href="#klass">Onsite Klass</a>
-          <a href="#programs">Programs</a>
-          <a href="/login">Teacher & Admin Portal</a>
+          <h3>{copy.footer.discover}</h3>
+          <a href="#klass">{copy.footer.online}</a>
+          <a href="#klass">{copy.footer.onsite}</a>
+          <a href="#programs">{copy.nav.programs}</a>
+          <a href="/login">{copy.footer.portal}</a>
         </section>
         <section>
-          <h3>Visit us</h3>
+          <h3>{copy.footer.visit}</h3>
           <p>AD Kavling 3, Jl. Kupang Jaya I, Sonokwijenan, Sukomanunggal, Surabaya, East Java 60189, Indonesia</p>
           <a href="mailto:aha@krya.global">aha@krya.global</a>
           <a href="https://wa.me/6285111212362" target="_blank" rel="noreferrer">+62 851-1121-2362</a>
         </section>
       </div>
       <aside>
-        © 2026 KRYAcademia. All rights reserved. <a href="#home">Back to top ↑</a>
+        © 2026 KRYAcademia. {copy.footer.rights} <a href="#home">{copy.footer.back} ↑</a>
       </aside>
     </footer>
   );
 }
 
-export default function Home() {
-  const [s, setS] = useState(false);
+function LandingPage() {
   const cursorGlow = useRef<HTMLDivElement>(null);
+  const { copy } = useLanguage();
 
   useEffect(() => {
     const o = new IntersectionObserver(
@@ -836,31 +867,31 @@ export default function Home() {
   return (
     <>
       <div ref={cursorGlow} className="cursor-glow" aria-hidden="true" />
-      <Navbar search={() => setS(true)} />
-      {s && <Search close={() => setS(false)} />}
+      <Navbar />
       <main>
         <Hero />
         <section className="impact reveal">
           <div>
             <AnimatedCounter end={141} />
-            <span>Students</span>
+            <span>{copy.stats.students}</span>
           </div>
           <div>
             <AnimatedCounter end={7} />
-            <span>Partner Institution</span>
+            <span>{copy.stats.partners}</span>
           </div>
           <div>
             <AnimatedCounter end={programs.length} />
-            <span>Programs</span>
+            <span>{copy.stats.programs}</span>
           </div>
           <div>
             <AnimatedCounter end={klasses.length} />
-            <span>Klass</span>
+            <span>{copy.stats.klass}</span>
           </div>
         </section>
         <Klass />
         <Purpose />
         <Programs />
+        <Coaches />
         <Agenda />
         <Activities />
         <Partners />
@@ -871,4 +902,8 @@ export default function Home() {
       <Footer />
     </>
   );
+}
+
+export default function Home() {
+  return <LanguageProvider><LandingPage /></LanguageProvider>;
 }

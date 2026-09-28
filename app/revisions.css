@@ -12,6 +12,9 @@ body .navbar:has(.sm-open) { backdrop-filter: none; -webkit-backdrop-filter: non
 body .navbar > nav { gap: 20px; }
 body .navbar > nav a { font-size: 12px; white-space: nowrap; }
 body .navact > button { width: 50px; height: 50px; }
+.language-picker { display: flex; align-items: center; gap: 7px; min-width: 78px; height: 50px; padding: 0 12px; border: 1px solid var(--line); border-radius: 99px; background: rgba(255,255,255,.8); color: var(--navy); }
+.language-picker select { width: 38px; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.language-picker:focus-within { border-color: var(--red); box-shadow: 0 0 0 2px rgba(232,0,27,.12); }
 body .navbar .login, body .hero-copy .btn { min-height: 54px; font-size: 12px; }
 body .sm-container { display: none; }
 body .sm-panel-item { font-size: 28px; }
@@ -39,7 +42,8 @@ body .chips button { font-size: 11px; }
 body .klassgrid { align-items: stretch; }
 body .klass-card { border-radius: 8px; display: flex; flex-direction: column; animation: klass-appear .35s ease both; }
 body .klass-card .cardbody { flex: 1; display: flex; flex-direction: column; }
-body .klass-card a { margin-top: auto; padding-top: 18px; }
+body .klass-card .klass-details-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-top: auto; padding: 18px 0 0; border: 0; background: transparent; color: var(--red); font-size: 12px; font-weight: 800; text-align: left; text-transform: uppercase; }
+body .klass-card .klass-details-trigger:hover { color: var(--navy); }
 body .klass-card .photo { height: 210px; flex-shrink: 0; }
 body .klass-card h3 { font-size: 20px; overflow-wrap: anywhere; }
 body .card p, body .program p { font-size: 14px; }
@@ -54,8 +58,8 @@ body .why-expand .scroll-expand__media { object-position: center 45%; }
 body .why-expand .scroll-expand__overlay { align-items: flex-start; justify-content: flex-end; text-align: left; padding: 28px 7%; }
 body .why-expand p { color: white; font-size: 28px; line-height: 1.3; }
 body .why-expand em { font-family: Georgia, serif; }
-body .why-sdgs-figure { max-width: none; }
-body .why-sdgs-figure img { aspect-ratio: 966 / 500; object-fit: cover; object-position: center; }
+body .why-sdgs-figure { max-width: 900px; margin-inline: auto; }
+body .why-sdgs-figure img { aspect-ratio: 1350 / 500; object-fit: contain; object-position: center; }
 body .partner-logo-loop .logoloop-list img { width: 180px; height: 144px; object-fit: contain; mix-blend-mode: multiply; }
 body .partner-logo-loop { mix-blend-mode: multiply; }
 body .activities { padding-block: 64px 30px; }
@@ -82,7 +86,7 @@ body .contact h2 { color: var(--navy); }
 .updates-controls { display: flex; justify-content: flex-end; gap: 8px; margin: -18px 0 18px; }
 .updates-controls button { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--navy); transition: color .2s, border-color .2s, background .2s; }
 .updates-controls button:hover { border-color: var(--navy); background: var(--navy); color: #fff; }
-.updates-grid { display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - 44px) / 3); gap: 22px; padding-bottom: 8px; overflow-x: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.updates-grid { display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - 44px) / 3); gap: 22px; padding-bottom: 8px; overflow-x: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x pan-y; overscroll-behavior-inline: contain; }
 .updates-grid::-webkit-scrollbar { display: none; }
 .update-card { min-width: 0; overflow: hidden; scroll-snap-align: start; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--navy); text-decoration: none; transition: transform .3s, box-shadow .3s; }
 .update-card:hover { transform: translateY(-5px); box-shadow: 0 18px 42px rgba(7, 19, 36, .12); }
@@ -130,9 +134,38 @@ body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shad
 .program-dialog-close:hover { color: var(--red); transform: rotate(6deg); }
 .program-dialog-action { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 50px; border: 0; border-radius: 99px; background: var(--red); color: white; font-size: 11px; font-weight: 800; text-transform: uppercase; transition: background .25s, transform .25s; }
 .program-dialog-action:hover { background: #c90018; transform: translateY(-2px); }
+.klass-dialog { width: min(1040px, calc(100vw - 48px)); }
+.klass-dialog-shell { grid-template-columns: minmax(0, 1.12fr) minmax(370px, .88fr); }
+.klass-dialog-gallery { position: relative; min-height: 0; overflow: hidden; background: var(--navy-dark); }
+.klass-dialog-gallery > img { object-fit: cover; animation: klass-photo-in .45s cubic-bezier(.16,1,.3,1) both; }
+.klass-gallery-controls { position: absolute; z-index: 1; right: 18px; bottom: 18px; display: flex; align-items: center; gap: 10px; padding: 7px; border-radius: 99px; background: rgba(7,19,36,.78); color: white; backdrop-filter: blur(10px); }
+.klass-gallery-controls button { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; background: transparent; color: white; }
+.klass-gallery-controls button:hover { background: white; color: var(--navy); }
+.klass-gallery-controls span { min-width: 42px; text-align: center; font-size: 10px; font-weight: 800; }
+.klass-dialog-content { padding-bottom: 28px; }
+.klass-teaching-team > div { display: grid; gap: 9px; margin-top: 12px; }
+.klass-teaching-team article { display: flex; align-items: center; gap: 11px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; }
+.klass-teaching-team article img { width: 46px; height: 46px; flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
+.klass-teaching-team article span { display: grid; gap: 3px; min-width: 0; }
+.klass-teaching-team article strong { font-size: 11px; }
+.klass-teaching-team article small { color: var(--muted); font-size: 8px; line-height: 1.35; }
+.klass-teaching-team > p { margin: 12px 0 20px; font-size: 10px; }
+@keyframes klass-photo-in { from { opacity: .4; transform: scale(1.035); } to { opacity: 1; transform: none; } }
 @keyframes program-dialog-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 28px)) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @keyframes program-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes program-photo-in { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+.coaches { background: var(--navy-dark); color: white; }
+.coaches .heading h2, .coaches .heading p { color: white; }
+.coaches .eyebrow { color: #ff8a96; }
+.coach-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 22px; }
+.coach-card { overflow: hidden; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; background: #10233d; }
+.coach-card > img { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; object-position: center top; }
+.coach-card > div { padding: 24px; }
+.coach-card small { color: #ff8a96; font-size: 9px; font-weight: 800; line-height: 1.5; text-transform: uppercase; }
+.coach-card h3 { margin: 8px 0 15px; color: white; font-size: 23px; }
+.coach-card strong { display: block; margin-bottom: 10px; color: white; font-size: 11px; }
+.coach-card p { margin: 0; color: #c7d1df; font-size: 13px; line-height: 1.75; }
+.coach-note { max-width: 760px; margin: 28px auto 0; color: #c7d1df; font-size: 11px; line-height: 1.7; text-align: center; }
 .agenda-calendar { display: grid; grid-template-columns: minmax(320px, .8fr) minmax(0, 1.2fr); gap: 48px; align-items: start; }
 .agenda-month { background: var(--pale); padding: 28px; border-radius: 8px; }
 .agenda-month header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -185,6 +218,7 @@ body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shad
   .agenda-month { padding: 20px; }
   .agenda-month h3 { font-size: 18px; }
   body .klassgrid, body .programgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coach-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body .program { display: flex; flex-direction: column; gap: 0; padding: 0; min-height: 0; border-radius: 8px; }
   body .program > small { top: 12px; left: 12px; }
   body .program > img { width: 100%; height: auto; aspect-ratio: 600 / 424; flex-shrink: 0; object-fit: cover; border-radius: 0; }
@@ -223,6 +257,8 @@ body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shad
   .program-dialog-content section { margin-top: 18px; padding-top: 16px; }
   .program-dialog dl { gap: 10px; margin: 18px 0; padding-block: 14px; }
   .program-dialog-close { top: 12px; right: 12px; width: 36px; height: 36px; }
+  .klass-dialog-shell { grid-template-columns: 1fr; grid-template-rows: minmax(220px, 38svh) minmax(0, 1fr); }
+  .klass-gallery-controls { right: 10px; bottom: 10px; }
   .agenda-calendar { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .agenda-month { padding: 20px 16px; }
   .month-controls button { width: 40px; height: 40px; }
@@ -249,8 +285,12 @@ body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shad
   body .klass-card .cardbody { padding: 22px; }
   body .klass-card h3 { font-size: 20px; }
   body .klass-card p { font-size: 14px; }
-  body .klass-card a { min-height: 44px; gap: 6px; }
-  body .klass-card a svg { flex-shrink: 0; width: 14px; }
+  body .klass-card .klass-details-trigger { min-height: 44px; gap: 6px; }
+  body .klass-card .klass-details-trigger svg { flex-shrink: 0; width: 14px; }
+  .coach-grid { grid-template-columns: 1fr; }
+  .coach-card { display: grid; grid-template-columns: minmax(120px, .8fr) minmax(0, 1.2fr); }
+  .coach-card > img { height: 100%; min-height: 220px; }
+  .coach-card > div { padding: 20px; }
   body .klass-card:hover, body .program:hover { transform: none; }
   body .program h3 { font-size: 22px; overflow-wrap: anywhere; }
   body .program p { font-size: 14px; line-height: 1.7; }
@@ -268,13 +308,14 @@ body .contact form { border: 1px solid var(--line); border-radius: 8px; box-shad
   body .navbar { gap: 10px; }
   body .navbar .brand img { width: 36px; }
   body .navbar .brand strong { font-size: 14px; }
+  .language-picker { min-width: 70px; padding-inline: 9px; }
   body .navact { gap: 8px; }
   body .heading h2, body .contact h2 { font-size: 30px; }
   body .tabs button { padding-inline: 16px; }
   .agenda-filter { gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  body .selected-day-disc, body .agenda-event, body .klass-card, body .program-dialog, body .program-dialog::backdrop, body .program-dialog-gallery figure, body .update-card, body .update-card-image img { transition: none; animation: none; }
+  body .selected-day-disc, body .agenda-event, body .klass-card, body .program-dialog, body .program-dialog::backdrop, body .program-dialog-gallery figure, body .klass-dialog-gallery > img, body .update-card, body .update-card-image img { transition: none; animation: none; }
   .cursor-glow { display: none; }
 }
 @media (pointer: coarse) { .cursor-glow { display: none; } }

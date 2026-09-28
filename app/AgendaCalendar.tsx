@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { agendaEvents, dateKey, eventsOnDate, monthCells, parseDate } from './agendaData';
+import { useLanguage } from './i18n';
 
-const formatDay = (key: string) => parseDate(key).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+const locales = { en: 'en-GB', id: 'id-ID', zh: 'zh-CN' } as const;
 
 export default function AgendaCalendar() {
   const [month, setMonth] = useState('2026-09');
@@ -12,6 +13,10 @@ export default function AgendaCalendar() {
   const [today, setToday] = useState('');
   const [tab, setTab] = useState('All');
   const days = useRef<HTMLDivElement>(null);
+  const { language, copy } = useLanguage();
+  const locale = locales[language];
+  const formatDay = (key: string) => parseDate(key).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+  const tabLabels: Record<string, string> = { All: copy.agenda.all, Upcoming: copy.agenda.upcoming, Today: copy.agenda.today, Past: copy.agenda.past };
 
   useEffect(() => {
     const update = () => setToday(dateKey(new Date()));
@@ -58,14 +63,14 @@ export default function AgendaCalendar() {
     <div className="agenda-calendar">
       <div className="agenda-month">
         <header>
-          <div><small>Sample agenda</small><h3>{parseDate(`${month}-01`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</h3></div>
+          <div><small>{copy.agenda.sample}</small><h3>{parseDate(`${month}-01`).toLocaleDateString(locale, { month: 'long', year: 'numeric' })}</h3></div>
           <div className="month-controls">
-            <button type="button" onClick={() => moveMonth(-1)} aria-label="Previous month" title="Previous month"><ChevronLeft size={18} /></button>
-            <button type="button" onClick={() => moveMonth(1)} aria-label="Next month" title="Next month"><ChevronRight size={18} /></button>
+            <button type="button" onClick={() => moveMonth(-1)} aria-label={copy.agenda.previousMonth} title={copy.agenda.previousMonth}><ChevronLeft size={18} /></button>
+            <button type="button" onClick={() => moveMonth(1)} aria-label={copy.agenda.nextMonth} title={copy.agenda.nextMonth}><ChevronRight size={18} /></button>
           </div>
         </header>
-        <div className="agenda-week" aria-hidden="true">{['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((day) => <span key={day}>{day}</span>)}</div>
-        <div className="agenda-days" ref={days} role="group" aria-label="Choose a date">
+        <div className="agenda-week" aria-hidden="true">{(language === 'id' ? ['Sn', 'Sl', 'Rb', 'Km', 'Jm', 'Sb', 'Mg'] : language === 'zh' ? ['一', '二', '三', '四', '五', '六', '日'] : ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']).map((day) => <span key={day}>{day}</span>)}</div>
+        <div className="agenda-days" ref={days} role="group" aria-label={copy.agenda.choose}>
           <span className="selected-day-disc" aria-hidden="true" style={{
             opacity: selectedIndex < 0 ? 0 : 1,
             left: `calc(${((Math.max(0, selectedIndex) % 7) + 0.5) * 100 / 7}% - var(--agenda-disc-radius, 17px))`,
@@ -74,7 +79,7 @@ export default function AgendaCalendar() {
           } as CSSProperties} />
           {cells.map((date, index) => date ? (
             <button type="button" key={date} data-date={date} onClick={() => select(date)} onKeyDown={(event) => onDayKey(event, date)}
-              aria-label={`${formatDay(date)}${eventsOnDate(agendaEvents, date).length ? ', has events' : ''}`}
+              aria-label={`${formatDay(date)}${eventsOnDate(agendaEvents, date).length ? `, ${copy.agenda.hasEvents}` : ''}`}
               aria-pressed={selected === date} aria-current={today === date ? 'date' : undefined}
               className={`${selected === date ? 'selected' : ''} ${today === date ? 'is-today' : ''} ${eventsOnDate(agendaEvents, date).length ? 'has-events' : ''}`}>
               <span>{Number(date.slice(-2))}</span>
@@ -82,24 +87,24 @@ export default function AgendaCalendar() {
           ) : <span key={`empty-${index}`} aria-hidden="true" />)}
         </div>
         <footer>
-          <span className="today-legend"><i aria-hidden="true" />Today</span>
-          <button type="button" disabled={!today} onClick={() => select(today)}>Today</button>
+          <span className="today-legend"><i aria-hidden="true" />{copy.agenda.today}</span>
+          <button type="button" disabled={!today} onClick={() => select(today)}>{copy.agenda.today}</button>
         </footer>
       </div>
       <div className="agenda-events">
-        <div className="agenda-filter" role="group" aria-label="Filter agenda">
-          {['All', 'Upcoming', 'Today', 'Past'].map((name) => <button type="button" key={name} aria-pressed={tab === name} onClick={() => setTab(name)}>{name}</button>)}
+        <div className="agenda-filter" role="group" aria-label={copy.agenda.filter}>
+          {['All', 'Upcoming', 'Today', 'Past'].map((name) => <button type="button" key={name} aria-pressed={tab === name} onClick={() => setTab(name)}>{tabLabels[name]}</button>)}
         </div>
-        <p className="agenda-selection" role="status"><strong>{formatDay(selected)}</strong><span>{matching.length ? `${matching.length} sample event${matching.length > 1 ? 's' : ''}` : 'No events scheduled for this date.'}</span></p>
+        <p className="agenda-selection" role="status"><strong>{formatDay(selected)}</strong><span>{matching.length ? `${matching.length} ${matching.length > 1 ? copy.agenda.sampleEvents : copy.agenda.sampleEvent}` : copy.agenda.noEventsDate}</span></p>
         <div className="agenda-event-rows">
           {visibleEvents.map((event) => (
             <button type="button" key={event.id} className={`agenda-event ${event.date === selected ? 'is-selected' : ''}`} aria-pressed={event.date === selected} onClick={() => select(event.date)}>
-              <span className="event-date"><strong>{Number(event.date.slice(-2))}</strong><small>{parseDate(event.date).toLocaleDateString('en-GB', { month: 'short' })}</small></span>
+              <span className="event-date"><strong>{Number(event.date.slice(-2))}</strong><small>{parseDate(event.date).toLocaleDateString(locale, { month: 'short' })}</small></span>
               <span className="event-details"><small>{event.kind} · {event.mode}</small><strong>{event.title}</strong><span>{event.time}</span></span>
               <ArrowUpRight size={18} aria-hidden="true" />
             </button>
           ))}
-          {visibleEvents.length === 0 && <p className="agenda-empty">No {tab === 'All' ? '' : tab.toLowerCase() + ' '}events in this month.</p>}
+          {visibleEvents.length === 0 && <p className="agenda-empty">{copy.agenda.noEventsDate}</p>}
         </div>
       </div>
     </div>
