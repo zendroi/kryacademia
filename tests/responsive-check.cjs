@@ -86,7 +86,8 @@ const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000';
       await page.getByRole('button', { name: 'Next photo' }).click();
       assert.notEqual(await page.locator('.klass-gallery-controls span').innerText(), galleryBefore);
       await page.getByRole('button', { name: 'Close Klass details' }).click();
-      assert.equal(await page.locator('.coach-card').count(), 3);
+      assert.equal(await page.locator('.coach-card').count(), 15);
+      assert.equal(await page.locator('.skiper30 figure').count(), 15);
       if (width === 1440) {
         assert.ok(await page.getByRole('link', { name: 'Updates', exact: true }).isVisible());
         await page.locator('.updates-grid').scrollIntoViewIfNeeded();
@@ -98,9 +99,16 @@ const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000';
         const wheelAfter = await page.evaluate(() => ({ top: scrollY, left: document.querySelector('.updates-grid').scrollLeft }));
         assert.ok(wheelAfter.top > wheelBefore.top, 'vertical wheel moves page over Updates');
         assert.equal(wheelAfter.left, wheelBefore.left, 'vertical wheel does not move update cards');
-        await page.locator('.language-picker select').selectOption('id');
+        await page.locator('.updates-grid').scrollIntoViewIfNeeded();
+        const diagonalBefore = await page.evaluate(() => scrollY);
+        await page.mouse.wheel(240, 120);
+        await page.waitForTimeout(100);
+        assert.ok(await page.evaluate(() => scrollY) > diagonalBefore, 'diagonal trackpad wheel still moves page over Updates');
+        await page.locator('.language-picker button').click();
+        await page.getByRole('button', { name: 'ID', exact: true }).click();
         await page.locator('#klass h2').filter({ hasText: 'Temukan Klass Berikutnya' }).waitFor();
-        await page.locator('.language-picker select').selectOption('en');
+        await page.locator('.language-picker button').click();
+        await page.getByRole('button', { name: 'EN', exact: true }).click();
       }
       assert.equal(await page.locator('#contact').evaluate(e => getComputedStyle(e).backgroundColor), 'rgb(255, 255, 255)');
       assert.equal(await page.locator('#contact h2').evaluate(e => getComputedStyle(e).color), 'rgb(23, 48, 81)');

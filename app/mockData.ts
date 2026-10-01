@@ -40,9 +40,21 @@ export const partners=['Elyon Christian School Surabaya','Xin Zhong School','SMA
 // Original school logos from the official School Collaboration section, checked 2026-09-14.
 export const partnerLogos = ['/partners/9.jpg', '/partners/4.jpg', '/partners/5.jpg', '/partners/92.png', '/partners/81.png', '/partners/6.jpg', '/partners/8.jpg'];
 export const coachProfiles = [
-  ['Liza Stephanie', 'Head of KRYAcademia', 'Learning program direction', 'Leads the development of purposeful learning experiences that connect creativity, projects, and real-world impact.', '/coaches/liza-stephanie.jpg'],
-  ['Sintowati S.', 'Chief of Educators Professional Development & HR', 'Educator development', 'Supports educators in creating thoughtful, structured, and engaging learning experiences for young people.', '/coaches/sintowati.jpg'],
-  ['Jeremy Nathanael R.', 'KRYAcademia Staff', 'Learning facilitation', 'Supports hands-on sessions and helps learners move from curiosity to confident project creation.', '/coaches/jeremy-nathanael.jpg'],
+  ['Liza Stephanie', 'STEAM Projects', '/coaches/liza-stephanie.jpg'],
+  ['Sintowati S.', 'Creative Learning', '/coaches/sintowati.jpg'],
+  ['Gabriel Ryan', 'Science', '/coaches/gabriel-ryan.jpg'],
+  ['Sara Rustiani B.', 'Biotechnology', '/coaches/sara-rustiani.jpg'],
+  ['Wahyu Wido S.', 'Mathematics & Logic', '/coaches/wahyu-wido.jpg'],
+  ['Lavida Melia', 'Environmental Studies', '/coaches/lavida-melia.jpg'],
+  ['Daniel Richard R.', 'Coding & Game Design', '/coaches/daniel-richard.jpg'],
+  ['Jeremy Nathanael R.', 'Robotics', '/coaches/jeremy-nathanael.jpg'],
+  ['Nero Pratama', 'Digital Media', '/coaches/nero-pratama.jpg'],
+  ['Prisya Mahardita', 'Visual Arts', '/coaches/prisya-mahardita.jpg'],
+  ['Angelina Hartono S.', 'English & Communication', '/coaches/angelina-hartono.jpg'],
+  ['Rahayu Widyawati', 'Community Projects', '/coaches/rahayu-widyawati.jpg'],
+  ['Antonius M.B.', 'Innovation & Entrepreneurship', '/coaches/antonius.jpg'],
+  ['Yurizal Santoso', 'Maker & Prototyping', '/coaches/yurizal-santoso.jpg'],
+  ['Jessica Angelina', 'Project-Based Learning', '/coaches/jessica-angelina.jpg'],
 ] as const;
 export const klassGalleries: Record<string, readonly string[]> = {
   'STEAMaker Upcycling Project': [img.steamaker, '/activities/maker.png', '/activities/learning-12.jpg'],

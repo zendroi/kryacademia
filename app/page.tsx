@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState, type WheelEvent } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Languages, X, Mail, MessageCircle } from 'lucide-react';
@@ -17,6 +17,8 @@ import BasicDropdown, { type DropdownItem } from '@/components/smoothui/basic-dr
 import BasicToast from '@/components/smoothui/basic-toast';
 import Checkbox from '@/components/smoothui/checkbox';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
+import { Skiper30 } from '@/components/ui/skiper-ui/skiper30';
+import { Link003 } from '@/components/ui/skiper-ui/skiper40';
 import { LanguageProvider, useLanguage, type Language } from './i18n';
 
 const nav = ['home', 'klass', 'programs', 'agenda', 'activities', 'partners', 'updates', 'faq', 'contact'] as const;
@@ -137,6 +139,12 @@ function Navbar() {
     { label: 'LinkedIn', link: 'https://linkedin.com/company/krya-global' },
     { label: 'WhatsApp', link: 'https://wa.me/6285111212362' },
   ];
+  const languageItems: DropdownItem[] = [
+    { id: 'en', label: 'EN' },
+    { id: 'id', label: 'ID' },
+    { id: 'zh', label: 'ZH' },
+  ];
+  const languageLabel = languageItems.find((item) => item.id === language)?.label || 'EN';
 
   useEffect(() => {
     const h = () => {
@@ -164,15 +172,17 @@ function Navbar() {
         ))}
       </nav>
       <div className="navact">
-        <label className="language-picker">
+        <div className="language-picker">
           <Languages size={19} aria-hidden />
           <span className="sr-only">Language</span>
-          <select value={language} onChange={(event) => setLanguage(event.target.value as Language)} aria-label="Language">
-            <option value="en">EN</option>
-            <option value="id">ID</option>
-            <option value="zh">中文</option>
-          </select>
-        </label>
+          <BasicDropdown
+            key={language}
+            className="language-dropdown"
+            label={languageLabel}
+            items={languageItems}
+            onChange={(item) => setLanguage(item.id as Language)}
+          />
+        </div>
         <a className="login group" href="/login">
           Login <A />
         </a>
@@ -253,6 +263,15 @@ function Klass() {
   const { copy, localize } = useLanguage();
   const activeKlass = klasses.find((item) => item[0] === selected);
   const gallery = activeKlass ? klassGalleries[activeKlass[0]] || [activeKlass[4]] : [];
+  const teachingCoaches = activeKlass
+    ? activeKlass[0] === 'Biotechnology'
+      ? coachProfiles.slice(3, 6)
+      : activeKlass[2] === 'Technology'
+      ? coachProfiles.slice(6, 9)
+      : activeKlass[2] === 'Art & Language'
+      ? coachProfiles.slice(9, 12)
+      : coachProfiles.slice(0, 3)
+    : [];
 
   const items = useMemo(() => {
     return klasses.filter((x) => (mode === 'All modes' || x[1] === mode) && (cat === 'All' || x[2] === cat));
@@ -339,10 +358,10 @@ function Klass() {
               </dl>
               <section className="klass-teaching-team">
                 <h4>{copy.klass.teachingTeam}</h4>
-                <div>{coachProfiles.map((coach) => (
+                <div>{teachingCoaches.map((coach) => (
                   <article key={coach[0]}>
-                    <NextImage src={coach[4]} alt={coach[0]} width={46} height={46} />
-                    <span><strong>{coach[0]}</strong><small>{coach[1]}</small></span>
+                    <NextImage src={coach[2]} alt={coach[0]} width={46} height={46} />
+                    <span><strong>{coach[0]}</strong><small>{copy.coaches.role(coach[1])}</small></span>
                   </article>
                 ))}</div>
                 <p>{copy.klass.teacherNote}</p>
@@ -501,24 +520,27 @@ function Programs() {
 }
 
 function Coaches() {
-  const { copy, localize } = useLanguage();
+  const { copy } = useLanguage();
   return (
-    <section id="coaches" className="section coaches">
-      <Heading eyebrow={copy.coaches.eyebrow} title={copy.coaches.title} copy={copy.coaches.copy} fold />
-      <div className="coach-grid">
-        {coachProfiles.map((coach) => (
-          <article className="coach-card reveal" key={coach[0]}>
-            <NextImage src={coach[4]} alt={coach[0]} width={800} height={800} />
-            <div>
-              <small>{coach[1]}</small>
-              <h3>{coach[0]}</h3>
-              <strong>{copy.coaches.focus}: {localize(coach[2])}</strong>
-              <p>{localize(coach[3])}</p>
-            </div>
-          </article>
-        ))}
+    <section id="coaches" className="coaches">
+      <Skiper30 eyebrow={copy.coaches.eyebrow} images={coachProfiles.map((coach) => coach[2])} title={copy.coaches.title} />
+      <div className="section coach-list">
+        <p className="coach-intro">{copy.coaches.copy}</p>
+        <div className="coach-grid">
+          {coachProfiles.map((coach) => (
+            <article className="coach-card reveal" key={coach[0]}>
+              <NextImage src={coach[2]} alt={coach[0]} width={800} height={800} />
+              <div>
+                <small>{copy.coaches.role(coach[1])}</small>
+                <h3>{coach[0]}</h3>
+                <strong>{copy.coaches.focus}: {coach[1]}</strong>
+                <p>{copy.coaches.description(coach[1])}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+        <p className="coach-note">{copy.coaches.note}</p>
       </div>
-      <p className="coach-note">{copy.coaches.note}</p>
     </section>
   );
 }
@@ -616,11 +638,6 @@ function FAQ() {
 function Updates() {
   const scroller = useRef<HTMLDivElement>(null);
   const { copy } = useLanguage();
-  const keepPageScrolling = (event: WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-    event.preventDefault();
-    window.scrollBy({ top: event.deltaY });
-  };
 
   return (
     <section id="updates" className="section updates">
@@ -634,7 +651,7 @@ function Updates() {
         <button type="button" onClick={() => scroller.current?.scrollBy({ left: -scroller.current.clientWidth * .9, behavior: 'smooth' })} aria-label={copy.updates.previous}><ChevronLeft size={20} /></button>
         <button type="button" onClick={() => scroller.current?.scrollBy({ left: scroller.current.clientWidth * .9, behavior: 'smooth' })} aria-label={copy.updates.next}><ChevronRight size={20} /></button>
       </div>
-      <div className="updates-grid" ref={scroller} onWheel={keepPageScrolling}>
+      <div className="updates-grid" ref={scroller}>
         {updates.map(([category, title, excerpt, image, href]) => (
           <a className="update-card reveal group" href={href} target="_blank" rel="noreferrer" key={title}>
             <div className="update-card-image">
@@ -731,8 +748,8 @@ function Contact() {
         <span className="eyebrow">{copy.contact.eyebrow}</span>
         <h2>{copy.contact.title}</h2>
         <p>{copy.contact.copy}</p>
-        <a className="contact-link" href="mailto:aha@krya.global"><Mail size={20} aria-hidden />aha@krya.global</a>
-        <a className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362 ({copy.contact.cleo})</a>
+        <Link003 className="contact-link" href="mailto:aha@krya.global"><Mail size={20} aria-hidden />aha@krya.global</Link003>
+        <Link003 className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362 ({copy.contact.cleo})</Link003>
       </aside>
       <form onSubmit={submit} noValidate>
         {status === 'success' && <BasicToast type="success" message={copy.contact.success} onClose={() => setStatus('idle')} />}
@@ -797,27 +814,27 @@ function Footer() {
         <section>
           <h3>{copy.footer.explore}</h3>
           {nav.slice(0, 5).map((id) => (
-            <a href={'#' + id} key={id}>
+            <Link003 href={'#' + id} key={id}>
               {copy.nav[id]}
-            </a>
+            </Link003>
           ))}
         </section>
         <section>
           <h3>{copy.footer.discover}</h3>
-          <a href="#klass">{copy.footer.online}</a>
-          <a href="#klass">{copy.footer.onsite}</a>
-          <a href="#programs">{copy.nav.programs}</a>
-          <a href="/login">{copy.footer.portal}</a>
+          <Link003 href="#klass">{copy.footer.online}</Link003>
+          <Link003 href="#klass">{copy.footer.onsite}</Link003>
+          <Link003 href="#programs">{copy.nav.programs}</Link003>
+          <Link003 href="/login">{copy.footer.portal}</Link003>
         </section>
         <section>
           <h3>{copy.footer.visit}</h3>
           <p>AD Kavling 3, Jl. Kupang Jaya I, Sonokwijenan, Sukomanunggal, Surabaya, East Java 60189, Indonesia</p>
-          <a href="mailto:aha@krya.global">aha@krya.global</a>
-          <a href="https://wa.me/6285111212362" target="_blank" rel="noreferrer">+62 851-1121-2362</a>
+          <Link003 href="mailto:aha@krya.global">aha@krya.global</Link003>
+          <Link003 href="https://wa.me/6285111212362" target="_blank" rel="noreferrer">+62 851-1121-2362</Link003>
         </section>
       </div>
       <aside>
-        © 2026 KRYAcademia. {copy.footer.rights} <a href="#home">{copy.footer.back} ↑</a>
+        © 2026 KRYAcademia. {copy.footer.rights} <Link003 href="#home">{copy.footer.back} ↑</Link003>
       </aside>
     </footer>
   );
