@@ -653,7 +653,7 @@ function Updates() {
       </div>
       <div className="updates-grid" ref={scroller}>
         {updates.map(([category, title, excerpt, image, href]) => (
-          <a className="update-card reveal group" href={href} target="_blank" rel="noreferrer" key={title}>
+          <a className="update-card group" href={href} target="_blank" rel="noreferrer" key={title}>
             <div className="update-card-image">
               <NextImage src={image} alt="" width={768} height={960} />
             </div>
