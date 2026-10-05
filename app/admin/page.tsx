@@ -1,8 +1,8 @@
 import { requireRole } from '@/lib/auth';
-import PortalComingSoon from '../portal-coming-soon';
-import '../login/login.css';
+import AdminDashboard from './AdminDashboard';
+import './admin.css';
 
 export default async function AdminPage() {
   const session = await requireRole('admin');
-  return <PortalComingSoon email={session.email} role={session.role} />;
+  return <AdminDashboard email={session.email} />;
 }

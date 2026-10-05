@@ -25,7 +25,7 @@ try {
     const page = await browser.newPage();
     await signIn(page, `${role}@krya.global`, password);
     await page.waitForURL(`**/${role}`);
-    assert.match(await page.locator('body').innerText(), new RegExp(`${role} portal`, 'i'));
+    assert.match(await page.locator('body').innerText(), new RegExp(role === 'admin' ? 'admin workspace' : 'teacher portal', 'i'));
     await page.goto(`${baseUrl}/${role === 'teacher' ? 'admin' : 'teacher'}`);
     await page.waitForURL(`**/${role}`);
     await page.close();
