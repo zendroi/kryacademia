@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict';
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
+import postgres from 'postgres';
 
 const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3001';
-if (!process.env.SESSION_SECRET) throw new Error('SESSION_SECRET is required');
+if (!process.env.SESSION_SECRET || !process.env.DATABASE_URL) throw new Error('SESSION_SECRET and DATABASE_URL are required');
+const sql = postgres(process.env.DATABASE_URL, { ssl: process.env.DATABASE_URL.includes('localhost') ? false : 'require' });
+const fixtureIds = [];
+const catalogNames = [];
 const screenshots = join(tmpdir(), 'kryacademia-admin-check');
 const errors = [];
 
@@ -53,16 +57,21 @@ async function layout(page) {
     await mkdir(screenshots, { recursive: true });
     const anonymous = await browser.newPage();
     await anonymous.goto(`${baseUrl}/admin`);
+    await anonymous.waitForURL('**/login');
     assert.match(anonymous.url(), /\/login$/);
     await anonymous.close();
     const teacher = await browser.newContext();
     await teacher.addCookies([{ name: 'krya_session', value: session('teacher'), url: baseUrl }]);
     const teacherPage = await teacher.newPage();
     await teacherPage.goto(`${baseUrl}/admin`);
+    await teacherPage.waitForURL('**/teacher');
     assert.match(teacherPage.url(), /\/teacher$/);
     await teacher.close();
 
     for (const width of (process.env.WIDTHS || '1440,768,390,360').split(',').map(Number)) {
+      const fixtureId = randomUUID(); fixtureIds.push(fixtureId);
+      const inquiryName = `Admin inquiry fixture ${width}`;
+      await sql`INSERT INTO inquiries (id, submission_hash, name, email, phone, place, type, affiliation, message, language) VALUES (${fixtureId}, 'test', ${inquiryName}, ${`admin-check-${fixtureId}@example.com`}, '+62 812 3456 7890', 'Surabaya', 'Other', 'Parent', 'Check inquiry follow-up.', 'en')`;
       const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
       await context.addCookies([{ name: 'krya_session', value: session('admin'), url: baseUrl }]);
       const page = await context.newPage();
@@ -129,13 +138,14 @@ async function layout(page) {
       assert.equal(await page.locator('tbody tr').count(), 2);
 
       await navigate(page, 'Inquiries');
-      await page.locator('tbody tr').first().getByRole('button', { name: 'Open', exact: true }).click();
+      await page.locator('tbody tr').filter({ hasText: inquiryName }).getByRole('button', { name: 'Open', exact: true }).click();
       await page.getByRole('button', { name: 'Mark contacted', exact: true }).click();
-      assert.equal(await page.getByRole('dialog').getByRole('button', { name: 'Contacted', exact: true }).isDisabled(), true);
+      await page.getByRole('dialog').getByRole('button', { name: 'Mark resolved', exact: true }).waitFor();
+      assert.equal((await sql`SELECT status FROM inquiries WHERE id = ${fixtureId}`)[0].status, 'Contacted');
       await page.keyboard.press('Escape');
       await page.getByRole('dialog').waitFor({ state: 'hidden' });
       const csv = await download(page, () => page.getByRole('button', { name: 'Export', exact: true }).click());
-      assert.match(csv, /SMA Petra 12/);
+      assert.ok(csv.includes(inquiryName));
       assert.match(csv, /Contacted/);
 
       await navigate(page, 'Students');
@@ -171,10 +181,14 @@ async function layout(page) {
       await navigate(page, 'Klass');
       await page.getByRole('button', { name: 'Add Klass', exact: true }).click();
       const form = page.getByRole('dialog', { name: 'Add Klass', exact: true });
-      await form.getByRole('textbox', { name: 'Klass title' }).fill('Demo Robotics');
-      await form.getByRole('textbox', { name: 'Institution', exact: true }).fill('Xin Zhong School');
+      const catalogName = `Admin class fixture ${fixtureId}`; catalogNames.push(catalogName);
+      await form.getByRole('textbox', { name: 'Klass title' }).fill(catalogName);
+      await form.getByRole('button', { name: 'Institution: Independent / KRYAcademia', exact: true }).click();
+      await form.getByRole('button', { name: 'Xin Zhong School', exact: true }).click();
       await form.getByRole('textbox', { name: 'Category' }).fill('STEAM');
+      await form.getByRole('textbox', { name: 'Schedule', exact: true }).fill('Saturday, 10:00');
       await form.getByRole('textbox', { name: 'Description' }).fill('A hands-on robotics experience.');
+      await form.getByRole('button', { name: 'Delivery mode: Online', exact: true }).click();
       await form.getByRole('button', { name: 'Onsite', exact: true }).click();
       await page.screenshot({ path: join(screenshots, `record-form-${width}.png`) });
       await form.getByRole('button', { name: 'Add Klass', exact: true }).click();
@@ -184,11 +198,23 @@ async function layout(page) {
       assert.equal(await page.locator('.admin-metric').first().locator(':scope > strong').innerText(), '7');
       await layout(page);
       await context.close();
+      await sql.begin(async (tx) => {
+        const [row] = await tx`SELECT content FROM academy_catalog WHERE id = 1 FOR UPDATE`;
+        row.content.klasses = row.content.klasses.filter((item) => item.title !== catalogName);
+        await tx`UPDATE academy_catalog SET content = ${sql.json(row.content)} WHERE id = 1`;
+      });
       console.log(`Admin interaction and layout checks passed at ${width}px.`);
     }
     assert.deepEqual(errors, [], 'Browser runtime errors');
     console.log(`Screenshots: ${screenshots}`);
   } finally {
     await browser.close();
+    if (fixtureIds.length) await sql`DELETE FROM inquiries WHERE id IN ${sql(fixtureIds)}`;
+    if (catalogNames.length) await sql.begin(async (tx) => {
+      const [row] = await tx`SELECT content FROM academy_catalog WHERE id = 1 FOR UPDATE`;
+      row.content.klasses = row.content.klasses.filter((item) => !catalogNames.includes(item.title));
+      await tx`UPDATE academy_catalog SET content = ${sql.json(row.content)} WHERE id = 1`;
+    });
+    await sql.end();
   }
 })().catch((error) => { console.error(error); process.exitCode = 1; });

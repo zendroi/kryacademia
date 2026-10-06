@@ -45,6 +45,21 @@ async function save(page, draft = false) {
   await page.getByRole('status').filter({ hasText: draft ? 'Draft saved.' : 'Submitted successfully.' }).waitFor();
   await page.waitForFunction(() => document.querySelector('.teacher-editor button[type="submit"]')?.disabled === false);
 }
+async function tamperSave(page, mutate, expected) {
+  const handler = async (route) => {
+    if (route.request().method() === 'POST' && route.request().headers()['next-action']) {
+      const args = JSON.parse(route.request().postData());
+      assert.ok(args[0]?.kind, 'Expected a teaching record action');
+      mutate(args[0]);
+      await route.continue({ postData: JSON.stringify(args) });
+    } else await route.continue();
+  };
+  await page.route('**/teacher', handler);
+  try {
+    await page.getByRole('button', { name: 'Submit record', exact: true }).click();
+    await page.getByRole('alert').filter({ hasText: expected }).waitFor();
+  } finally { await page.unroute('**/teacher', handler); }
+}
 
 try {
   await mkdir(screenshots, { recursive: true });
@@ -60,7 +75,7 @@ try {
   assert.equal(await page.locator('.teacher-alert').count(), 0);
   for (const width of (process.env.WIDTHS || '1440,768,390,360').split(',').map(Number)) {
     await page.setViewportSize({ width, height: 960 });
-    for (const name of ['Overview', 'Meeting Journal', 'Lesson Plans', 'Semester Preparation', 'Class Requests', 'Notifications']) {
+    for (const name of ['Overview', 'Class Workflow', 'Meeting Journal', 'Lesson Plans', 'Semester Preparation', 'Class Requests', 'Notifications']) {
       await navigate(page, name);
       await layout(page);
       await page.screenshot({ path: join(screenshots, `${name.replaceAll(' ', '-')}-${width}.png`), fullPage: true });
@@ -68,14 +83,30 @@ try {
     console.log(`Teacher layout passed at ${width}px.`);
   }
   await page.setViewportSize({ width: 1440, height: 960 });
-  await navigate(page, 'Meeting Journal');
-  await page.getByLabel('Meeting date', { exact: true }).fill(testDate);
+  await navigate(page, 'Semester Preparation');
+  await page.getByLabel('Semester start', { exact: true }).fill(testDate);
+  await page.getByLabel('Submission deadline', { exact: true }).fill('2032-02-13');
+  await page.getByLabel('Title *', { exact: true }).fill(`${testName} syllabus`);
+  await page.getByLabel('Main coach *', { exact: true }).fill('Coach browser check');
+  await page.getByLabel('Program description').fill('Responsible, hands-on biotechnology investigations.');
+  await page.getByLabel('Semester learning objectives').fill('Observe, investigate, and communicate evidence.');
+  await page.getByLabel('Projects').fill('Biotechnology advocacy project.');
+  await page.getByLabel('Project description').fill('Present scientific findings to peers.');
+  await page.getByLabel('Meeting 1 topic *', { exact: true }).fill('Biotechnology fundamentals');
+  await page.getByRole('button', { name: 'Add meeting', exact: true }).click();
+  await page.getByLabel('Meeting 2 topic *', { exact: true }).fill('Investigating microorganisms');
+  await save(page);
+  const [syllabus] = await sql`SELECT id, content FROM teaching_records WHERE title = ${`${testName} syllabus`}`;
+  assert.equal(syllabus.content.sessions[1].date, '2032-02-27');
+  await navigate(page, 'Class Workflow');
+  assert.equal(await page.locator('.teacher-workflow-row').count(), 2);
+  await page.getByRole('button', { name: 'Meeting journal for meeting 1', exact: true }).click();
+  assert.equal(await page.getByLabel('Meeting date', { exact: true }).getAttribute('readonly'), '');
   await page.getByLabel('Meeting topic *', { exact: true }).fill(`${testName} meeting`);
   await page.getByRole('button', { name: 'Submit record', exact: true }).click();
   await page.getByRole('alert').filter({ hasText: 'Add a score and feedback' }).waitFor();
   await page.getByRole('button', { name: 'Student & Class Feedback', exact: true }).click();
-  await page.getByLabel('Score alicia', { exact: true }).fill('92');
-  await page.getByLabel('Score darren', { exact: true }).fill('85');
+  for (const id of ['alicia', 'darren']) for (const aspect of ['Afektif', 'Problem solving', 'Story telling', 'Kinerja']) await page.getByRole('group', { name: `${aspect} ${id}`, exact: true }).getByRole('button', { name: '3 / Proficient', exact: true }).click();
   await page.getByLabel('Personal feedback alicia').fill('Explained the experiment clearly and used observations as evidence.');
   await page.getByLabel('Personal feedback darren').fill('Worked carefully; next meeting focus on describing experimental controls.');
   await page.getByLabel('Class feedback').fill('Students compared findings and shared their observations confidently.');
@@ -89,7 +120,9 @@ try {
   await page.locator('.teacher-upload-previews img').waitFor();
   await save(page);
   const [meeting] = await sql`SELECT id, content, files FROM teaching_records WHERE title = ${`${testName} meeting`}`;
-  assert.equal(meeting.content.students[0].score, '92');
+  assert.equal(meeting.content.students[0].ratings.affective, '3');
+  assert.equal(meeting.content.syllabusId, syllabus.id);
+  assert.equal(meeting.content.meetingNumber, 1);
   assert.equal(meeting.files[0].mime, 'image/webp');
   assert.ok(meeting.files[0].size <= 184320);
   const attachmentUrl = `${baseUrl}/api/teaching-files/${meeting.files[0].id}`;
@@ -103,36 +136,50 @@ try {
   await page.reload();
   await page.getByRole('button', { name: new RegExp(`${testName} meeting`) }).click();
   await page.getByRole('button', { name: 'Student & Class Feedback', exact: true }).click();
-  assert.equal(await page.getByLabel('Score alicia', { exact: true }).inputValue(), '92');
+  assert.equal(await page.getByRole('group', { name: 'Afektif alicia', exact: true }).getByRole('button', { name: '3 / Proficient', exact: true }).getAttribute('aria-pressed'), 'true');
   await layout(page);
-  await navigate(page, 'Lesson Plans');
-  await page.getByLabel('Next meeting', { exact: true }).fill('2032-02-21');
+  await page.getByRole('button', { name: 'Plan meeting 2', exact: true }).click();
+  assert.equal(await page.getByLabel('Next meeting', { exact: true }).inputValue(), '2032-02-27');
   await page.getByLabel('Title *', { exact: true }).fill(`${testName} lesson plan`);
-  await page.getByLabel('Learning objectives').fill('Explain how controls improve experimental evidence.');
-  await page.getByLabel('Learning activities & timing').fill('15 minute reflection, 30 minute investigation, 15 minute discussion.');
   await save(page, true);
+  await page.getByLabel('Learning objectives').fill('Explain how controls improve experimental evidence.');
+  await page.getByLabel('Materials & preparation').fill('Sample containers, observation journal, and microscope.');
+  for (const number of [1, 2, 3]) {
+    await page.getByLabel(`Activity ${number} minutes`, { exact: true }).fill('15');
+    await page.getByLabel(`Activity ${number} purpose`, { exact: false }).fill('Connect scientific concepts with observed evidence.');
+    await page.getByLabel(`Activity ${number} coach activity`, { exact: false }).fill('Guide discussion and model careful observation.');
+    await page.getByLabel(`Activity ${number} student activity`, { exact: false }).fill('Investigate the samples and record observations.');
+  }
+  await page.getByLabel('Assessment', { exact: false }).fill('Review worksheets and participation in discussion.');
   await save(page);
-  await navigate(page, 'Semester Preparation');
-  await page.getByLabel('Title *', { exact: true }).fill(`${testName} syllabus`);
-  await page.getByLabel('Semester learning objectives').fill('Build confidence in responsible experiments and evidence-based reasoning.');
-  await page.getByLabel('Meeting-by-meeting syllabus').fill('Week 1: observation. Week 2: controls. Week 3: compare results. Week 4: present findings.');
-  await save(page);
-  await page.getByRole('button', { name: 'Material slides', exact: true }).click();
-  assert.equal(await page.locator('.teacher-canva-templates a').count(), 4);
-  await page.getByLabel('Meeting date', { exact: true }).fill(testDate);
+  await navigate(page, 'Class Workflow');
+  await page.getByRole('button', { name: 'Material recap for meeting 1', exact: true }).click();
+  assert.equal(await page.locator('.teacher-material-links a').first().getAttribute('href'), 'https://canva.link/7qu8j7bw0oc4ve1');
+  assert.equal(await page.locator('.teacher-material-links a').nth(1).getAttribute('href'), 'https://canva.link/5gnj7agqoy3l593');
+  assert.equal(await page.getByLabel('Your Canva slides link').count(), 0, 'Assigned links are not editable');
   await page.getByLabel('Title *', { exact: true }).fill(`${testName} slides`);
-  await page.getByLabel('Your Canva slides link').fill('https://example.com/not-canva');
-  await page.getByRole('button', { name: 'Submit record', exact: true }).click();
-  await page.getByRole('alert').filter({ hasText: 'Use a secure Canva design link' }).waitFor();
-  await page.getByLabel('Your Canva slides link').fill('https://canva.link/tf9z5tip7qyaou8');
+  await page.getByLabel('Material notes').fill('Presentation and worksheet are ready for head-coach review.');
+  await tamperSave(page, (draft) => { draft.content.canvaUrl = 'https://canva.link/tf9z5tip7qyaou8'; }, 'Keep the assigned presentation');
+  await tamperSave(page, (draft) => { draft.content.syllabusId = randomUUID(); }, 'belonging to your Klass');
   await page.getByLabel('Document PDF', { exact: true }).setInputFiles({ name: 'lesson-slides.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n%%EOF') });
   await page.locator('.teacher-upload-previews').getByText('lesson-slides.pdf', { exact: true }).waitFor();
   await save(page);
+  await navigate(page, 'Class Workflow');
+  await page.getByRole('button', { name: 'View syllabus', exact: true }).click();
+  await page.getByLabel('Meeting 2 date').fill('2032-02-28');
+  await page.getByRole('button', { name: 'Submit record', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: 'Keep meeting dates with existing records unchanged' }).waitFor();
+  await page.getByLabel('Meeting 2 date').fill('2032-02-27');
+  await save(page);
   await navigate(page, 'Class Requests');
-  await page.getByLabel('Needed by', { exact: true }).fill(testDate);
+  assert.equal(await page.getByLabel('Needed by', { exact: true }).inputValue(), '2032-02-27');
   await page.getByLabel('Title *', { exact: true }).fill(`${testName} supplies`);
   await page.getByLabel('Items & quantities').fill('10 reusable sample containers and 2 measuring tools.');
   await page.getByLabel('Purpose & classroom needs').fill('For student experiments during the next biotechnology class.');
+  await page.getByRole('button', { name: /^Request timeframe:/ }).click();
+  await page.getByRole('button', { name: 'Before semester', exact: true }).click();
+  assert.equal(await page.getByLabel('Semester start', { exact: true }).inputValue(), testDate);
+  assert.match(await page.locator('.teacher-inline-deadline').innerText(), /13 Feb 2032/);
   await save(page);
   const admin = await context('admin@krya.global', 'admin');
   assert.equal((await admin.request.get(attachmentUrl)).status(), 200);
@@ -140,6 +187,11 @@ try {
   await adminPage.goto(`${baseUrl}/admin`);
   await adminPage.waitForLoadState('networkidle');
   await adminPage.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: /^Approvals/ }).click();
+  for (const [title, detail] of [['syllabus', 'Biotechnology advocacy project.'], ['lesson plan', 'Coach activity'], ['meeting', 'Afektif:'], ['slides', 'Open worksheet']]) {
+    await adminPage.locator('.teacher-review-row').filter({ hasText: `${testName} ${title}` }).getByRole('button', { name: 'Review' }).click();
+    assert.match(await adminPage.getByRole('dialog').innerText(), new RegExp(detail.replace('.', '\\.'), 'i'));
+    await adminPage.getByRole('button', { name: 'Close details', exact: true }).click();
+  }
   await adminPage.locator('.teacher-review-row').filter({ hasText: `${testName} supplies` }).getByRole('button', { name: 'Review' }).click();
   await adminPage.getByRole('button', { name: /^Review status/ }).click();
   await adminPage.getByRole('button', { name: 'Needs revision', exact: true }).click();
@@ -186,6 +238,44 @@ try {
   await page.getByRole('status').filter({ hasText: 'Workspace updated.' }).waitFor();
   await navigate(page, 'Notifications');
   await page.getByRole('heading', { name: `${testName} supplies: Fulfilled` }).waitFor();
+  for (const width of [1440, 390, 360]) {
+    await page.setViewportSize({ width, height: 960 });
+    for (const name of ['Class Workflow', 'Meeting Journal', 'Lesson Plans', 'Semester Preparation', 'Notifications']) {
+      await navigate(page, name);
+      await layout(page);
+      await page.screenshot({ path: join(screenshots, `workflow-${name.replaceAll(' ', '-')}-${width}.png`), fullPage: true });
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await navigate(page, 'Semester Preparation');
+  await page.getByRole('button', { name: /^Klass:/ }).click();
+  await page.getByRole('button', { name: 'Coding Fundamentals', exact: true }).click();
+  await page.getByRole('button', { name: 'Use supplied 2026-2027 syllabus', exact: true }).click();
+  assert.equal(await page.locator('.teacher-timeline-entry').count(), 9);
+  assert.equal(await page.getByLabel('Meeting 9 date').inputValue(), '2026-11-21');
+  await page.getByLabel('Submission deadline').fill('2026-08-29');
+  await save(page);
+  await navigate(page, 'Class Workflow');
+  assert.equal(await page.locator('.teacher-workflow-row').count(), 9);
+  await page.getByRole('button', { name: 'Material recap for meeting 4', exact: true }).click();
+  assert.equal(await page.locator('.teacher-material-links a').first().getAttribute('href'), 'https://canva.link/tf9z5tip7qyaou8');
+  await page.setViewportSize({ width: 360, height: 960 });
+  await layout(page);
+  await page.screenshot({ path: join(screenshots, 'coding-assigned-materials-360.png'), fullPage: true });
+  await sql`INSERT INTO teaching_records (id, teacher_email, kind, class_id, meeting_date, title, content, status)
+    SELECT gen_random_uuid(), ${teacherEmail}, 'lesson-plan', 'steamaker-cikal', DATE '2020-01-01' + number, 'Legacy plan ' || number,
+      '{"objectives":"Legacy objectives","activities":"Legacy activities"}'::jsonb, 'Draft' FROM generate_series(1, 101) AS series(number)`;
+  await page.reload();
+  await page.locator('.page-preloader').waitFor({ state: 'detached' });
+  await navigate(page, 'Class Workflow');
+  assert.equal(await page.locator('.teacher-workflow-row').count(), 2, 'Older syllabuses remain available beyond 100 newer records');
+  await page.getByRole('button', { name: 'Meeting journal for meeting 1', exact: true }).click();
+  await page.getByRole('button', { name: 'Student & Class Feedback', exact: true }).click();
+  assert.equal(await page.getByRole('group', { name: 'Afektif alicia', exact: true }).getByRole('button', { name: '3 / Proficient', exact: true }).getAttribute('aria-pressed'), 'true');
+  await navigate(page, 'Lesson Plans');
+  await page.locator('.teacher-history-list > button').filter({ has: page.getByText('Legacy plan 1', { exact: true }) }).click();
+  assert.equal(await page.getByLabel('Learning activities & timing').inputValue(), 'Legacy activities');
+  await save(page, true);
   assert.deepEqual(errors, []);
   console.log('Teacher persistence, photos, access control, admin review, and notifications passed.');
 } finally {

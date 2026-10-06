@@ -145,10 +145,72 @@
 .teacher-review-controls label > span { display: block; font-size: 11px; font-weight: 700; margin-bottom: 8px; }
 .teacher-review-controls .admin-select { margin: 0; width: 100%; }
 .teacher-review-controls button.admin-primary-action { justify-self: end; }
+.teacher-workflow-heading { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin: 26px 0; }
+.teacher-workflow-heading h2 { margin: 0 0 8px; font-size: 22px; }
+.teacher-workflow-heading p, .teacher-workflow-heading small { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.8; }
+.teacher-workflow-list { border-top: 1px solid var(--line); }
+.teacher-workflow-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) minmax(290px, .9fr); gap: 18px; padding: 22px 0; align-items: center; border-bottom: 1px solid var(--line); }
+.teacher-meeting-number { align-self: start; padding-top: 5px; font-size: 18px; color: var(--red); font-weight: 700; }
+.teacher-workflow-topic > span, .teacher-workflow-topic > small { font-size: 10px; color: var(--muted); }
+.teacher-workflow-topic h3 { margin: 8px 0; font-size: 14px; line-height: 1.6; }
+.teacher-workflow-topic > small { color: #2e7360; }
+.teacher-workflow-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.teacher-workflow-actions button { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 8px; text-align: left; border: 1px solid var(--line); border-radius: 6px; color: var(--navy); background: #fff; font-size: 10px; transition: border-color .2s, background .2s; }
+.teacher-workflow-actions button:hover { border-color: var(--red); background: #fff1f3; }
+.teacher-workflow-actions button small { display: block; margin-top: 5px; font-size: 9px; color: var(--muted); }
+.teacher-session-binding { margin: 22px 0 !important; }
+.teacher-session-binding .teacher-select > div > button { text-align: left; height: auto; padding: 10px 12px; }
+.teacher-session-binding .teacher-select > div > button span { white-space: normal; line-height: 1.5; }
+.teacher-coach-fields { margin-top: 26px; }
+.teacher-coach-fields .admin-animated-input { margin-bottom: 20px; }
+.teacher-source-button { margin-bottom: 28px; }
+.teacher-deadline-input { max-width: 360px; margin: 10px 0 30px; }
+.teacher-timeline-entry, .teacher-lesson-step { padding: 20px 0; border-top: 1px solid var(--line); }
+.teacher-timeline-entry > header, .teacher-lesson-step > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.teacher-timeline-entry > header strong, .teacher-lesson-step > header strong { font-size: 12px; color: var(--red); }
+.teacher-timeline-fields { display: grid; grid-template-columns: 1fr .65fr 1fr; gap: 20px; }
+.teacher-lesson-step .teacher-form-grid { margin-bottom: 26px; }
+.teacher-activity-columns { grid-template-columns: 1fr 1fr; }
+.teacher-lesson-step .teacher-text-field { margin-top: 20px; }
+.teacher-activity-columns .teacher-text-field { margin: 0; }
+.teacher-rubric-guide { padding: 20px 0; margin: 14px 0 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 12px; }
+.teacher-rubric-guide > summary { cursor: pointer; min-height: 28px; font-weight: 700; }
+.teacher-rubric-guide section { padding-top: 16px; }
+.teacher-rubric-guide h4 { color: var(--red); margin: 0 0 12px; }
+.teacher-rubric-guide ol { margin: 0; padding-left: 23px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 35px; }
+.teacher-rubric-guide li { padding-left: 5px; line-height: 1.8; }
+.teacher-rubric-guide li strong, .teacher-rubric-guide li span { display: block; }
+.teacher-rubric-guide li span { color: var(--muted); font-size: 11px; }
+.teacher-rubric-average { font-weight: 700; text-align: right; color: var(--red); font-size: 12px; }
+.teacher-rubric-average small { display: block; margin-top: 7px; color: var(--muted); font-weight: 400; }
+.teacher-ratings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin-bottom: 24px; }
+.teacher-ratings > div > span { display: block; color: var(--muted); font-size: 10px; font-weight: 700; margin-bottom: 10px; }
+.teacher-ratings [role="group"] { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.teacher-ratings button { height: 44px; background: #fff; color: var(--navy); border: 1px solid var(--line); border-radius: 4px; font-size: 14px; }
+.teacher-ratings button.is-active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.teacher-ratings button:hover { border-color: var(--red); }
+.teacher-material-links { margin: 14px 0 28px; display: grid; gap: 16px; }
+.teacher-material-links > a { display: flex; align-items: center; gap: 12px; min-height: 62px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--navy); }
+.teacher-material-links > a strong { display: block; margin-top: 6px; font-size: 10px; color: var(--muted); }
+.teacher-material-links > a > svg:last-child { margin-left: auto; }
+.teacher-material-links > a:hover { color: var(--red); }
+.teacher-next-plan { margin-top: 24px; }
+.teacher-inline-deadline .admin-status { margin-left: 12px; }
+.teacher-summary h3 { font-size: 15px; margin: 24px 0 12px; }
+.teacher-summary-timeline { padding-left: 20px; font-size: 12px; }
+.teacher-summary-timeline li { padding: 10px 0; border-bottom: 1px solid var(--line); line-height: 1.8; }
+.teacher-summary-timeline strong, .teacher-summary-timeline span { display: block; }
+.teacher-summary-timeline span, .teacher-summary-step > span { font-size: 11px; color: var(--muted); }
+.teacher-summary-ratings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.teacher-summary-ratings span { font-size: 11px; }
+.teacher-summary-ratings + p { margin-top: 16px; }
 @media (max-width: 1100px) {
   .teacher-overview-layout { grid-template-columns: 1fr; }
   .teacher-deadline-panel { padding-top: 10px; }
   .teacher-canva-templates > div { grid-template-columns: 1fr 1fr; }
+  .teacher-workflow-row { grid-template-columns: 32px 1fr; }
+  .teacher-workflow-actions { grid-column: 2; }
+  .teacher-ratings { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 680px) {
   .teacher-top-date { font-size: 10px; }
@@ -186,6 +248,16 @@
   .teacher-review-row { grid-template-columns: 1fr auto; }
   .teacher-review-row .admin-status { grid-column: 1; grid-row: 2; }
   .teacher-review-row > button { grid-column: 2; grid-row: 1 / 3; }
+  .teacher-workflow-heading { flex-wrap: wrap; }
+  .teacher-workflow-row { gap: 12px; grid-template-columns: 26px 1fr; }
+  .teacher-workflow-actions { grid-column: 1 / -1; gap: 7px; }
+  .teacher-workflow-actions button { gap: 6px; padding: 8px 6px; }
+  .teacher-workflow-actions button svg { width: 16px; }
+  .teacher-timeline-fields { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .teacher-timeline-fields .teacher-select { grid-column: 1 / -1; }
+  .teacher-ratings { gap: 18px 14px; }
+  .teacher-rubric-guide ol { grid-template-columns: 1fr; }
+  .teacher-summary-ratings { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   .teacher-class-row > button, .teacher-history-list > button, .teacher-section-tabs > button, .teacher-canva-templates a { transition: none; }

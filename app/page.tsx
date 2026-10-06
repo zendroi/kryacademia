@@ -20,6 +20,8 @@ import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button
 import { Skiper30 } from '@/components/ui/skiper-ui/skiper30';
 import { Link003 } from '@/components/ui/skiper-ui/skiper40';
 import { LanguageProvider, useLanguage, type Language } from './i18n';
+import { submitInquiry } from './inquiry/actions';
+import { validateInquiry } from '@/lib/inquiry';
 
 const nav = ['home', 'klass', 'programs', 'agenda', 'activities', 'partners', 'updates', 'faq', 'contact'] as const;
 
@@ -686,7 +688,7 @@ function AnimatedField({ bad, name, label, className = '', ...props }: { bad: st
   const { copy } = useLanguage();
   return (
     <div className={`form-field ${className} ${bad.includes(name) ? 'bad' : ''}`}>
-      <AnimatedInput {...props} name={name} label={`${label} *`} />
+      <AnimatedInput {...props} name={name} label={`${label} *`} required aria-invalid={bad.includes(name)} />
       {bad.includes(name) && <small>{copy.contact.required}</small>}
     </div>
   );
@@ -714,7 +716,16 @@ function Contact() {
   const [bad, setBad] = useState<string[]>([]);
   const [affiliation, setAffiliation] = useState('');
   const [consent, setConsent] = useState(false);
-  const { copy } = useLanguage();
+  const [error, setError] = useState<'' | 'validation' | 'unavailable' | 'rateLimit'>('');
+  const pending = useRef(false);
+  const submission = useRef({ id: '', data: '' });
+  const { copy, language } = useLanguage();
+
+  function edited() {
+    if (pending.current) return;
+    setStatus('idle');
+    setError('');
+  }
 
   useEffect(() => {
     const h = (e: Event) => {
@@ -722,6 +733,7 @@ function Contact() {
       setType(d.type);
       setProgram(d.program || '');
       setStatus('idle');
+      setError('');
       setBad([]);
       setConsent(false);
       if (d.type === 'School Partnership') setAffiliation('Institution');
@@ -730,16 +742,26 @@ function Contact() {
     return () => window.removeEventListener('inquiry', h);
   }, []);
 
-  const submit = (e: FormEvent<HTMLFormElement>) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (pending.current || status === 'success') return;
     const d = new FormData(e.currentTarget);
-    const required = ['name', 'email', 'phone', 'place', 'type', 'affiliation', 'message', 'consent'];
-    if (affiliation === 'Institution') required.push('institution');
-    const m = required.filter((x) => !String(d.get(x) || '').trim());
-    setBad(m);
-    if (m.length) return;
+    d.set('language', language);
+    const { fields, data } = validateInquiry(d);
+    setBad(fields);
+    setError('');
+    if (fields.length) { setError('validation'); return; }
+    const serialized = JSON.stringify(data);
+    if (submission.current.data !== serialized) submission.current = { id: crypto.randomUUID(), data: serialized };
+    d.set('submission-id', submission.current.id);
+    pending.current = true;
     setStatus('loading');
-    setTimeout(() => setStatus('success'), 900);
+    try {
+      const result = await submitInquiry(d);
+      if (result.ok) setStatus('success');
+      else { setBad(result.fields); setError(result.error); setStatus('idle'); }
+    } catch { setError('unavailable'); setStatus('idle'); }
+    finally { pending.current = false; }
   };
 
   return (
@@ -751,49 +773,51 @@ function Contact() {
         <Link003 className="contact-link" href="mailto:aha@krya.global"><Mail size={20} aria-hidden />aha@krya.global</Link003>
         <Link003 className="contact-link" href="https://wa.me/6285111212362" target="_blank" rel="noreferrer"><MessageCircle size={20} aria-hidden />+62 851-1121-2362 ({copy.contact.cleo})</Link003>
       </aside>
-      <form onSubmit={submit} noValidate>
+      <form onSubmit={submit} onChangeCapture={edited} aria-busy={status === 'loading'} noValidate>
         {status === 'success' && <BasicToast type="success" message={copy.contact.success} onClose={() => setStatus('idle')} />}
-            <AnimatedField bad={bad} name="name" label={copy.contact.name} autoComplete="name" />
-            <AnimatedField bad={bad} name="email" label={copy.contact.email} type="email" autoComplete="email" />
-            <AnimatedField bad={bad} name="phone" label={copy.contact.phone} type="tel" placeholder="+62 812 3456 7890" autoComplete="tel" />
-            <AnimatedField bad={bad} name="place" label={copy.contact.place} autoComplete="address-level2" />
-            <DropdownField bad={bad} name="type" label={copy.contact.type} value={type} items={['Workshop', 'Klass', 'Program', 'School Partnership', 'Event', ['Other', copy.contact.other]]} onChange={(value) => { setType(value); setProgram(''); }} />
+            <div className="inquiry-honeypot" aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
+            <AnimatedField bad={bad} name="name" label={copy.contact.name} autoComplete="name" maxLength={120} />
+            <AnimatedField bad={bad} name="email" label={copy.contact.email} type="email" autoComplete="email" maxLength={254} />
+            <AnimatedField bad={bad} name="phone" label={copy.contact.phone} type="tel" placeholder="+62 812 3456 7890" autoComplete="tel" maxLength={30} />
+            <AnimatedField bad={bad} name="place" label={copy.contact.place} autoComplete="address-level2" maxLength={120} />
+            <DropdownField bad={bad} name="type" label={copy.contact.type} value={type} items={['Workshop', 'Klass', 'Program', 'School Partnership', 'Event', ['Other', copy.contact.other]]} onChange={(value) => { edited(); setType(value); setProgram(''); }} />
             {affiliation === 'Institution' ? (
               <div className="institution-field">
-                <AnimatedField bad={bad} name="institution" label={copy.contact.institutionName} placeholder={copy.contact.institutionPlaceholder} autoComplete="organization" autoFocus />
+                <AnimatedField bad={bad} name="institution" label={copy.contact.institutionName} placeholder={copy.contact.institutionPlaceholder} autoComplete="organization" maxLength={180} autoFocus />
                 <input type="hidden" name="affiliation" value="Institution" />
-                <button className="institution-reset" type="button" onClick={() => setAffiliation('')} aria-label={copy.contact.changeInstitution} title={copy.contact.changeInstitution}><X size={17} /></button>
+                <button className="institution-reset" type="button" onClick={() => { edited(); setAffiliation(''); }} aria-label={copy.contact.changeInstitution} title={copy.contact.changeInstitution}><X size={17} /></button>
               </div>
             ) : (
-              <DropdownField bad={bad} name="affiliation" label={copy.contact.institution} value={affiliation} items={['Institution', ['Parent', copy.contact.parent], ['Non-institution', copy.contact.nonInstitution]]} onChange={setAffiliation} />
+              <DropdownField bad={bad} name="affiliation" label={copy.contact.institution} value={affiliation} items={['Institution', ['Parent', copy.contact.parent], ['Non-institution', copy.contact.nonInstitution]]} onChange={(value) => { edited(); setAffiliation(value); }} />
             )}
             {type === 'Klass' && (
               <>
-                <DropdownField bad={bad} name="klass" label={copy.contact.klass} value={program} items={klasses.map((x) => x[0])} onChange={setProgram} />
-                <DropdownField bad={bad} name="mode" label={copy.contact.mode} value={mode} items={['Online', 'Onsite']} onChange={setMode} />
+                <DropdownField bad={bad} name="klass" label={copy.contact.klass} value={program} items={klasses.map((x) => x[0])} onChange={(value) => { edited(); setProgram(value); }} />
+                <DropdownField bad={bad} name="mode" label={copy.contact.mode} value={mode} items={['Online', 'Onsite']} onChange={(value) => { edited(); setMode(value); }} />
               </>
             )}
             {type === 'Program' && (
-              <DropdownField bad={bad} className="full" name="program" label={copy.contact.program} value={program} items={[...programs.map((x) => x[0]), ['Custom Program', copy.contact.customProgram]]} onChange={setProgram} />
+              <DropdownField bad={bad} className="full" name="program" label={copy.contact.program} value={program} items={[...programs.map((x) => x[0]), ['Custom Program', copy.contact.customProgram]]} onChange={(value) => { edited(); setProgram(value); }} />
             )}
             {type === 'School Partnership' && (
-              <AnimatedField bad={bad} name="school-level" label={copy.contact.schoolLevel} />
+              <AnimatedField bad={bad} name="school-level" label={copy.contact.schoolLevel} maxLength={180} />
             )}
             {['Workshop', 'Event', 'Other'].includes(type) && (
-              <AnimatedField bad={bad} className="full" name="request" label={type === 'Workshop'
+              <AnimatedField bad={bad} className="full" name="request" maxLength={1000} label={type === 'Workshop'
                     ? copy.contact.workshop
                     : type === 'Event'
                     ? copy.contact.event
                     : copy.contact.specify} />
             )}
             <Field bad={bad} name="message" label={copy.contact.message}>
-              <textarea name="message" rows={4} />
+              <textarea name="message" rows={4} required maxLength={5000} aria-invalid={bad.includes('message')} />
             </Field>
             <label className={'consent ' + (bad.includes('consent') ? 'bad' : '')}>
-              <Checkbox id="consent" name="consent" value="yes" checked={consent} onCheckedChange={setConsent} required />
+              <Checkbox id="consent" name="consent" value="yes" checked={consent} onCheckedChange={(value) => { edited(); setConsent(value); }} required />
               <span>{copy.contact.consent} *</span>
             </label>
-            <InteractiveHoverButton className="submit" disabled={status === 'loading'} type="submit">
+            {error && <p className="inquiry-error full" role="alert">{copy.contact[error]}</p>}
+            <InteractiveHoverButton className="submit" disabled={status === 'loading' || status === 'success'} type="submit">
               {status === 'loading' ? copy.contact.sending : copy.contact.send}
             </InteractiveHoverButton>
             <p className="note">{copy.contact.note}</p>

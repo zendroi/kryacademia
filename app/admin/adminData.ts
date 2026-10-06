@@ -11,6 +11,10 @@ export type KlassRecord = {
   students: number;
   schedule: string;
   description: string;
+  institutionId?: string;
+  coachIds?: string[];
+  deadlines?: { semesterStart: string; syllabus: string; meetings: { date: string; lessonPlan: string; feedback: string }[] };
+  revision?: number;
 };
 
 export type CoachRecord = {
@@ -23,6 +27,8 @@ export type CoachRecord = {
   classes: number;
   students: number;
   bio: string;
+  portalEmail?: string;
+  revision?: number;
 };
 
 export type StudentRecord = {
@@ -33,6 +39,14 @@ export type StudentRecord = {
   klass: string;
   score: number;
   attendance: number;
+  institutionId?: string;
+  classIds?: string[];
+  revision?: number;
+};
+
+export type InstitutionRecord = {
+  id: string; name: string; city: string; classes: number; students: number; logo: string; about: string;
+  country?: string; address?: string; contactName?: string; email?: string; phone?: string; website?: string; revision?: number;
 };
 
 export const klasses: KlassRecord[] = [
@@ -128,7 +142,7 @@ export const students: StudentRecord[] = [
   { id: 'farhan', name: 'Farhan Akbar', school: 'Gloria School', grade: 'Grade 9', klass: 'Digital Animation', score: 84, attendance: 91 },
 ];
 
-export const institutions = [
+export const institutions: InstitutionRecord[] = [
   { id: 'xin-zhong', name: 'Xin Zhong School', city: 'Surabaya', classes: 1, students: 24, logo: '/partners/4.jpg', about: 'A learning partner collaborating with KRYAcademia on biotechnology and innovation experiences for secondary students.' },
   { id: 'cikal', name: 'Sekolah Cikal', city: 'Jakarta', classes: 1, students: 18, logo: '', about: 'A partner institution bringing project-based STEAM learning into interdisciplinary student journeys.' },
   { id: 'gloria', name: 'Gloria School', city: 'Surabaya', classes: 1, students: 20, logo: '/partners/6.jpg', about: 'A partner school supporting creative problem solving, prototyping, and student-led innovation.' },
@@ -140,11 +154,4 @@ export const approvals = [
   { id: 'apr-2', owner: 'Wahyu Wido', type: 'Purchase Request', detail: 'STEAMaker prototype materials', due: 'Tomorrow, 12:00', status: 'Submitted' },
   { id: 'apr-3', owner: 'Gabriel Ryan', type: 'Lesson Plan', detail: 'Coding project sprint', due: '08 Oct 2026', status: 'Approved' },
   { id: 'apr-4', owner: 'Jessica Angelina', type: 'Slides', detail: 'AR narrative workshop', due: '10 Oct 2026', status: 'Needs revision' },
-];
-
-export const inquiries = [
-  { id: 'inq-1', name: 'SMA Petra 12', email: 'partnership@example.com', type: 'School Partnership', date: 'Today, 09:24', status: 'New', message: 'We would like to discuss an onsite innovation program for Grade 10.' },
-  { id: 'inq-2', name: 'Ibu Kartini', email: 'kartini@example.com', type: 'Parent Inquiry', date: 'Yesterday', status: 'Contacted', message: 'Could you share the next online coding class schedule?' },
-  { id: 'inq-3', name: 'Rudi Hermawan', email: 'rudi@example.com', type: 'General', date: '03 Oct 2026', status: 'Resolved', message: 'Thank you, the information has been received.' },
-  { id: 'inq-4', name: 'Maria Chen', email: 'maria@example.com', type: 'Klass Registration', date: '02 Oct 2026', status: 'New', message: 'I am interested in Digital Animation for my child.' },
 ];

@@ -484,10 +484,18 @@
 .feedback-row > strong { color: var(--red); font-size: 15px; }
 .institution-detail-head .institution-logo { width: 140px; height: 140px; }
 .inquiry-detail-head { margin-right: 54px; display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 16px; }
-.inquiry-detail-head > span { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: var(--navy); color: #fff; font-family: Georgia, serif; font-size: 18px; font-style: italic; }
+.inquiry-detail-head > span:first-child { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: var(--navy); color: #fff; font-family: Georgia, serif; font-size: 18px; font-style: italic; }
 .inquiry-detail-head h2 { font-size: 30px; }
 .inquiry-detail-head a { color: #748294; font-size: 10px; }
 .inquiry-actions { margin-top: 22px; display: flex; gap: 10px; }
+.inquiry-metadata { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 24px 0; }
+.inquiry-metadata dt { color: var(--muted); font-size: 11px; }
+.inquiry-metadata dd { margin: 6px 0 0; color: var(--navy); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.inquiry-detail-head > div { min-width: 0; }
+.inquiry-detail-head a { overflow-wrap: anywhere; }
+.inquiry-message p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.inquiry-empty { padding: 24px; color: var(--muted); }
+@media (max-width: 480px) { .inquiry-metadata { grid-template-columns: 1fr; } }
 
 .admin-toast { position: fixed; z-index: 130; right: 24px; bottom: 24px; max-width: min(390px, calc(100vw - 32px)); padding: 14px 18px; display: flex; align-items: center; gap: 10px; border-radius: 6px; background: var(--navy); color: #fff; box-shadow: 0 18px 44px rgba(11, 25, 44, .28); font-size: 10px; font-weight: 700; }
 .admin-toast svg { color: #ff9ca7; }
@@ -504,6 +512,45 @@
 .admin-record-form { max-width: 620px; margin: 0 auto; padding-top: 10px; }
 .admin-record-form h2 { margin: 8px 54px 24px 0; font-size: 28px; font-weight: 700; }
 .admin-record-form .surface-eyebrow { margin-left: 0; }
+
+.catalog-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 48px 24px 0; }
+.catalog-fields { border: 0; padding: 0; margin: 0; display: grid; gap: 20px; }
+.catalog-fields .teacher-form-grid { margin: 0; }
+.catalog-options { margin: 0; border: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.catalog-options legend { margin-bottom: 12px; font-size: 12px; font-weight: 700; }
+.catalog-options label { display: flex; align-items: center; gap: 10px; font-size: 12px; line-height: 1.5; }
+.catalog-options .admin-checkbox { flex: 0 0 20px; }
+.catalog-deadlines { padding-top: 20px; border-top: 1px solid #e2e7eb; }
+.catalog-deadlines h3 { margin: 0 0 16px; font-size: 17px; }
+.catalog-deadlines > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; }
+.catalog-deadlines h4 { font-size: 13px; }
+.catalog-deadlines > header > div { display: flex; gap: 8px; align-items: center; }
+.catalog-deadline-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 36px; gap: 12px; align-items: end; padding: 16px 0; border-top: 1px solid #e2e7eb; }
+.catalog-person-link { width: 100%; color: var(--navy); background: #fff; text-align: left; transition: border-color .2s, background .2s; }
+.catalog-person-link > span { flex: 0 0 38px; }
+.catalog-person-link > div { flex: 1; }
+.catalog-person-link > svg { flex: 0 0 16px; }
+.catalog-person-link:hover, .catalog-klass-links button:hover { border-color: var(--red); background: #f4f7fa; }
+.catalog-people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.catalog-people .detail-person { margin: 0; }
+.catalog-klass-links button { width: 100%; background: transparent; border-right: 0; border-left: 0; border-bottom: 0; text-align: left; color: var(--navy); transition: background .2s; }
+.catalog-login { display: block; margin-top: 12px; overflow-wrap: anywhere; color: var(--muted); font-size: 11px; }
+.catalog-task { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid #e2e7eb; }
+.catalog-task strong { font-size: 13px; }
+.catalog-task p, .catalog-task small { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.status-overdue { background: #fff0f1; color: #c80020; }
+.status-upcoming { background: #edf3f7; color: var(--navy); }
+.admin-detail-modal .catalog-feedback-row { grid-template-columns: 1fr auto; }
+.catalog-feedback-row .teacher-summary-ratings { margin-top: 12px; }
+
+@media (max-width: 680px) {
+  .catalog-options, .catalog-people { grid-template-columns: 1fr; }
+  .catalog-deadline-row { grid-template-columns: 1fr 1fr; }
+  .catalog-deadline-row > label:first-child { grid-column: 1 / -1; }
+  .catalog-deadline-row > button { justify-self: end; grid-column: 2; }
+  .catalog-deadlines > header { align-items: start; flex-direction: column; }
+  .detail-section > header { flex-wrap: wrap; }
+}
 .admin-mode-field { margin: 0 0 20px; padding: 0; border: 0; }
 .admin-mode-field legend { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .institution-logo > span, .coach-photo > span, .profile-photo > span { width: 100%; height: 100%; display: grid; place-items: center; color: var(--navy); font-size: 28px; font-weight: 700; background: var(--pale); }
@@ -588,7 +635,7 @@
   .session-row, .feedback-row { grid-template-columns: 34px 1fr; }
   .feedback-row > strong { grid-column: 2; }
   .inquiry-detail-head { margin-right: 0; grid-template-columns: 58px 1fr; }
-  .inquiry-detail-head > span { width: 58px; height: 58px; }
+  .inquiry-detail-head > span:first-child { width: 58px; height: 58px; }
   .inquiry-detail-head .admin-status { grid-column: 2; }
   .inquiry-actions { display: grid; }
   .compact-klass { grid-template-columns: 84px 1fr auto; }

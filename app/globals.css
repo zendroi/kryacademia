@@ -1690,6 +1690,9 @@ img {
   font-size: 9px;
 }
 
+.contact .inquiry-honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.contact .inquiry-error { margin: 0; color: var(--red); font-size: 12px; line-height: 1.6; }
+
 .success {
   grid-column: 1 / -1;
   min-height: 420px;

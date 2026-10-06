@@ -13,13 +13,14 @@ export function teachingConfig(): TeachingConfig {
 
 export async function loadTeachingRecords(email?: string): Promise<TeachingRecord[]> {
   const sql = db();
+  // ponytail: complete pilot history avoids false missing tasks; paginate by class/semester as data grows.
   return sql<TeachingRecord[]>`
     SELECT id, teacher_email AS "teacherEmail", kind, class_id AS "classId",
       meeting_date::text AS date, title, content, files, status,
       reviewer_note AS "reviewerNote", updated_at::text AS "updatedAt"
     FROM teaching_records
-    WHERE ${email ? sql`teacher_email = ${email}` : sql`status != 'Draft'`}
-    ORDER BY updated_at DESC LIMIT 100
+    ${email ? sql`WHERE teacher_email = ${email}` : sql``}
+    ORDER BY updated_at DESC
   `;
 }
 

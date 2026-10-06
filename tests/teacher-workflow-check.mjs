@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import ts from 'typescript';
+
+// Load the pure TypeScript validator without starting Next or accessing the database.
+const moduleUrl = (source) => `data:text/javascript;base64,${Buffer.from(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText).toString('base64')}`;
+const catalog = moduleUrl(await readFile(new URL('../app/admin/adminData.ts', import.meta.url), 'utf8'));
+const source = (await readFile(new URL('../app/teacher/teacherData.ts', import.meta.url), 'utf8')).replace("'../admin/adminData'", JSON.stringify(catalog));
+const { validateDraft, sourceSyllabus, assignedMaterials, emptyRatings, emptySteps, roster } = await import(moduleUrl(source));
+const config = { semesterStart: '2027-01-11', deadline: '2027-01-04', sample: true, canvaTemplate: '' };
+const syllabusId = '11111111-1111-4111-8111-111111111111';
+const syllabus = { kind: 'syllabus', classId: 'biotech-10', date: '2026-09-05', title: 'Biotechnology semester', files: [], submit: true, content: { ...sourceSyllabus('biotech-10'), deadline: '2026-08-29' } };
+validateDraft(syllabus, config);
+assert.throws(() => validateDraft({ ...syllabus, content: { ...syllabus.content, steps: [] } }, config), /different document type/);
+assert.throws(() => validateDraft({ ...syllabus, content: { ...syllabus.content, reflection: {} } }, config), /Text fields/);
+assert.throws(() => validateDraft({ ...syllabus, content: { ...syllabus.content, meetingNumber: {} } }, config), /meeting number/);
+assert.equal(syllabus.content.sessions.length, 9);
+assert.equal(sourceSyllabus('coding').sessions[8].date, '2026-11-21');
+assert.equal(sourceSyllabus('coding').sessions[7].phase, 'Dedicating');
+assert.equal(assignedMaterials('coding', 4).canvaUrl, 'https://canva.link/tf9z5tip7qyaou8');
+assert.equal(assignedMaterials('biotech-10', 2).worksheetUrl, 'https://canva.link/l1cc3xdxv419wxl');
+assert.equal(assignedMaterials('coding', 10).canvaUrl, '');
+const badSyllabus = structuredClone(syllabus);
+badSyllabus.content.deadline = badSyllabus.date;
+assert.throws(() => validateDraft(badSyllabus, config), /deadline/);
+badSyllabus.content.deadline = '2026-08-29';
+badSyllabus.content.sessions[1].date = badSyllabus.content.sessions[0].date;
+assert.throws(() => validateDraft(badSyllabus, config), /chronological/);
+badSyllabus.content.sessions[1].date = '2026-09-12';
+badSyllabus.content.sessions[0].time = '24:00';
+assert.throws(() => validateDraft(badSyllabus, config), /time/);
+
+const meeting = { kind: 'meeting', classId: 'biotech-10', date: '2026-09-05', title: 'Meeting 1', files: [], submit: true, content: { workflowVersion: 2, syllabusId, meetingNumber: 1, mainCoach: 'Coach', teacherAttendance: 'Present', reflection: 'Students explored biotechnology.', students: roster('biotech-10').map((student) => ({ id: student.id, attendance: 'Present', score: '', feedback: 'Used evidence to explain observations.', ratings: { affective: '4', problemSolving: '3', storytelling: '3', performance: '4' } })) } };
+validateDraft(meeting, config);
+meeting.content.students[0].ratings.affective = '5';
+assert.throws(() => validateDraft(meeting, config), /1 to 4/);
+meeting.content.students[0].ratings = emptyRatings();
+assert.throws(() => validateDraft(meeting, config), /four rubric/);
+meeting.content.students[0].attendance = 'Absent';
+meeting.content.students[0].feedback = '';
+validateDraft(meeting, config);
+meeting.content.students[1].feedback = '';
+assert.throws(() => validateDraft(meeting, config), /feedback/);
+meeting.submit = false;
+validateDraft(meeting, config);
+delete meeting.content.syllabusId;
+assert.throws(() => validateDraft(meeting, config), /choose its meeting first/);
+
+const plan = { kind: 'lesson-plan', classId: 'biotech-10', date: '2026-09-12', title: 'Next meeting', files: [], submit: true, content: { workflowVersion: 2, syllabusId, meetingNumber: 2, mainCoach: 'Coach', objectives: 'Observe microbes.', resources: 'Slides and microscope.', assessment: 'Observe safe experiment practice.', steps: emptySteps().map((step) => ({ ...step, minutes: '15', purpose: 'Connect evidence to concepts.', teacherActivity: 'Guide the experiment.', studentActivity: 'Observe and record findings.' })) } };
+validateDraft(plan, config);
+plan.content.steps[0].teacherActivity = '';
+assert.throws(() => validateDraft(plan, config), /coach activity/);
+plan.submit = false;
+validateDraft(plan, config);
+plan.content.canvaUrl = 'javascript:alert(1)';
+assert.throws(() => validateDraft(plan, config), /secure Canva/);
+
+const material = { kind: 'slides', classId: 'biotech-10', date: '2026-09-05', title: 'Material recap', files: [], submit: true, content: { workflowVersion: 2, syllabusId, meetingNumber: 1, mainCoach: 'Coach', notes: 'Ready for head-coach review.', ...assignedMaterials('biotech-10', 1) } };
+validateDraft(material, config);
+material.content.canvaUrl = 'https://canva.link/tf9z5tip7qyaou8';
+assert.throws(() => validateDraft(material, config), /unchanged/);
+material.content.canvaUrl = 'https://canva.link.attacker.com/design';
+assert.throws(() => validateDraft(material, config), /secure Canva/);
+console.log('Syllabus timeline, rubric, lesson steps, and assigned Canva link validation passed.');
