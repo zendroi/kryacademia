@@ -10,6 +10,7 @@ if (accounts.some(([, password]) => !password)) throw new Error('Test account pa
 
 async function signIn(page, email, password) {
   await page.goto(`${baseUrl}/login`);
+  await page.locator('.page-preloader').waitFor({ state: 'detached' });
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: /sign in/i }).click();
@@ -25,6 +26,7 @@ try {
     const page = await browser.newPage();
     await signIn(page, `${role}@krya.global`, password);
     await page.waitForURL(`**/${role}`);
+    await page.locator('.page-preloader').waitFor({ state: 'detached' });
     assert.match(await page.locator('body').innerText(), new RegExp(role === 'admin' ? 'admin workspace' : 'teacher workspace', 'i'));
     await page.goto(`${baseUrl}/${role === 'teacher' ? 'admin' : 'teacher'}`);
     await page.waitForURL(`**/${role}`);
