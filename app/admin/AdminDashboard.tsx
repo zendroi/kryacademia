@@ -1,11 +1,11 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import AnimatedInput from '@/components/smoothui/animated-input';
 import BasicDropdown from '@/components/smoothui/basic-dropdown';
+import { FormPagePreloader, PageLoadingLink as Link } from '@/components/smoothui/page-preloader';
 import Checkbox from '@/components/smoothui/checkbox';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 import {
@@ -35,6 +35,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { logout } from '../login/actions';
+import { reviewTeachingRecord } from '../teacher/actions';
+import { TeacherSelect, TeachingAttachments } from '../teacher/TeachingControls';
+import { dateLabel, recordLabels, teachingClasses, roster, type TeachingRecord, type RecordStatus } from '../teacher/teacherData';
 import {
   approvals,
   coaches,
@@ -124,7 +127,7 @@ function AdminSelect({ label, options, value, onChange }: { label: string; optio
   return <div className="admin-select"><span>{label}</span><BasicDropdown key={value} label={`${label}: ${value}`} items={options.map((option) => ({ id: option, label: option }))} onChange={(item) => onChange(String(item.id))} /></div>;
 }
 
-export default function AdminDashboard({ email }: { email: string }) {
+export default function AdminDashboard({ email, initialSubmissions = [], teachingUnavailable = false }: { email: string; initialSubmissions?: TeachingRecord[]; teachingUnavailable?: boolean }) {
   const [activeView, setActiveView] = useState<ViewKey>('overview');
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -134,6 +137,8 @@ export default function AdminDashboard({ email }: { email: string }) {
   const [records, setRecords] = useState<Records>({ klasses, institutions, coaches, students, inquiries, approvals });
   const [draft, setDraft] = useState<Draft>({ audience: 'All coaches', subject: '', message: '', email: true, portal: true });
   const [toast, setToast] = useState('');
+  const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [reviewing, setReviewing] = useState<TeachingRecord | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -192,7 +197,8 @@ export default function AdminDashboard({ email }: { email: string }) {
   }
 
   const copy = viewCopy[activeView];
-  const notificationCount = records.inquiries.filter((item) => item.status === 'New').length + records.approvals.filter((item) => ['Pending', 'Submitted'].includes(item.status)).length;
+  const teacherPending = submissions.filter((item) => item.status === 'Submitted').length;
+  const notificationCount = records.inquiries.filter((item) => item.status === 'New').length + records.approvals.filter((item) => ['Pending', 'Submitted'].includes(item.status)).length + teacherPending;
 
   return (
     <MotionConfig reducedMotion="user"><main className="admin-shell">
@@ -213,14 +219,14 @@ export default function AdminDashboard({ email }: { email: string }) {
             <button className={activeView === key ? 'is-active' : ''} aria-current={activeView === key ? 'page' : undefined} type="button" key={key} onClick={() => changeView(key)}>
               <Icon size={18} strokeWidth={1.8} aria-hidden />
               <span>{label}</span>
-              {badge ? <b>{key === 'approvals' ? records.approvals.filter((item) => ['Pending', 'Submitted'].includes(item.status)).length : records.inquiries.filter((item) => item.status === 'New').length}</b> : null}
+              {badge ? <b>{key === 'approvals' ? records.approvals.filter((item) => ['Pending', 'Submitted'].includes(item.status)).length + teacherPending : records.inquiries.filter((item) => item.status === 'New').length}</b> : null}
             </button>
           ))}
         </nav>
 
         <div className="admin-sidebar-foot">
           <Link href="/"><ChevronLeft size={17} aria-hidden />Website</Link>
-          <form action={logout}><button type="submit"><LogOut size={17} aria-hidden />Log out</button></form>
+          <form action={logout}><FormPagePreloader /><button type="submit"><LogOut size={17} aria-hidden />Log out</button></form>
         </div>
       </aside>
 
@@ -238,7 +244,7 @@ export default function AdminDashboard({ email }: { email: string }) {
               <button className="admin-icon-button" type="button" onClick={() => setNotificationsOpen((open) => !open)} aria-label="Notifications" aria-expanded={notificationsOpen}>
                 <Bell size={19} />{notificationCount > 0 && <span>{notificationCount}</span>}
               </button>
-              <AnimatePresence>{notificationsOpen && <NotificationPanel records={records} onClose={() => setNotificationsOpen(false)} changeView={changeView} />}</AnimatePresence>
+              <AnimatePresence>{notificationsOpen && <NotificationPanel records={records} teacherPending={teacherPending} onClose={() => setNotificationsOpen(false)} changeView={changeView} />}</AnimatePresence>
             </div>
             <span className="admin-demo-badge">Demo data</span>
             <div className="admin-account"><span>{initials(email)}</span><div><strong>Admin</strong><small>{email}</small></div></div>
@@ -258,7 +264,7 @@ export default function AdminDashboard({ email }: { email: string }) {
               {activeView === 'institutions' && <InstitutionView institutions={records.institutions} query={query} openDetail={setDetail} />}
               {activeView === 'coaches' && <CoachView coaches={records.coaches} query={query} openDetail={setDetail} />}
               {activeView === 'students' && <StudentView students={records.students} query={query} openDetail={setDetail} />}
-              {activeView === 'approvals' && <ApprovalView approvals={records.approvals} onApprove={(id) => { setRecords((current) => ({ ...current, approvals: current.approvals.map((item) => item.id === id ? { ...item, status: 'Approved' } : item) })); announce('Demo request approved.'); }} query={query} />}
+              {activeView === 'approvals' && <><section className="teacher-review-queue"><header className="teacher-section-head"><div><span>Live teacher submissions</span><h2>Teacher review queue</h2></div><span>{submissions.length} records</span></header>{teachingUnavailable ? <p className="teacher-form-error">Teacher submissions are temporarily unavailable.</p> : submissions.filter((item) => `${item.title} ${item.teacherEmail}`.toLowerCase().includes(query.toLowerCase())).map((item) => <article className="teacher-review-row" key={item.id}><div><strong>{item.title}</strong><small>{recordLabels[item.kind]} / {item.teacherEmail} / {dateLabel(item.date)}</small></div><StatusChip status={item.status} /><button className="admin-secondary-action" onClick={() => setReviewing(item)}>Review <ChevronRight size={16} /></button></article>)}{!teachingUnavailable && !submissions.length && <p>No teacher submissions yet.</p>}</section><ApprovalView approvals={records.approvals} onApprove={(id) => { setRecords((current) => ({ ...current, approvals: current.approvals.map((item) => item.id === id ? { ...item, status: 'Approved' } : item) })); announce('Demo request approved.'); }} query={query} /></>}
               {activeView === 'reports' && <ReportView records={records} announce={announce} />}
               {activeView === 'inquiries' && <InquiryView inquiries={records.inquiries} query={query} openDetail={setDetail} />}
               {activeView === 'broadcast' && <BroadcastView draft={draft} setDraft={setDraft} records={records} announce={announce} />}
@@ -269,12 +275,13 @@ export default function AdminDashboard({ email }: { email: string }) {
 
       <AnimatePresence>{detail && <DetailModal records={records} detail={detail} onClose={() => setDetail(null)} updateInquiry={updateInquiry} />}</AnimatePresence>
       <AnimatePresence>{createView && <RecordForm view={createView} onClose={() => setCreateView(null)} onCreate={createRecord} />}</AnimatePresence>
+      <AnimatePresence>{reviewing && <TeacherReview record={reviewing} onClose={() => setReviewing(null)} onReviewed={(items) => { setSubmissions(items); setReviewing(null); announce('Review saved. Teacher notified in their dashboard.'); }} />}</AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="admin-toast" role="status" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}><CheckCircle2 size={18} />{toast}</motion.div>}</AnimatePresence>
     </main></MotionConfig>
   );
 }
 
-function NotificationPanel({ records, onClose, changeView }: { records: Records; onClose: () => void; changeView: (view: ViewKey) => void }) {
+function NotificationPanel({ records, teacherPending, onClose, changeView }: { records: Records; teacherPending: number; onClose: () => void; changeView: (view: ViewKey) => void }) {
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function dismiss(event: MouseEvent | KeyboardEvent) {
@@ -287,6 +294,7 @@ function NotificationPanel({ records, onClose, changeView }: { records: Records;
   return (
     <motion.div ref={panel} className="admin-notifications" initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.98 }} transition={{ duration: 0.2 }}>
       <div><strong>Notifications</strong><button type="button" onClick={onClose} aria-label="Close notifications"><X size={16} /></button></div>
+      {teacherPending > 0 && <button type="button" onClick={() => changeView('approvals')}><span className="notification-dot" /><div><strong>{teacherPending} teacher submissions</strong><small>Waiting for review</small></div></button>}
       {records.inquiries.filter((item) => item.status === 'New').map((item) => <button key={item.id} type="button" onClick={() => changeView('inquiries')}><span className="notification-dot" /><div><strong>New inquiry: {item.name}</strong><small>{item.date}</small></div></button>)}
       {records.approvals.filter((item) => ['Pending', 'Submitted'].includes(item.status)).map((item) => <button key={item.id} type="button" onClick={() => changeView('approvals')}><span className="notification-dot" /><div><strong>{item.owner}: {item.type}</strong><small>{item.status}</small></div></button>)}
       <button className="notifications-all" type="button" onClick={onClose}>Close notifications</button>
@@ -455,6 +463,28 @@ function ModalFrame({ title, onClose, children }: { title: string; onClose: () =
       {children}
     </motion.section>
   </dialog>;
+}
+
+function TeacherReview({ record, onClose, onReviewed }: { record: TeachingRecord; onClose: () => void; onReviewed: (records: TeachingRecord[]) => void }) {
+  const [status, setStatus] = useState<RecordStatus>('Approved');
+  const [note, setNote] = useState(record.reviewerNote);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const labels = { teacherAttendance: 'Teacher attendance', reflection: 'Class feedback', objectives: 'Learning objectives', activities: 'Activities', resources: 'Resources', outline: 'Syllabus outline', canvaUrl: 'Canva design', items: 'Items & quantities', reason: 'Purpose', timing: 'Request timeframe' };
+  async function submit(event: FormEvent) {
+    event.preventDefault(); setPending(true); setError('');
+    try {
+      const result = await reviewTeachingRecord(record.id, status, note);
+      if (result.ok) onReviewed(result.records); else setError(result.error);
+    } catch { setError('Could not save the review. Please retry.'); }
+    finally { setPending(false); }
+  }
+  return <ModalFrame title="Teacher submission review" onClose={() => { if (!pending) onClose(); }}>
+    <div className="teacher-submission-heading"><span className="surface-eyebrow">{recordLabels[record.kind]}</span><h2>{record.title}</h2><p>{record.teacherEmail} / {teachingClasses.find((item) => item.id === record.classId)?.title} / {dateLabel(record.date)}</p></div><StatusChip status={record.status} />
+    <dl className="teacher-review-fields">{Object.entries(labels).map(([key, label]) => { const value = record.content[key as keyof typeof labels]; return value ? <div key={key}><dt>{label}</dt><dd>{key === 'canvaUrl' ? <a href={value} target="_blank" rel="noopener noreferrer">Open Canva design</a> : value}</dd></div> : null; })}{record.content.students?.map((student) => <div key={student.id}><dt>{roster(record.classId).find((item) => item.id === student.id)?.name}</dt><dd>{student.attendance} / Score: {student.score || '-'}<br />{student.feedback}</dd></div>)}</dl>
+    <TeachingAttachments files={record.files} />
+    <form className="teacher-review-controls" onSubmit={submit}><fieldset disabled={pending} style={{ border: 0, padding: 0, margin: 0 }}><TeacherSelect label="Review status" value={status} options={['Approved', 'Needs revision', 'Rejected', ...(record.kind === 'request' ? ['Fulfilled'] : [])].map((label) => ({ id: label, label }))} onChange={(value) => setStatus(value as RecordStatus)} /><label><span>Admin note{['Needs revision', 'Rejected'].includes(status) ? ' *' : ''}</span><textarea aria-label="Admin note" required={['Needs revision', 'Rejected'].includes(status)} value={note} maxLength={2000} onChange={(event) => setNote(event.target.value)} /></label></fieldset><button className="admin-primary-action" disabled={pending}>{pending ? 'Saving...' : 'Save review'}</button>{error && <p className="teacher-form-error" role="alert">{error}</p>}</form>
+  </ModalFrame>;
 }
 
 function DetailModal({ detail, onClose, records, updateInquiry }: { detail: Detail; onClose: () => void; records: Records; updateInquiry: (id: string) => void }) {

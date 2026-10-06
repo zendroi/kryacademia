@@ -1,8 +1,8 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import { Clock3, ShieldCheck } from 'lucide-react';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 import { Link003 } from '@/components/ui/skiper-ui/skiper40';
+import { FormPagePreloader, PageLoadingLink as Link } from '@/components/smoothui/page-preloader';
 import { logout } from './login/actions';
 import type { Role } from '@/lib/auth';
 
@@ -31,7 +31,7 @@ export default function PortalComingSoon({ email, role }: { email: string; role:
         <div className="portal-account"><ShieldCheck aria-hidden size={18} /><div><small>Signed in as</small><strong>{email}</strong></div></div>
         <div className="portal-actions">
           <Link003 className="portal-home" href="/">Back to website</Link003>
-          <form action={logout}><InteractiveHoverButton className="portal-logout" type="submit">Log out</InteractiveHoverButton></form>
+          <form action={logout}><FormPagePreloader /><InteractiveHoverButton className="portal-logout" type="submit">Log out</InteractiveHoverButton></form>
         </div>
       </div>
     </section>

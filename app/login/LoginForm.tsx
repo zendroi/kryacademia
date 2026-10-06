@@ -2,6 +2,7 @@
 
 import { ShieldCheck } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
+import { FormPagePreloader } from '@/components/smoothui/page-preloader';
 import AnimatedInput from '@/components/smoothui/animated-input';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 import { Link003 } from '@/components/ui/skiper-ui/skiper40';
@@ -25,6 +26,7 @@ function SubmitButton() {
 export default function LoginForm({ error }: { error?: string }) {
   return (
     <form action={login} className="auth-form">
+      <FormPagePreloader />
       {error && <div className="auth-error" role="alert">{errors[error] || errors.invalid}</div>}
       <div className="auth-field">
         <AnimatedInput autoComplete="username" label="Email address" name="email" required type="email" />

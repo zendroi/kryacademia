@@ -8,6 +8,15 @@ import { createPortal } from "react-dom";
 const ROTATION_ANGLE_OPEN = 180;
 const DROPDOWN_OFFSET = 4;
 
+function dropdownPosition(rect: DOMRect, count: number) {
+  const height = Math.min(count * 44 + 16, window.innerHeight - 16);
+  return {
+    left: rect.left,
+    top: rect.bottom + DROPDOWN_OFFSET + height <= window.innerHeight - 8 ? rect.bottom + DROPDOWN_OFFSET : Math.max(8, rect.top - height - DROPDOWN_OFFSET),
+    width: rect.width,
+  };
+}
+
 export interface DropdownItem {
   icon?: React.ReactNode;
   id: string | number;
@@ -28,6 +37,7 @@ export default function BasicDropdown({
   className = "",
 }: BasicDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [portalHost, setPortalHost] = useState<Element | null>(null);
   const listId = useId();
   const [selectedItem, setSelectedItem] = useState<DropdownItem | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -45,15 +55,12 @@ export default function BasicDropdown({
 
   const handleToggle = useCallback(() => {
     if (!isOpen && buttonRef.current) {
+      setPortalHost(dropdownRef.current?.closest("dialog") || document.body);
       const rect = buttonRef.current.getBoundingClientRect();
-      setPosition({
-        left: rect.left,
-        top: rect.bottom + DROPDOWN_OFFSET,
-        width: rect.width,
-      });
+      setPosition(dropdownPosition(rect, items.length));
     }
     setIsOpen(!isOpen);
-  }, [isOpen]);
+  }, [isOpen, items.length]);
 
   // Update position on scroll/resize when open
   useEffect(() => {
@@ -64,11 +71,7 @@ export default function BasicDropdown({
     const updatePosition = () => {
       if (buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect();
-        setPosition({
-          left: rect.left,
-          top: rect.bottom + DROPDOWN_OFFSET,
-          width: rect.width,
-        });
+        setPosition(dropdownPosition(rect, items.length));
       }
     };
 
@@ -79,7 +82,7 @@ export default function BasicDropdown({
       window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("resize", updatePosition);
     };
-  }, [isOpen]);
+  }, [isOpen, items.length]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -121,6 +124,8 @@ export default function BasicDropdown({
       }
 
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         setIsOpen(false);
         setFocusedIndex(-1);
         buttonRef.current?.focus();
@@ -180,6 +185,8 @@ export default function BasicDropdown({
               left: `${position.left}px`,
               top: `${position.top}px`,
               width: `${position.width}px`,
+              maxHeight: "calc(100dvh - 16px)",
+              overflowY: "auto",
             }}
             transition={
               shouldReduceMotion
@@ -305,9 +312,7 @@ export default function BasicDropdown({
           </motion.div>
         </button>
       </div>
-      {typeof window === "undefined"
-        ? null
-        : createPortal(dropdownContent, document.body)}
+      {portalHost ? createPortal(dropdownContent, portalHost) : null}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { PageLoadingLink as Link } from '@/components/smoothui/page-preloader';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';

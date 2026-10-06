@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import NextImage from 'next/image';
-import Link from 'next/link';
+import { PageLoadingLink as Link } from '@/components/smoothui/page-preloader';
 import { ArrowUpRight, ChevronLeft, ChevronRight, Languages, X, Mail, MessageCircle } from 'lucide-react';
 import { activities, coachProfiles, events, img, klasses, klassGalleries, partnerLogos, partners, programs, updates } from './mockData';
 import ActivitiesInfiniteScroll from './ActivitiesInfiniteScroll';
@@ -88,10 +88,10 @@ function AnimatedCounter({ end, duration = 1500 }: { end: number; duration?: num
 
 function Brand({ light = false }: { light?: boolean }) {
   return (
-    <Link className={'brand ' + (light ? 'light' : '')} href="/#home" aria-label="KRYAcademia home">
+    <a className={'brand ' + (light ? 'light' : '')} href="#home" aria-label="KRYAcademia home">
       <NextImage src="/kryacademia-logo.png" alt="" width={48} height={48} priority />
       <strong>KRYAcademia</strong>
-    </Link>
+    </a>
   );
 }
 
@@ -183,9 +183,9 @@ function Navbar() {
             onChange={(item) => setLanguage(item.id as Language)}
           />
         </div>
-        <a className="login group" href="/login">
+        <Link className="login group" href="/login">
           Login <A />
-        </a>
+        </Link>
         <StaggeredMenu
           items={staggeredNavItems}
           socialItems={staggeredSocialItems}
