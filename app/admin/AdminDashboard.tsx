@@ -42,8 +42,11 @@ import { refreshInquiries, updateInquiryStatus } from '../inquiry/actions';
 import { inquiryDate, type InquiryRecord } from '@/lib/inquiry';
 import { TeacherSelect, TeachingAttachments, TeachingSummary } from '../teacher/TeachingControls';
 import { dateLabel, recordLabels, today, type TeachingRecord, type RecordStatus } from '../teacher/teacherData';
-import { approvedSyllabuses, coachTasks, type AcademyCatalog, type CatalogRecord } from '@/lib/academy';
+import { approvedSyllabuses, classDeadlines, coachTasks, type AcademyCatalog, type CatalogRecord } from '@/lib/academy';
 import CatalogEditor from './CatalogEditor';
+import TeacherAccounts from './TeacherAccounts';
+import NotificationJobs from './NotificationJobs';
+import type { TeacherAccount } from '@/lib/accounts';
 import {
   approvals,
   type CoachRecord,
@@ -53,7 +56,7 @@ import {
   type InstitutionRecord,
 } from './adminData';
 
-type ViewKey = 'overview' | 'klasses' | 'institutions' | 'coaches' | 'students' | 'approvals' | 'reports' | 'inquiries' | 'broadcast';
+type ViewKey = 'overview' | 'klasses' | 'institutions' | 'coaches' | 'students' | 'approvals' | 'reports' | 'inquiries' | 'broadcast' | 'accounts' | 'jobs';
 type Detail =
   | { kind: 'klass'; item: KlassRecord }
   | { kind: 'coach'; item: CoachRecord }
@@ -70,11 +73,13 @@ const navItems: { key: ViewKey; label: string; icon: LucideIcon; badge?: number 
   { key: 'klasses', label: 'Klass', icon: BookOpen },
   { key: 'institutions', label: 'Institutions', icon: Building2 },
   { key: 'coaches', label: 'Coaches', icon: GraduationCap },
+  { key: 'accounts', label: 'Teacher accounts', icon: Users },
   { key: 'students', label: 'Students', icon: Users },
   { key: 'approvals', label: 'Approvals', icon: ClipboardCheck, badge: 2 },
   { key: 'reports', label: 'Reports', icon: FileBarChart },
   { key: 'inquiries', label: 'Inquiries', icon: MessageCircleQuestion, badge: 2 },
   { key: 'broadcast', label: 'Broadcast', icon: Radio },
+  { key: 'jobs', label: 'Delivery jobs', icon: Bell },
 ];
 
 const viewCopy: Record<ViewKey, { eyebrow: string; title: string; description: string }> = {
@@ -87,6 +92,8 @@ const viewCopy: Record<ViewKey, { eyebrow: string; title: string; description: s
   reports: { eyebrow: 'Learning evidence', title: 'Reports & Certificates', description: 'Prepare progress reports and certificates for students, classes, and institutions.' },
   inquiries: { eyebrow: 'Incoming interest', title: 'Inquiry List', description: 'Follow up on requests submitted through the KRYAcademia landing page.' },
   broadcast: { eyebrow: 'Communication', title: 'Broadcast Center', description: 'Prepare focused announcements for coaches and partner institutions.' },
+  accounts: { eyebrow: 'Portal access', title: 'Teacher Accounts', description: 'Review teacher applications and manage account access.' },
+  jobs: { eyebrow: 'Delivery operations', title: 'Delivery Jobs', description: 'Dashboard notification delivery and deadline reminders.' },
 };
 
 const pageMotion = {
@@ -129,7 +136,7 @@ function AdminSelect({ label, options, value, onChange }: { label: string; optio
   return <div className="admin-select"><span>{label}</span><BasicDropdown key={value} label={`${label}: ${value}`} items={options.map((option) => ({ id: option, label: option }))} onChange={(item) => onChange(String(item.id))} /></div>;
 }
 
-export default function AdminDashboard({ email, initialCatalog, catalogUnavailable = false, initialSubmissions = [], teachingUnavailable = false, initialInquiries = [], inquiriesUnavailable = false }: { email: string; initialCatalog: AcademyCatalog; catalogUnavailable?: boolean; initialSubmissions?: TeachingRecord[]; teachingUnavailable?: boolean; initialInquiries?: InquiryRecord[]; inquiriesUnavailable?: boolean }) {
+export default function AdminDashboard({ email, initialCatalog, catalogUnavailable = false, initialSubmissions = [], teachingUnavailable = false, initialInquiries = [], inquiriesUnavailable = false, initialAccounts = [], accountsUnavailable = false }: { email: string; initialCatalog: AcademyCatalog; catalogUnavailable?: boolean; initialSubmissions?: TeachingRecord[]; teachingUnavailable?: boolean; initialInquiries?: InquiryRecord[]; inquiriesUnavailable?: boolean; initialAccounts?: TeacherAccount[]; accountsUnavailable?: boolean }) {
   const [activeView, setActiveView] = useState<ViewKey>('overview');
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -145,6 +152,8 @@ export default function AdminDashboard({ email, initialCatalog, catalogUnavailab
   const [draft, setDraft] = useState<Draft>({ audience: 'All coaches', subject: '', message: '', email: true, portal: true });
   const [toast, setToast] = useState('');
   const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [accounts, setAccounts] = useState(initialAccounts);
+  const [accountsError, setAccountsError] = useState(accountsUnavailable);
   const [reviewing, setReviewing] = useState<TeachingRecord | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -295,13 +304,15 @@ export default function AdminDashboard({ email, initialCatalog, catalogUnavailab
               {activeView === 'reports' && <ReportView records={records} announce={announce} />}
               {activeView === 'inquiries' && !inquiryError && <InquiryView inquiries={records.inquiries} query={query} openDetail={setDetail} />}
               {activeView === 'broadcast' && <BroadcastView draft={draft} setDraft={setDraft} records={records} announce={announce} />}
+              {activeView === 'accounts' && <TeacherAccounts accounts={accounts} unavailable={accountsError} query={query} onChanged={(items) => { setAccounts(items); setAccountsError(false); }} />}
+              {activeView === 'jobs' && <NotificationJobs query={query} />}
             </motion.div>
           </AnimatePresence>
         </div>
       </section>
 
       <AnimatePresence mode="wait">{createView ? <ModalFrame key="catalog-editor" title={`${editItem ? 'Edit' : 'Add'} ${creationLabels[createView]}`} onClose={() => { if (!savingCatalog) { setCreateView(null); setEditItem(undefined); } }}><CatalogEditor kind={createView} item={editItem} catalog={records} submissions={submissions} onSaved={catalogSaved} onPending={setSavingCatalog} /></ModalFrame> : detail ? <DetailModal key="catalog-detail" records={records} detail={detail} submissions={submissions} teachingUnavailable={teachingUnavailable} canEdit={!catalogUnavailable} onEdit={editDetail} openDetail={linkedDetail} onBack={detailHistory.length ? () => { setDetail(detailHistory.at(-1)!); setDetailHistory((items) => items.slice(0, -1)); } : undefined} onClose={() => { setDetail(null); setDetailHistory([]); }} updateInquiry={updateInquiry} /> : null}</AnimatePresence>
-      <AnimatePresence>{reviewing && <TeacherReview record={reviewing} catalog={records} onClose={() => setReviewing(null)} onReviewed={(items) => { setSubmissions(items); setReviewing(null); announce('Review saved. Teacher notified in their dashboard.'); }} />}</AnimatePresence>
+      <AnimatePresence>{reviewing && <TeacherReview record={reviewing} catalog={records} onClose={() => setReviewing(null)} onReviewed={(record, items, warning) => { setSubmissions((current) => items || current.map((item) => item.id === record.id ? record : item)); setReviewing(null); announce(warning || 'Review saved. Teacher notified in their dashboard.'); }} />}</AnimatePresence>
       <AnimatePresence>{toast && <motion.div className="admin-toast" role="status" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}><CheckCircle2 size={18} />{toast}</motion.div>}</AnimatePresence>
     </main></MotionConfig>
   );
@@ -491,16 +502,16 @@ function ModalFrame({ title, onClose, children }: { title: string; onClose: () =
   </dialog>;
 }
 
-function TeacherReview({ record, catalog, onClose, onReviewed }: { record: TeachingRecord; catalog: AcademyCatalog; onClose: () => void; onReviewed: (records: TeachingRecord[]) => void }) {
-  const [status, setStatus] = useState<RecordStatus>('Approved');
+function TeacherReview({ record, catalog, onClose, onReviewed }: { record: TeachingRecord; catalog: AcademyCatalog; onClose: () => void; onReviewed: (record: TeachingRecord, records?: TeachingRecord[], warning?: string) => void }) {
+  const [status, setStatus] = useState<RecordStatus>(record.status === 'Submitted' ? 'Approved' : record.status);
   const [note, setNote] = useState(record.reviewerNote);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   async function submit(event: FormEvent) {
     event.preventDefault(); setPending(true); setError('');
     try {
-      const result = await reviewTeachingRecord(record.id, status, note);
-      if (result.ok) onReviewed(result.records); else setError(result.error);
+      const result = await reviewTeachingRecord(record.id, status, note, record.revision);
+      if (result.ok) onReviewed(result.record, result.records, result.refreshError); else setError(result.error);
     } catch { setError('Could not save the review. Please retry.'); }
     finally { setPending(false); }
   }
@@ -536,7 +547,7 @@ function KlassDetail({ item, records, submissions, openDetail }: { item: KlassRe
     <div className="detail-content-grid"><div><span className="surface-eyebrow">Klass overview</span><p>{item.description}</p><dl><div><dt>Schedule</dt><dd><CalendarDays size={16} />{item.schedule}</dd></div><div><dt>Students</dt><dd><Users size={16} />{enrolled.length} enrolled learners</dd></div><div><dt>Delivery</dt><dd><MonitorUp size={16} />{item.mode}</dd></div></dl></div><div><span className="surface-eyebrow">Coach team</span>{team.map((coach) => <button type="button" className="detail-person catalog-person-link" key={coach.id} onClick={() => openDetail({ kind: 'coach', item: coach })}><span>{initials(coach.name)}</span><div><strong>{coach.name}</strong><small>{coach.specialty}</small></div><ChevronRight size={16} /></button>)}{!team.length && <p className="detail-muted">No coaches assigned.</p>}</div></div>
     <section className="detail-section"><header><div><span className="surface-eyebrow">Enrollment</span><h3>Students ({enrolled.length})</h3></div></header><div className="catalog-people">{enrolled.map((student) => <button type="button" className="detail-person catalog-person-link" key={student.id} onClick={() => openDetail({ kind: 'student', item: student })}><span>{initials(student.name)}</span><div><strong>{student.name}</strong><small>{student.grade} / {student.school}</small></div><ChevronRight size={16} /></button>)}</div>{!enrolled.length && <p className="detail-muted">No students enrolled yet.</p>}</section>
     <section className="detail-section"><header><div><span className="surface-eyebrow">Learning journey</span><h3>{syllabus?.title || 'Approved syllabus'}</h3></div>{syllabuses.length > 1 && <TeacherSelect label="Approved syllabus" value={syllabus.id} options={syllabuses.map((record) => ({ id: record.id, label: record.title }))} onChange={setSyllabusId} />}</header>{syllabus ? <><p className="detail-muted">{syllabus.teacherEmail} / Approved / {dateLabel(syllabus.date)}</p>{syllabus.content.sessions?.length ? syllabus.content.sessions.map((session, index) => <article className="session-row" key={session.date}><b>{String(index + 1).padStart(2, '0')}</b><div><h4>{session.topic}</h4><p>{dateLabel(session.date)} / {session.time} / {session.phase}</p></div></article>) : <p>{syllabus.content.outline || syllabus.content.objectives}</p>}</> : <p className="detail-muted">No approved syllabus yet.</p>}</section>
-    {(item.deadlines?.syllabus || item.deadlines?.meetings.length) ? <section className="detail-section"><header><h3>Admin deadlines</h3></header>{item.deadlines.syllabus && <p>Syllabus: {dateLabel(item.deadlines.syllabus)} / Semester starts {dateLabel(item.deadlines.semesterStart)}</p>}{item.deadlines.meetings.map((meeting) => <p key={meeting.date}>{dateLabel(meeting.date)}{meeting.lessonPlan && ` / Lesson plan: ${dateLabel(meeting.lessonPlan)}`}{meeting.feedback && ` / Feedback: ${dateLabel(meeting.feedback)}`}</p>)}</section> : null}</>;
+    {(item.deadlines?.syllabus || item.deadlines?.semesterRequest || item.deadlines?.meetings.length) ? <section className="detail-section"><header><h3>Admin deadlines</h3></header>{item.deadlines.syllabus && <p>Syllabus: {dateLabel(item.deadlines.syllabus)} / Semester starts {dateLabel(item.deadlines.semesterStart)}</p>}{item.deadlines.semesterRequest && <p>Semester class needs: {dateLabel(item.deadlines.semesterRequest)}</p>}{item.deadlines.meetings.map((meeting) => <p key={meeting.date}>{dateLabel(meeting.date)}{meeting.lessonPlan && ` / Lesson plan: ${dateLabel(meeting.lessonPlan)}`}{meeting.feedback && ` / Feedback: ${dateLabel(meeting.feedback)}`}{meeting.request && ` / Class needs: ${dateLabel(meeting.request)}`}</p>)}</section> : null}</>;
 }
 
 function KlassLinks({ klasses, openDetail }: { klasses: KlassRecord[]; openDetail: (detail: Detail) => void }) {
@@ -547,7 +558,7 @@ function CoachDetail({ item, records, submissions, unavailable, openDetail }: { 
   const assigned = records.klasses.filter((klass) => klass.coachIds?.includes(item.id));
   const tasks = unavailable ? [] : coachTasks(item, records, submissions, today());
   return <><div className="profile-detail"><div className="profile-photo">{item.image ? <Image src={item.image} alt={item.name} fill sizes="180px" /> : <span>{initials(item.name)}</span>}</div><div><span>{item.level}</span><h2>{item.name}</h2><p>{item.specialty} Coach</p><a href={`mailto:${item.email}`}><Mail size={15} />{item.email}</a><small className="catalog-login">Portal: {item.portalEmail || 'Not linked'}</small></div><div className="profile-stats"><strong>{item.classes}<small>Klass</small></strong><strong>{item.students}<small>Students</small></strong></div></div>
-    <section className="detail-section"><header><div><span className="surface-eyebrow">Submission tracking</span><h3>Outstanding tasks{!unavailable && ` (${tasks.length})`}</h3></div></header>{tasks.map((task) => <article className="catalog-task" key={`${task.classId}-${task.label}-${task.date}`}><div><strong>{task.label}</strong><p>{task.klass} / {dateLabel(task.date)}</p><small>Due {dateLabel(task.deadline)} / {task.status}</small></div><StatusChip status={task.overdue ? 'Overdue' : 'Upcoming'} /></article>)}{!tasks.length && <p className="detail-muted">{unavailable ? 'Task status unavailable.' : !item.portalEmail ? 'Teacher login account not linked.' : !assigned.some((klass) => klass.deadlines?.syllabus || klass.deadlines?.meetings.some((meeting) => meeting.lessonPlan || meeting.feedback)) ? 'No admin deadlines set.' : 'No outstanding tasks for the configured deadlines.'}</p>}</section>
+    <section className="detail-section"><header><div><span className="surface-eyebrow">Submission tracking</span><h3>Outstanding tasks{!unavailable && ` (${tasks.length})`}</h3></div></header>{tasks.map((task) => <article className="catalog-task" key={`${task.classId}-${task.label}-${task.date}`}><div><strong>{task.label}</strong><p>{task.klass} / {dateLabel(task.date)}</p><small>Due {dateLabel(task.deadline)} / {task.status}</small></div><StatusChip status={task.overdue ? 'Overdue' : 'Upcoming'} /></article>)}{!tasks.length && <p className="detail-muted">{unavailable ? 'Task status unavailable.' : !item.portalEmail ? 'Teacher login account not linked.' : !assigned.some((klass) => classDeadlines(klass).length) ? 'No admin deadlines set.' : 'No outstanding tasks for the configured deadlines.'}</p>}</section>
     <section className="detail-section"><header><div><span className="surface-eyebrow">Current work</span><h3>Assigned Klass</h3></div></header><KlassLinks klasses={assigned} openDetail={openDetail} />{!assigned.length && <p className="detail-muted">No active assignment.</p>}</section></>;
 }
 

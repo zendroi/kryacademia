@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { createHmac, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { fixtureSession, clearFixtureSessions } from './session-fixture.mjs';
 import { mkdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -29,10 +30,7 @@ const sql = postgres(process.env.DATABASE_URL, { ssl: process.env.DATABASE_URL.i
 const screenshots = join(tmpdir(), 'kryacademia-inquiry-check');
 const errors = [];
 const browser = await chromium.launch();
-function session(role) {
-  const payload = Buffer.from(JSON.stringify({ email: `${role}@krya.global`, role, exp: Date.now() + 3600000 })).toString('base64url');
-  return `${payload}.${createHmac('sha256', process.env.SESSION_SECRET).update(payload).digest('base64url')}`;
-}
+async function session(role) { return fixtureSession(sql, `${role}@krya.global`, role); }
 async function choose(page, name, value) {
   await page.locator(`#contact input[name="${name}"]`).locator('..').getByRole('button').click();
   await page.locator('.smooth-dropdown-menu').getByRole('button', { name: value, exact: true }).click();
@@ -134,7 +132,7 @@ try {
       assert.equal((await sql`SELECT count(*)::int AS count FROM inquiries WHERE email = ${email}`)[0].count, 2, 'Lost response retry must not duplicate');
     }
 
-    await ctx.addCookies([{ name: 'krya_session', value: session('admin'), url: baseUrl }]);
+    await ctx.addCookies([{ name: 'krya_session', value: await session('admin'), url: baseUrl }]);
     await page.goto(`${baseUrl}/admin`);
     await page.locator('.page-preloader').waitFor({ state: 'detached' });
     await page.getByRole('button', { name: 'Notifications', exact: true }).click();
@@ -159,7 +157,7 @@ try {
 
     const forbidden = await browser.newContext();
     for (const role of ['anonymous', 'teacher']) {
-      if (role === 'teacher') await forbidden.addCookies([{ name: 'krya_session', value: session(role), url: baseUrl }]);
+      if (role === 'teacher') await forbidden.addCookies([{ name: 'krya_session', value: await session(role), url: baseUrl }]);
       const response = await forbidden.request.post(`${baseUrl}/admin`, { headers: { 'next-action': updateRequest.headers()['next-action'], 'content-type': 'text/plain;charset=UTF-8', origin: baseUrl }, data: JSON.stringify([saved.id, 'Resolved']) });
       assert.match(response.headers()['x-action-redirect'] || '', role === 'teacher' ? /\/teacher/ : /\/login/);
       assert.equal((await sql`SELECT status FROM inquiries WHERE id = ${saved.id}`)[0].status, 'Contacted');
@@ -190,7 +188,7 @@ try {
       const refreshAction = await refreshRequest;
       await page.locator('tbody tr').filter({ hasText: newName }).waitFor();
       const reader = await browser.newContext();
-      await reader.addCookies([{ name: 'krya_session', value: session('teacher'), url: baseUrl }]);
+      await reader.addCookies([{ name: 'krya_session', value: await session('teacher'), url: baseUrl }]);
       const denied = await reader.request.post(`${baseUrl}/admin`, { headers: { 'next-action': refreshAction.headers()['next-action'], 'content-type': 'text/plain;charset=UTF-8', origin: baseUrl }, data: '[]' });
       assert.match(denied.headers()['x-action-redirect'] || '', /\/teacher/);
       assert.equal((await denied.text()).includes(email), false, 'Teacher must not receive inbox data');
@@ -206,5 +204,6 @@ try {
 } finally {
   await browser.close();
   if (emails.length) await sql`DELETE FROM inquiries WHERE email IN ${sql(emails)}`;
+  await clearFixtureSessions(sql);
   await sql.end();
 }

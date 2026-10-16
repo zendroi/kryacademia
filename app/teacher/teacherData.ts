@@ -59,8 +59,8 @@ export type TeachingContent = {
   timing?: 'Before class' | 'Before semester';
 };
 export type TeachingFile = { id: string; name: string; mime: string; size: number; data?: string };
-export type RecordDraft = { id?: string; kind: RecordKind; classId: string; date: string; title: string; content: TeachingContent; files: TeachingFile[]; submit: boolean };
-export type TeachingRecord = Omit<RecordDraft, 'submit'> & { id: string; teacherEmail: string; status: RecordStatus; reviewerNote: string; updatedAt: string };
+export type RecordDraft = { id?: string; revision?: number; kind: RecordKind; classId: string; date: string; title: string; content: TeachingContent; files: TeachingFile[]; submit: boolean };
+export type TeachingRecord = Omit<RecordDraft, 'submit'> & { id: string; revision: number; teacherEmail: string; status: RecordStatus; reviewerNote: string; updatedAt: string };
 export type TeacherNotification = { id: string; recordId: string; title: string; message: string; read: boolean; createdAt: string };
 export type TeachingConfig = { semesterStart: string; deadline: string; sample: boolean; canvaTemplate: string };
 
@@ -202,9 +202,11 @@ export function validateDraft(input: RecordDraft, config: TeachingConfig, catalo
   if ((input.kind === 'syllabus' && content.workflowVersion !== 2) || (input.kind === 'request' && input.content.timing === 'Before semester' && !content.syllabusId)) {
     if (input.date !== config.semesterStart) throw new Error('Semester submissions must use the semester start date.');
   }
-  if (!Array.isArray(input.files) || input.files.length > 4 || input.files.filter((file) => file.mime.startsWith('image/')).length > 3 || input.files.filter((file) => file.mime === 'application/pdf').length > 1) throw new Error('Attach up to three photos and one PDF.');
+  if (!Array.isArray(input.files) || input.files.length > 4) throw new Error('Attach up to three photos and one PDF.');
   for (const file of input.files) {
-    if (!file || !/^[a-f0-9-]{36}$/i.test(file.id) || typeof file.name !== 'string' || !file.name || file.name.length > 140 || !['image/webp', 'image/jpeg', 'image/png', 'application/pdf'].includes(file.mime) || !Number.isInteger(file.size) || file.size < 1 || file.size > (file.mime === 'application/pdf' ? 1048576 : 184320)) throw new Error('A file exceeds the upload limit or has an unsupported format.');
+    if (!file || !/^[a-f0-9-]{36}$/i.test(file.id) || typeof file.name !== 'string' || !file.name || file.name.length > 140 || !['image/webp', 'image/jpeg', 'image/png', 'application/pdf'].includes(file.mime) || !Number.isInteger(file.size) || file.size < 1 || file.size > (file.mime === 'application/pdf' ? 1048576 : file.data ? 184320 : 524288)) throw new Error('A file exceeds the upload limit or has an unsupported format.');
     if (file.data && (typeof file.data !== 'string' || file.data.length > 1400000)) throw new Error('The file is too large.');
   }
+  if (new Set(input.files.map((file) => file.id)).size !== input.files.length) throw new Error('Attach each file only once.');
+  if (input.files.filter((file) => file.mime.startsWith('image/')).length > 3 || input.files.filter((file) => file.mime === 'application/pdf').length > 1) throw new Error('Attach up to three photos and one PDF.');
 }

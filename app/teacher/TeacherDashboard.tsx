@@ -9,13 +9,14 @@ import { FormPagePreloader, PageLoadingLink as Link } from '@/components/smoothu
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 import { logout } from '../login/actions';
 import { markTeacherNotificationsRead, refreshTeacherWorkspace, saveTeachingRecord } from './actions';
-import { CoachFields, LessonFields, MaterialFields, RubricGuide, StudentRubric, SyllabusFields, TeacherSelect, TeacherTextArea as TextArea } from './TeachingControls';
+import { CoachFields, LessonFields, MaterialFields, RubricGuide, StudentRubric, SyllabusFields, TeacherSelect, TeachingAttachments, TeachingSummary, TeacherTextArea as TextArea } from './TeachingControls';
 import { assignedMaterials, attendanceOptions, dateLabel, emptyRatings, emptySteps, recordLabels, roster as classRoster, semesterRecords, today, type Attendance, type RecordDraft, type RecordKind, type TeachingConfig, type TeachingContent, type TeachingFile, type TeachingRecord, type TeacherNotification } from './teacherData';
 import { classDeadlines, type TeachingCatalog } from '@/lib/academy';
+import { compressImage, readFileDataUrl } from '@/lib/client-image';
 
 const CatalogContext = createContext<TeachingCatalog>({ klasses: [], students: [] });
 
-type View = 'overview' | 'workflow' | 'meeting' | 'lesson-plan' | 'semester' | 'request' | 'notifications';
+type View = 'overview' | 'workflow' | 'meeting' | 'lesson-plan' | 'semester' | 'request' | 'notifications' | 'history';
 const navigation = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'workflow', label: 'Class Workflow', icon: BookOpen },
@@ -24,6 +25,7 @@ const navigation = [
   { key: 'semester', label: 'Semester Preparation', icon: BookOpen },
   { key: 'request', label: 'Class Requests', icon: Package },
   { key: 'notifications', label: 'Notifications', icon: Bell },
+  { key: 'history', label: 'Submission history', icon: FileText },
 ] as const;
 const copy = {
   overview: ['Teacher workspace', 'Welcome back, Teacher.', 'Make room for inspiring lessons, thoughtful feedback, and meaningful progress.'],
@@ -33,6 +35,7 @@ const copy = {
   semester: ['Ready for a new semester', 'Semester Preparation', 'Prepare your syllabus and teaching materials before learning begins.'],
   request: ['Learning essentials', 'Class Requests', 'Submit class needs and follow their progress with the admin team.'],
   notifications: ['Stay in the loop', 'Notifications', 'Submission confirmations, admin updates, and upcoming deadlines.'],
+  history: ['Your teaching records', 'Submission History', ''],
 };
 
 function blank(catalog: TeachingCatalog, kind: RecordKind, classId: string, config: TeachingConfig, records: TeachingRecord[] = [], email = ''): RecordDraft {
@@ -55,10 +58,12 @@ function Status({ status }: { status: string }) {
 
 export default function TeacherDashboard({ email, initialCatalog, initialRecords, initialNotifications, config, storageError = false }: { email: string; initialCatalog: TeachingCatalog; initialRecords: TeachingRecord[]; initialNotifications: TeacherNotification[]; config: TeachingConfig; storageError?: boolean }) {
   const [catalog, setCatalog] = useState(initialCatalog);
+  const [storageUnavailable, setStorageUnavailable] = useState(storageError);
   const [view, setView] = useState<View>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const [records, setRecords] = useState(initialRecords);
   const [notifications, setNotifications] = useState(initialNotifications);
+  const [historical, setHistorical] = useState<TeachingRecord | null>(null);
   const [draft, setDraft] = useState(() => blank(initialCatalog, 'meeting', initialCatalog.klasses[0]?.id || '', config, initialRecords, email));
   const [dirty, setDirty] = useState(false);
   const [pending, setPending] = useState(false);
@@ -101,7 +106,13 @@ export default function TeacherDashboard({ email, initialCatalog, initialRecords
     setDraft(blank(catalog, draft.kind, classId, config, records, email)); setDirty(false); setError('');
   }
   function patch(update: Partial<RecordDraft>) { setDraft((current) => ({ ...current, ...update })); setDirty(true); setError(''); }
-  function edit(record: TeachingRecord) { open(record.kind === 'syllabus' || record.kind === 'slides' ? 'semester' : record.kind, record.kind, record); }
+  function edit(record: TeachingRecord) {
+    if (!catalog.klasses.some((klass) => klass.id === record.classId)) {
+      if (canLeave()) { setHistorical(record); setView('history'); setDirty(false); }
+      return;
+    }
+    open(record.kind === 'syllabus' || record.kind === 'slides' ? 'semester' : record.kind, record.kind, record);
+  }
   function openMeeting(syllabus: TeachingRecord, number: number, kind: 'meeting' | 'lesson-plan' | 'slides') {
     const session = syllabus.content.sessions?.[number - 1];
     if (!session || !canLeave()) return;
@@ -123,9 +134,10 @@ export default function TeacherDashboard({ email, initialCatalog, initialRecords
     try {
       const result = await saveTeachingRecord({ ...draft, submit });
       if (!result.ok) { setError(result.error); return; }
-      setRecords(result.records); setNotifications(result.notifications); setDirty(false);
-      const saved = result.records.find((record) => record.kind === draft.kind && record.classId === draft.classId && record.date === draft.date);
-      if (saved) setDraft({ ...saved, submit: false });
+      setRecords((items) => result.records || [result.record, ...items.filter((item) => item.id !== result.record.id)]);
+      if (result.notifications) setNotifications(result.notifications);
+      setDirty(false); setDraft({ ...result.record, submit: false });
+      if (result.refreshError) setError(result.refreshError);
       announce(submit ? 'Submitted successfully.' : 'Draft saved.');
     } catch { setError('Connection interrupted. Your form is unchanged; please retry.'); }
     finally { setPending(false); }
@@ -146,7 +158,9 @@ export default function TeacherDashboard({ email, initialCatalog, initialRecords
       const result = await refreshTeacherWorkspace();
       if (!result.ok) { setError(result.error); return; }
       setRecords(result.records); setNotifications(result.notifications);
+      setHistorical((record) => record ? result.records.find((item) => item.id === record.id) || null : null);
       setCatalog(result.catalog);
+      setStorageUnavailable(false);
       const current = result.records.find((record) => record.id === draft.id);
       const classId = result.catalog.klasses.some((klass) => klass.id === draft.classId) ? draft.classId : result.catalog.klasses[0]?.id || '';
       setDraft(current && result.catalog.klasses.some((klass) => klass.id === current.classId) ? { ...current, submit: false } : blank(result.catalog, draft.kind, classId, config, result.records, email));
@@ -162,22 +176,23 @@ export default function TeacherDashboard({ email, initialCatalog, initialRecords
     <AnimatePresence>{menuOpen && <motion.button className="admin-menu-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />}</AnimatePresence>
     <aside className={`admin-sidebar ${menuOpen ? 'is-open' : ''}`}>
       <div className="admin-brand-row"><Link href="/" className="admin-brand" aria-label="KRYAcademia home"><Image src="/kryacademia-logo.png" alt="" width={42} height={46} priority /><span><strong>KRYAcademia</strong><small>Teacher workspace</small></span></Link><button className="admin-sidebar-close" aria-label="Close navigation" onClick={() => setMenuOpen(false)}><X size={20} /></button></div>
-      <nav className="admin-nav" aria-label="Teacher navigation"><span className="admin-nav-label">Your teaching space</span>{navigation.map(({ key, label, icon: Icon }) => <button key={key} aria-current={view === key ? 'page' : undefined} className={view === key ? 'is-active' : ''} disabled={pending} onClick={() => open(key, key === 'semester' ? 'syllabus' : key === 'overview' || key === 'workflow' || key === 'notifications' ? undefined : key)}><Icon size={18} /><span>{label}</span>{key === 'notifications' && unread > 0 && <b>{unread}</b>}</button>)}</nav>
+      <nav className="admin-nav" aria-label="Teacher navigation"><span className="admin-nav-label">Your teaching space</span>{navigation.map(({ key, label, icon: Icon }) => <button key={key} aria-current={view === key ? 'page' : undefined} className={view === key ? 'is-active' : ''} disabled={pending} onClick={() => open(key, key === 'semester' ? 'syllabus' : key === 'overview' || key === 'workflow' || key === 'notifications' || key === 'history' ? undefined : key)}><Icon size={18} /><span>{label}</span>{key === 'notifications' && unread > 0 && <b>{unread}</b>}</button>)}</nav>
       <div className="teacher-semester-label"><BookOpen size={17} /><div><strong>Semester preparation</strong><span>{dateLabel(semesterDate)}</span>{config.sample && !activeSyllabus && semesterDate === config.semesterStart && <small>Sample dates</small>}</div></div>
       <div className="admin-sidebar-foot"><Link href="/" onClick={(event) => { if (!canLeave()) event.preventDefault(); }}><ChevronLeft size={17} />Website</Link><form action={logout} onSubmit={(event) => { if (!canLeave()) event.preventDefault(); }}><FormPagePreloader /><button type="submit"><LogOut size={17} />Log out</button></form></div>
     </aside>
     <section className="admin-workspace"><header className="admin-topbar"><button className="admin-menu-button" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={21} /></button><span className="teacher-top-date"><CalendarDays size={17} />{dateLabel(today())}</span><div className="admin-top-actions"><span className="admin-demo-badge">Admin assignments</span><button className="admin-icon-button" aria-label="Refresh workspace" title="Refresh workspace" disabled={pending || uploading} onClick={() => void refresh()}><RefreshCw size={18} /></button><button className="admin-icon-button" aria-label="Notifications" title="Notifications" onClick={() => open('notifications')}><Bell size={19} />{unread > 0 && <span>{unread}</span>}</button><div className="admin-account"><span>T</span><div><strong>Teacher</strong><small>{email}</small></div></div></div></header>
       <div className="admin-content"><div className="admin-page-heading"><div><span>{copy[view][0]}</span><h1>{copy[view][1]}</h1><p>{copy[view][2]}</p></div><span className="teacher-workspace-tag"><CheckCircle2 size={15} />Teacher portal</span></div>
-        {storageError && <div className="teacher-alert" role="alert">Database unavailable. Saving is disabled until the teaching tables are ready. <button onClick={() => window.location.reload()}>Retry</button></div>}
-        {!storageError && !catalog.klasses.length && <p className="teacher-alert">No Klass assigned to this account yet. Contact admin to link your coach profile.</p>}
+        {storageUnavailable && <div className="teacher-alert" role="alert">Database unavailable. Saving is disabled until the teaching tables are ready. <button onClick={() => void refresh()} disabled={pending}>Retry</button></div>}
+        {!storageUnavailable && !catalog.klasses.length && <p className="teacher-alert">No Klass assigned to this account yet. Contact admin to link your coach profile.</p>}
         <AnimatePresence mode="wait" initial={false}><motion.div key={view} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
           {view === 'overview' && <Overview records={records} open={open} edit={edit} openClass={(classId) => { if (canLeave()) { setDraft(blank(catalog, 'meeting', classId, config, records, email)); setDirty(false); setView('workflow'); } }} />}
           {view === 'workflow' && catalog.klasses.length > 0 && <ClassWorkflow records={records} initialClass={draft.classId} prepare={(classId) => { setDraft(blank(catalog, 'syllabus', classId, config, records, email)); setView('semester'); }} openMeeting={openMeeting} edit={edit} />}
           {view === 'notifications' && <Notifications notifications={notifications} records={records} edit={edit} markRead={markRead} pending={pending} />}
+          {view === 'history' && <section><History records={records} edit={edit} />{historical && <div className="teacher-record-history"><h2>{historical.title}</h2><p>{recordLabels[historical.kind]} / {dateLabel(historical.date)} / Read-only</p><Status status={historical.status} /><TeachingSummary record={historical} /><TeachingAttachments files={historical.files} />{historical.reviewerNote && <p className="teacher-review-note">{historical.reviewerNote}</p>}</div>}</section>}
           {isEditor && catalog.klasses.length > 0 && <>
             {view === 'semester' && <div className="teacher-section-tabs" role="group" aria-label="Semester documents">{(['syllabus', 'slides'] as const).map((kind) => <button key={kind} className={draft.kind === kind ? 'is-active' : ''} onClick={() => open('semester', kind)} disabled={pending}><FileText size={16} />{recordLabels[kind]}</button>)}</div>}
             {records.find((record) => record.id === draft.id)?.reviewerNote && <p className="teacher-review-note"><strong>Admin feedback</strong>{records.find((record) => record.id === draft.id)?.reviewerNote}</p>}
-            <RecordEditor key={`${draft.kind}-${draft.id || 'new'}-${draft.classId}`} draft={draft} records={records} bindMeeting={bindMeeting} prepare={() => open('semester', 'syllabus')} patch={patch} config={config} pending={pending} uploading={uploading} setUploading={setUploading} locked={locked} storageError={storageError} changeClass={changeClass} save={save} dirty={dirty} error={error} />
+            <RecordEditor key={`${draft.kind}-${draft.id || 'new'}-${draft.classId}`} draft={draft} records={records} bindMeeting={bindMeeting} prepare={() => open('semester', 'syllabus')} patch={patch} config={config} pending={pending} uploading={uploading} setUploading={setUploading} locked={locked} storageError={storageUnavailable} changeClass={changeClass} save={save} dirty={dirty} error={error} />
             {draft.kind === 'meeting' && draft.id && records.some((record) => record.id === draft.id && record.status !== 'Draft') && (() => { const syllabus = records.find((record) => record.id === draft.content.syllabusId); const next = (draft.content.meetingNumber || 0) + 1; return syllabus?.content.sessions?.[next - 1] ? <button className="admin-secondary-action teacher-next-plan" onClick={() => openMeeting(syllabus, next, 'lesson-plan')}><CalendarDays size={17} />Plan meeting {next}<ArrowUpRight size={17} /></button> : null; })()}
             <History records={records.filter((record) => (view === 'semester' ? ['syllabus', 'slides'].includes(record.kind) : record.kind === view))} edit={edit} />
           </>}
@@ -213,7 +228,8 @@ function ClassWorkflow({ records, initialClass, prepare, openMeeting, edit }: { 
   const catalog = useContext(CatalogContext);
   const teachingClasses = catalog.klasses;
   const roster = (id: string) => classRoster(id, catalog);
-  const [classId, setClassId] = useState(initialClass);
+  const [selectedClass, setClassId] = useState(initialClass);
+  const classId = teachingClasses.some((klass) => klass.id === selectedClass) ? selectedClass : teachingClasses[0]?.id || '';
   const [selectedId, setSelectedId] = useState('');
   const syllabuses = semesterRecords(records, classId);
   const syllabus = syllabuses.find((record) => record.id === selectedId) || syllabuses[0];
@@ -260,8 +276,8 @@ function RecordEditor({ draft, records, bindMeeting, prepare, patch, config, pen
       for (const file of Array.from(files)) {
         if (file.type === 'application/pdf') {
           if (file.size > 1048576) throw new Error('PDFs must be 1 MB or smaller.');
-          added.push({ id: crypto.randomUUID(), name: file.name.slice(0, 140), mime: file.type, size: file.size, data: await dataUrl(file) });
-        } else added.push(await compressPhoto(file));
+          added.push({ id: crypto.randomUUID(), name: file.name.slice(0, 140), mime: file.type, size: file.size, data: await readFileDataUrl(file) });
+        } else added.push(await compressImage(file));
       }
       const all = [...draft.files, ...added];
       if (all.filter((file) => file.mime.startsWith('image/')).length > 3 || all.filter((file) => file.mime === 'application/pdf').length > 1) throw new Error('Use up to three photos and one PDF per record.');
@@ -271,7 +287,7 @@ function RecordEditor({ draft, records, bindMeeting, prepare, patch, config, pen
   }
   return <form ref={form} className="teacher-editor" onSubmit={submit}>
     <header className="teacher-editor-header"><div><span>{recordLabels[draft.kind]}</span><h2>{draft.id ? 'Your saved record' : 'Create a new record'}</h2></div><span>{locked ? 'Reviewed / read only' : dirty ? 'Unsaved changes' : draft.id ? 'Saved' : 'New entry'}</span></header>
-    {(semester || ['meeting', 'lesson-plan'].includes(draft.kind)) && <div className="teacher-inline-deadline"><Clock3 size={17} /><span>Admin deadline: <strong>{deadline ? dateLabel(deadline) : 'Not set'}</strong>{deadline && today() > deadline && <b> / Deadline passed</b>}</span></div>}
+    {(semester || ['meeting', 'lesson-plan', 'request'].includes(draft.kind)) && <div className="teacher-inline-deadline"><Clock3 size={17} /><span>Admin deadline: <strong>{deadline ? dateLabel(deadline) : 'Not set'}</strong>{deadline && today() > deadline && <b> / Deadline passed</b>}</span></div>}
     {draft.kind === 'syllabus' && !draft.id && !klass?.deadlines?.syllabus && <p className="teacher-alert">Ask admin to set semester dates and the syllabus deadline before saving.</p>}
     <fieldset disabled={pending || locked || uploading}>
       <div className="teacher-form-grid"><fieldset disabled={Boolean(draft.id)}><TeacherSelect label="Klass" value={draft.classId} options={teachingClasses.map((klass) => ({ id: klass.id, label: klass.title }))} onChange={changeClass} /></fieldset><label className="teacher-date-field"><span>{semester ? 'Semester start' : draft.kind === 'request' ? 'Needed by' : draft.kind === 'lesson-plan' ? 'Next meeting' : 'Meeting date'} *</span><input aria-label={semester ? 'Semester start' : draft.kind === 'request' ? 'Needed by' : draft.kind === 'lesson-plan' ? 'Next meeting' : 'Meeting date'} type="date" value={draft.date} readOnly={Boolean(content.syllabusId) || Boolean(draft.id) || (semester && draft.kind === 'request')} required onChange={(event) => patch({ date: event.target.value, ...(draft.kind === 'syllabus' && content.sessions?.length === 1 && !content.sessions[0].topic ? { content: { ...content, sessions: [{ ...content.sessions[0], date: event.target.value }] } } : {}) })} /></label></div>
@@ -288,7 +304,7 @@ function RecordEditor({ draft, records, bindMeeting, prepare, patch, config, pen
       {draft.kind === 'lesson-plan' && (content.workflowVersion === 2 ? <LessonFields content={content} update={update} /> : <><TextArea label="Learning objectives" required value={content.objectives || ''} onChange={(objectives) => update({ objectives })} /><TextArea label="Learning activities & timing" required value={content.activities || ''} onChange={(activities) => update({ activities })} /><TextArea label="Resources & preparation" value={content.resources || ''} onChange={(resources) => update({ resources })} /></>)}
       {draft.kind === 'syllabus' && (content.workflowVersion === 2 ? <SyllabusFields draft={draft} patch={patch} deadlines={klass?.deadlines} /> : <><TextArea label="Semester learning objectives" required value={content.objectives || ''} onChange={(objectives) => update({ objectives })} /><TextArea label="Meeting-by-meeting syllabus" required value={content.outline || ''} onChange={(outline) => update({ outline })} /></>)}
       {draft.kind === 'slides' && <MaterialFields draft={draft} update={update} canvaTemplate={config.canvaTemplate} />}
-      {draft.kind === 'request' && <><fieldset disabled={Boolean(draft.id)}><TeacherSelect label="Request timeframe" value={content.timing || 'Before class'} options={['Before class', 'Before semester'].map((label) => ({ id: label, label }))} onChange={(timing) => patch({ date: timing === 'Before semester' ? syllabus?.date || config.semesterStart : syllabus?.content.sessions?.[(content.meetingNumber || 1) - 1]?.date || today(), content: { ...content, timing: timing as 'Before class' | 'Before semester' } })} /></fieldset><TextArea label="Items & quantities" required value={content.items || ''} onChange={(items) => update({ items })} /><TextArea label="Purpose & classroom needs" required value={content.reason || ''} onChange={(reason) => update({ reason })} /></>}
+      {draft.kind === 'request' && <><fieldset disabled={Boolean(draft.id)}><TeacherSelect label="Request timeframe" value={content.timing || 'Before class'} options={['Before class', 'Before semester'].map((label) => ({ id: label, label }))} onChange={(timing) => patch({ date: timing === 'Before semester' ? syllabus?.date || klass?.deadlines?.semesterStart || config.semesterStart : syllabus?.content.sessions?.[(content.meetingNumber || 1) - 1]?.date || today(), content: { ...content, timing: timing as 'Before class' | 'Before semester' } })} /></fieldset><TextArea label="Items & quantities" required value={content.items || ''} onChange={(items) => update({ items })} /><TextArea label="Purpose & classroom needs" required value={content.reason || ''} onChange={(reason) => update({ reason })} /></>}
       <section className="teacher-upload"><div><h3>{draft.kind === 'meeting' ? 'Meeting documentation' : 'Attachments'}</h3><span>Photos: auto-compressed / PDF: max. 1 MB</span></div><label className="admin-secondary-action"><ImagePlus size={17} />{uploading ? 'Processing...' : 'Add photos'}<input className="sr-only" aria-label="Documentation photos" type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={uploading || draft.files.filter((file) => file.mime.startsWith('image/')).length >= 3} onChange={(event) => { void upload(event.target.files); event.target.value = ''; }} /></label>{draft.kind !== 'meeting' && <label className="admin-secondary-action"><FileText size={17} />Add PDF<input className="sr-only" aria-label="Document PDF" type="file" accept="application/pdf" disabled={uploading || draft.files.some((file) => file.mime === 'application/pdf')} onChange={(event) => { void upload(event.target.files); event.target.value = ''; }} /></label>}
         <div className="teacher-upload-previews">{draft.files.map((file) => <div key={file.id}>{file.mime.startsWith('image/') ? <Image src={file.data || `/api/teaching-files/${file.id}`} width={180} height={125} alt={file.name} unoptimized /> : <FileText size={28} />}<strong>{file.name}</strong><span>{Math.ceil(file.size / 1024)} KB</span><button title="Remove attachment" aria-label={`Remove ${file.name}`} type="button" onClick={() => patch({ files: draft.files.filter((item) => item.id !== file.id) })}><Trash2 size={16} /></button></div>)}</div>
         {uploadError && <p className="teacher-form-error" role="alert">{uploadError}</p>}
@@ -297,29 +313,6 @@ function RecordEditor({ draft, records, bindMeeting, prepare, patch, config, pen
     {locked ? <p className="teacher-locked"><CheckCircle2 size={17} />This record has been reviewed and is read only.</p> : <div className="teacher-form-actions"><button className="admin-secondary-action" type="button" disabled={pending || uploading || storageError || needsSyllabus} onClick={() => { if (form.current?.reportValidity()) void save(false); }}><Save size={16} />Save draft</button><InteractiveHoverButton className="admin-interactive-action" type="submit" disabled={pending || uploading || storageError || needsSyllabus}>{pending ? 'Saving...' : 'Submit record'}</InteractiveHoverButton></div>}
     {error && <p className="teacher-form-error" role="alert">{error}</p>}
   </form>;
-}
-
-function dataUrl(file: Blob): Promise<string> {
-  return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('Could not read the file.')); reader.readAsDataURL(file); });
-}
-
-async function compressPhoto(file: File): Promise<TeachingFile> {
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10485760) throw new Error('Use JPEG, PNG, or WebP photos up to 10 MB.');
-  const bitmap = await createImageBitmap(file);
-  try {
-    if (bitmap.width * bitmap.height > 40000000) throw new Error('Photo resolution is too large. Use a photo under 40 megapixels.');
-    for (const max of [1440, 1080, 800]) {
-      const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Photo compression is unavailable in this browser.');
-      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', max === 1440 ? 0.78 : 0.58));
-      if (blob && blob.size <= 184320) return { id: crypto.randomUUID(), name: `${file.name.replace(/\.[^.]+$/, '').slice(0, 130)}.${blob.type === 'image/webp' ? 'webp' : 'png'}`, mime: blob.type, size: blob.size, data: await dataUrl(blob) };
-    }
-    throw new Error('This photo is too detailed to compress. Please choose a smaller photo.');
-  } finally { bitmap.close(); }
 }
 
 function Notifications({ notifications, records, edit, markRead, pending }: { notifications: TeacherNotification[]; records: TeachingRecord[]; edit: (record: TeachingRecord) => void; markRead: () => void; pending: boolean }) {

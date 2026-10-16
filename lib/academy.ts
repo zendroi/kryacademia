@@ -5,7 +5,7 @@ export type AcademyCatalog = { klasses: KlassRecord[]; coaches: CoachRecord[]; s
 export type CatalogKind = keyof AcademyCatalog;
 export type CatalogRecord = KlassRecord | CoachRecord | StudentRecord | InstitutionRecord;
 export type TeachingCatalog = Pick<AcademyCatalog, 'klasses' | 'students'>;
-export const emptyDeadlines = () => ({ semesterStart: '', syllabus: '', meetings: [] as NonNullable<KlassRecord['deadlines']>['meetings'] });
+export const emptyDeadlines = () => ({ semesterStart: '', syllabus: '', semesterRequest: '', meetings: [] as NonNullable<KlassRecord['deadlines']>['meetings'] });
 
 export function catalogCounts(catalog: AcademyCatalog): AcademyCatalog {
   const assigned = (id: string) => catalog.klasses.filter((klass) => klass.coachIds?.includes(id));
@@ -55,9 +55,11 @@ export function classDeadlines(klass: KlassRecord) {
   const deadlines = klass.deadlines;
   return !deadlines ? [] : [
       ...(deadlines.syllabus ? [{ kind: 'syllabus', label: 'Syllabus', date: deadlines.semesterStart, deadline: deadlines.syllabus }] : []),
+      ...(deadlines.semesterRequest ? [{ kind: 'request', label: 'Semester class needs', date: deadlines.semesterStart, deadline: deadlines.semesterRequest }] : []),
       ...deadlines.meetings.flatMap((meeting) => [
         ...(meeting.lessonPlan ? [{ kind: 'lesson-plan', label: 'Lesson plan', date: meeting.date, deadline: meeting.lessonPlan }] : []),
         ...(meeting.feedback ? [{ kind: 'meeting', label: 'Feedback & attendance', date: meeting.date, deadline: meeting.feedback }] : []),
+        ...(meeting.request ? [{ kind: 'request', label: 'Class needs', date: meeting.date, deadline: meeting.request }] : []),
       ]),
     ];
 }

@@ -1,14 +1,30 @@
 import 'server-only';
+import type postgres from 'postgres';
 import { db } from './db';
-import { seedCatalog, catalogCounts, assignedCatalog, type AcademyCatalog } from './academy';
+import { assignedCatalog, type AcademyCatalog } from './academy';
+import { readAcademicCore } from './academic-core';
+import { requireRole } from './auth';
 
-export async function loadAcademyCatalog(): Promise<AcademyCatalog> {
+type Transaction = postgres.TransactionSql;
+
+export async function readAcademyCatalog(tx: Transaction): Promise<AcademyCatalog> {
+  const [state] = await tx`SELECT relational_ready FROM academy_core_state WHERE id = 1 FOR SHARE`;
+  if (!state?.relational_ready) throw new Error('Run the Phase 3 database migration before using the portal.');
+  return readAcademicCore(tx);
+}
+
+async function readCatalog(): Promise<AcademyCatalog> {
   const sql = db();
-  await sql`INSERT INTO academy_catalog (id, content) VALUES (1, ${sql.json(seedCatalog())}) ON CONFLICT (id) DO NOTHING`;
-  const [row] = await sql`SELECT content FROM academy_catalog WHERE id = 1`;
-  return catalogCounts(row.content as AcademyCatalog);
+  return sql.begin(readAcademyCatalog);
+}
+
+export async function loadAcademyCatalog() {
+  await requireRole('admin');
+  return readCatalog();
 }
 
 export async function loadTeachingCatalog(email: string) {
-  return assignedCatalog(await loadAcademyCatalog(), email);
+  const session = await requireRole('teacher');
+  if (session.email !== email) throw new Error('This account is not accessible.');
+  return assignedCatalog(await readCatalog(), session.email);
 }

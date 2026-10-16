@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { createHmac, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { fixtureSession, clearFixtureSessions } from './session-fixture.mjs';
+import { updateCatalog } from './academic-fixture.mjs';
 import { readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -14,10 +16,7 @@ const catalogNames = [];
 const screenshots = join(tmpdir(), 'kryacademia-admin-check');
 const errors = [];
 
-function session(role) {
-  const payload = Buffer.from(JSON.stringify({ email: `${role}@krya.global`, role, exp: Date.now() + 600000 })).toString('base64url');
-  return `${payload}.${createHmac('sha256', process.env.SESSION_SECRET).update(payload).digest('base64url')}`;
-}
+async function session(role) { return fixtureSession(sql, `${role}@krya.global`, role); }
 
 async function download(page, trigger) {
   const pending = page.waitForEvent('download');
@@ -32,7 +31,7 @@ async function navigate(page, label) {
   if (await menu.isVisible()) await menu.click();
   await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name: new RegExp(`^${label}(?:\\s*\\d+)?$`) }).click();
   await page.waitForTimeout(350);
-  const heading = { Overview: 'Good morning', Institutions: 'Institution Management', Coaches: 'Coach Management', Students: 'Student Management', Inquiries: 'Inquiry List', Approvals: 'Approval Management' };
+  const heading = { Overview: 'Good morning', Institutions: 'Institution Management', Coaches: 'Coach Management', Students: 'Student Management', Inquiries: 'Inquiry List', Approvals: 'Approval Management', 'Teacher accounts': 'Teacher Accounts' };
   assert.match(await page.locator('.admin-page-heading').innerText(), new RegExp(heading[label] || label));
 }
 
@@ -61,7 +60,7 @@ async function layout(page) {
     assert.match(anonymous.url(), /\/login$/);
     await anonymous.close();
     const teacher = await browser.newContext();
-    await teacher.addCookies([{ name: 'krya_session', value: session('teacher'), url: baseUrl }]);
+    await teacher.addCookies([{ name: 'krya_session', value: await session('teacher'), url: baseUrl }]);
     const teacherPage = await teacher.newPage();
     await teacherPage.goto(`${baseUrl}/admin`);
     await teacherPage.waitForURL('**/teacher');
@@ -73,7 +72,7 @@ async function layout(page) {
       const inquiryName = `Admin inquiry fixture ${width}`;
       await sql`INSERT INTO inquiries (id, submission_hash, name, email, phone, place, type, affiliation, message, language) VALUES (${fixtureId}, 'test', ${inquiryName}, ${`admin-check-${fixtureId}@example.com`}, '+62 812 3456 7890', 'Surabaya', 'Other', 'Parent', 'Check inquiry follow-up.', 'en')`;
       const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
-      await context.addCookies([{ name: 'krya_session', value: session('admin'), url: baseUrl }]);
+      await context.addCookies([{ name: 'krya_session', value: await session('admin'), url: baseUrl }]);
       const page = await context.newPage();
       page.on('pageerror', (error) => errors.push(error.message));
       page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
@@ -86,7 +85,7 @@ async function layout(page) {
       await page.locator('.admin-notifications').waitFor({ state: 'hidden' });
       await layout(page);
       await page.screenshot({ path: join(screenshots, `overview-${width}.png`), fullPage: true });
-      for (const label of ['Klass', 'Institutions', 'Coaches', 'Students', 'Approvals', 'Reports', 'Inquiries', 'Broadcast']) {
+      for (const label of ['Klass', 'Institutions', 'Coaches', 'Students', 'Teacher accounts', 'Approvals', 'Reports', 'Inquiries', 'Broadcast']) {
         await navigate(page, label);
         await layout(page);
       }
@@ -188,6 +187,8 @@ async function layout(page) {
       await form.getByRole('textbox', { name: 'Category' }).fill('STEAM');
       await form.getByRole('textbox', { name: 'Schedule', exact: true }).fill('Saturday, 10:00');
       await form.getByRole('textbox', { name: 'Description' }).fill('A hands-on robotics experience.');
+      await form.getByLabel('Klass image', { exact: true }).setInputFiles({ name: 'admin-class.webp', mimeType: 'image/webp', buffer: await readFile(new URL('../public/klass/digitechnology-coding.webp', import.meta.url)) });
+      await form.getByText(/admin-class\.webp \/ \d+ KB/).waitFor();
       await form.getByRole('button', { name: 'Delivery mode: Online', exact: true }).click();
       await form.getByRole('button', { name: 'Onsite', exact: true }).click();
       await page.screenshot({ path: join(screenshots, `record-form-${width}.png`) });
@@ -199,9 +200,12 @@ async function layout(page) {
       await layout(page);
       await context.close();
       await sql.begin(async (tx) => {
-        const [row] = await tx`SELECT content FROM academy_catalog WHERE id = 1 FOR UPDATE`;
-        row.content.klasses = row.content.klasses.filter((item) => item.title !== catalogName);
-        await tx`UPDATE academy_catalog SET content = ${sql.json(row.content)} WHERE id = 1`;
+        let imageIds;
+        await updateCatalog(tx, (catalog) => {
+        imageIds = catalog.klasses.filter((item) => item.title === catalogName).map((item) => /^\/api\/academy-images\/([a-f0-9-]{36})$/i.exec(item.image)?.[1]).filter(Boolean);
+        catalog.klasses = catalog.klasses.filter((item) => item.title !== catalogName);
+        });
+        if (imageIds.length) await tx`DELETE FROM academy_images WHERE id IN ${tx(imageIds)}`;
       });
       console.log(`Admin interaction and layout checks passed at ${width}px.`);
     }
@@ -211,10 +215,14 @@ async function layout(page) {
     await browser.close();
     if (fixtureIds.length) await sql`DELETE FROM inquiries WHERE id IN ${sql(fixtureIds)}`;
     if (catalogNames.length) await sql.begin(async (tx) => {
-      const [row] = await tx`SELECT content FROM academy_catalog WHERE id = 1 FOR UPDATE`;
-      row.content.klasses = row.content.klasses.filter((item) => !catalogNames.includes(item.title));
-      await tx`UPDATE academy_catalog SET content = ${sql.json(row.content)} WHERE id = 1`;
+      let imageIds;
+        await updateCatalog(tx, (catalog) => {
+      imageIds = catalog.klasses.filter((item) => catalogNames.includes(item.title)).map((item) => /^\/api\/academy-images\/([a-f0-9-]{36})$/i.exec(item.image)?.[1]).filter(Boolean);
+      catalog.klasses = catalog.klasses.filter((item) => !catalogNames.includes(item.title));
+      });
+      if (imageIds.length) await tx`DELETE FROM academy_images WHERE id IN ${tx(imageIds)}`;
     });
+    await clearFixtureSessions(sql);
     await sql.end();
   }
 })().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -12,8 +12,9 @@ export type KlassRecord = {
   schedule: string;
   description: string;
   institutionId?: string;
+  klassTypeId?: string;
   coachIds?: string[];
-  deadlines?: { semesterStart: string; syllabus: string; meetings: { date: string; lessonPlan: string; feedback: string }[] };
+  deadlines?: { semesterStart: string; syllabus: string; semesterRequest?: string; meetings: { date: string; lessonPlan: string; feedback: string; request?: string }[] };
   revision?: number;
 };
 

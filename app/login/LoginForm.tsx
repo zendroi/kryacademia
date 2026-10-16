@@ -11,6 +11,8 @@ import { login } from './actions';
 const errors: Record<string, string> = {
   invalid: 'Email atau password tidak sesuai.',
   server: 'Portal sedang tidak dapat terhubung. Silakan coba lagi.',
+  limited: 'Terlalu banyak percobaan. Silakan coba lagi setelah 15 menit.',
+  pending: 'Pendaftaran Anda masih menunggu persetujuan admin.',
 };
 
 function SubmitButton() {
@@ -36,6 +38,7 @@ export default function LoginForm({ error }: { error?: string }) {
       </div>
       <SubmitButton />
       <p className="auth-security"><ShieldCheck aria-hidden size={16} /> Secure role-based access for KRYAcademia teams.</p>
+      <Link003 className="auth-back" href="/register">Apply for a teacher account</Link003>
       <Link003 className="auth-back" href="/">Back to KRYAcademia</Link003>
     </form>
   );
