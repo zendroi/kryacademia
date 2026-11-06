@@ -21,7 +21,7 @@ Claude and Codex both read this file and both edit this working tree. Do not run
 
 ## Related
 
-- The Laravel rewrite is a separate repo and a separate vault. This app is the migration **source**; see [docs/hostinger-migration.md](docs/hostinger-migration.md).
+- The Laravel rewrite lives in the private [zendroi/kryacademia-laravel](https://github.com/zendroi/kryacademia-laravel) repository. This app is the migration **source**; see [docs/hostinger-migration.md](docs/hostinger-migration.md).
 - Design notes: [design.md](design.md).
 
 <!-- BEGIN:nextjs-agent-rules -->

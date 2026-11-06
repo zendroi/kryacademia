@@ -40,6 +40,9 @@ next-env.d.ts
 /work/
 /backups/
 
+# Laravel development moved to zendroi/kryacademia-laravel
+/laravel/
+
 # private data and local audit artifacts
 /.agents/teamwork/
 *.sqlite*

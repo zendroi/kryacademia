@@ -11,6 +11,14 @@ Handover between the people and the agents working on this repo (Claude and Code
 
 Rule: do not run two agents in this working tree at the same time. Commit before handing over, then add an entry here.
 
+## 2026-11-06 — Laravel moved to its private repository (Codex)
+
+- Created and verified [zendroi/kryacademia-laravel](https://github.com/zendroi/kryacademia-laravel) as a private repository with branch `main`. The prepared subtree history starts the new repository at `550f9c8`; its initial clone matches the previous `laravel/` Git tree exactly.
+- The canonical Laravel clone is `C:\Users\refy karta\Downloads\kryacademia-laravel-github`. Continue Laravel work there. The nested `laravel/` copy was removed only after verification and is ignored to prevent accidental reintroduction.
+- Removed the unused local `laravel-migration` branch at `21cab4b`, which contains no unique migration work. The `laravel-only` split branch remains for traceability.
+- The old standalone `Downloads\kryacademia-laravel` folder remains a private data/rollback source and was not pushed. All 51 checked configuration, database, export, and private object files remain unchanged.
+- Source code is preserved in the new repository and earlier commits. Checks covered repository privacy, cloned history/tree equality, and private-file exclusions; application tests were not repeated for this repository/documentation change. Nothing was deployed.
+
 ## 2026-11-06 — branch `otw-hosting` created; docs restructured
 
 Repository state at the end of the day:
@@ -25,6 +33,6 @@ Open decision: this app and the Laravel port now implement the same product. Per
 
 ## Handover — next session, for Codex
 
-The Laravel port moves out of this repository into `zendroi/kryacademia-laravel`, with the app at that repository's root. Branch `laravel-only` here was created with `git subtree split --prefix=laravel` as the thing to push into it. Full steps, including what must not be pushed: [../laravel/docs/worklog.md](../laravel/docs/worklog.md).
+The Laravel move is complete. The app now lives at the root of [zendroi/kryacademia-laravel](https://github.com/zendroi/kryacademia-laravel). Branch `laravel-only` here preserves the original `git subtree split --prefix=laravel` result. The Laravel handover continues in its [work log](https://github.com/zendroi/kryacademia-laravel/blob/main/docs/worklog.md).
 
-Until that is done and verified, `laravel/` stays where it is. Nothing is deployed yet.
+Use the canonical clone above for Laravel work; this working tree continues to hold the Next.js migration source. Nothing is deployed yet.

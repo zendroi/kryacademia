@@ -13,7 +13,7 @@ The portal covers invitation-based teacher registration with private identity an
 
 ## Migration status
 
-A rewrite of this application in Laravel exists in a separate repository, built because the Hostinger plan runs PHP without a Node.js runtime. This application is the migration **source**: `scripts/hostinger-data.mjs` produces the encrypted export the Laravel project imports. See [docs/hostinger-migration.md](docs/hostinger-migration.md).
+A rewrite of this application in Laravel lives in the private repository [zendroi/kryacademia-laravel](https://github.com/zendroi/kryacademia-laravel), built because the Hostinger plan runs PHP without a Node.js runtime. This application is the migration **source**: `scripts/hostinger-data.mjs` produces the encrypted export the Laravel project imports. See [docs/hostinger-migration.md](docs/hostinger-migration.md).
 
 ## Data
 
