@@ -42,7 +42,7 @@ import { refreshInquiries, updateInquiryStatus } from '../inquiry/actions';
 import { inquiryDate, type InquiryRecord } from '@/lib/inquiry';
 import { TeacherSelect, TeachingAttachments, TeachingSummary } from '../teacher/TeachingControls';
 import { dateLabel, recordLabels, today, type TeachingRecord, type RecordStatus } from '../teacher/teacherData';
-import { approvedSyllabuses, classDeadlines, coachTasks, type AcademyCatalog, type CatalogRecord } from '@/lib/academy';
+import { approvedSyllabuses, classDeadlines, coachAttendance, coachTasks, klassGroupLabel, type AcademyCatalog, type CatalogRecord } from '@/lib/academy';
 import CatalogEditor from './CatalogEditor';
 import TeacherAccounts from './TeacherAccounts';
 import NotificationJobs from './NotificationJobs';
@@ -146,7 +146,7 @@ export default function AdminDashboard({ email, initialCatalog, catalogUnavailab
   const [editItem, setEditItem] = useState<CatalogRecord>();
   const [savingCatalog, setSavingCatalog] = useState(false);
   const [detailHistory, setDetailHistory] = useState<Detail[]>([]);
-  const [records, setRecords] = useState<Records>({ ...initialCatalog, inquiries: initialInquiries, approvals });
+  const [records, setRecords] = useState<Records>({ ...initialCatalog, inquiries: initialInquiries, approvals: [] });
   const [inquiryError, setInquiryError] = useState(inquiriesUnavailable ? 'Inquiries are temporarily unavailable. Refresh to retry.' : '');
   const [refreshingInquiries, setRefreshingInquiries] = useState(false);
   const [draft, setDraft] = useState<Draft>({ audience: 'All coaches', subject: '', message: '', email: true, portal: true });
@@ -279,14 +279,14 @@ export default function AdminDashboard({ email, initialCatalog, catalogUnavailab
               </button>
               <AnimatePresence>{notificationsOpen && <NotificationPanel records={records} teacherPending={teacherPending} onClose={() => setNotificationsOpen(false)} changeView={changeView} />}</AnimatePresence>
             </div>
-            <span className="admin-demo-badge">{activeView === 'inquiries' ? 'Live inquiries' : 'Pilot catalog'}</span>
+            <span className="admin-demo-badge">{activeView === 'inquiries' ? 'Live inquiries' : 'Academic catalog'}</span>
             <div className="admin-account"><span>{initials(email)}</span><div><strong>Admin</strong><small>{email}</small></div></div>
           </div>
         </header>
 
         <div className="admin-content">
           <div className="admin-page-heading">
-            <div><span>{copy.eyebrow}<small className="admin-mobile-demo"> / {activeView === 'inquiries' ? 'Live inquiries' : 'Pilot catalog'}</small></span><h1>{copy.title}</h1><p>{copy.description}</p></div>
+            <div><span>{copy.eyebrow}<small className="admin-mobile-demo"> / {activeView === 'inquiries' ? 'Live inquiries' : 'Academic catalog'}</small></span><h1>{copy.title}</h1><p>{copy.description}</p></div>
             {activeView in creationLabels && <button className="admin-primary-action" disabled={catalogUnavailable} title={`Add ${creationLabels[activeView as CreateView]}`} aria-label={`Add ${creationLabels[activeView as CreateView]}`} type="button" onClick={() => { setEditItem(undefined); setCreateView(activeView as CreateView); }}><Plus size={17} />Add {creationLabels[activeView as CreateView]}</button>}
             {activeView === 'inquiries' && <button className="admin-secondary-action" type="button" onClick={refreshInbox} disabled={refreshingInquiries}><RefreshCw size={17} />{refreshingInquiries ? 'Refreshing...' : 'Refresh inbox'}</button>}
           </div>
@@ -300,7 +300,7 @@ export default function AdminDashboard({ email, initialCatalog, catalogUnavailab
               {activeView === 'institutions' && <InstitutionView institutions={records.institutions} query={query} openDetail={setDetail} />}
               {activeView === 'coaches' && <CoachView coaches={records.coaches} query={query} openDetail={setDetail} />}
               {activeView === 'students' && <StudentView students={records.students} query={query} openDetail={setDetail} />}
-              {activeView === 'approvals' && <><section className="teacher-review-queue"><header className="teacher-section-head"><div><span>Live teacher submissions</span><h2>Teacher review queue</h2></div><span>{submissions.filter((item) => item.status !== 'Draft').length} records</span></header>{teachingUnavailable ? <p className="teacher-form-error">Teacher submissions are temporarily unavailable.</p> : submissions.filter((item) => item.status !== 'Draft' && `${item.title} ${item.teacherEmail}`.toLowerCase().includes(query.toLowerCase())).map((item) => <article className="teacher-review-row" key={item.id}><div><strong>{item.title}</strong><small>{recordLabels[item.kind]} / {item.teacherEmail} / {dateLabel(item.date)}</small></div><StatusChip status={item.status} /><button className="admin-secondary-action" onClick={() => setReviewing(item)}>Review <ChevronRight size={16} /></button></article>)}{!teachingUnavailable && !submissions.some((item) => item.status !== 'Draft') && <p>No teacher submissions yet.</p>}</section><ApprovalView approvals={records.approvals} onApprove={(id) => { setRecords((current) => ({ ...current, approvals: current.approvals.map((item) => item.id === id ? { ...item, status: 'Approved' } : item) })); announce('Demo request approved.'); }} query={query} /></>}
+              {activeView === 'approvals' && <><section className="teacher-review-queue"><header className="teacher-section-head"><div><span>Live teacher submissions</span><h2>Teacher review queue</h2></div><span>{submissions.filter((item) => item.status !== 'Draft').length} records</span></header>{teachingUnavailable ? <p className="teacher-form-error">Teacher submissions are temporarily unavailable.</p> : submissions.filter((item) => item.status !== 'Draft' && `${item.title} ${item.teacherEmail} ${records.klasses.find((klass) => klass.id === item.classId)?.school || ''}`.toLowerCase().includes(query.toLowerCase())).map((item) => <article className="teacher-review-row" key={item.id}><div><strong>{item.title}</strong><small>{recordLabels[item.kind]} / {records.klasses.find((klass) => klass.id === item.classId)?.school || item.classId} / {item.teacherEmail} / {dateLabel(item.date)}</small></div><StatusChip status={item.status} /><button className="admin-secondary-action" onClick={() => setReviewing(item)}>Review <ChevronRight size={16} /></button></article>)}{!teachingUnavailable && !submissions.some((item) => item.status !== 'Draft') && <p>No teacher submissions yet.</p>}</section><ApprovalView approvals={records.approvals} onApprove={(id) => { setRecords((current) => ({ ...current, approvals: current.approvals.map((item) => item.id === id ? { ...item, status: 'Approved' } : item) })); announce('Demo request approved.'); }} query={query} /></>}
               {activeView === 'reports' && <ReportView records={records} announce={announce} />}
               {activeView === 'inquiries' && !inquiryError && <InquiryView inquiries={records.inquiries} query={query} openDetail={setDetail} />}
               {activeView === 'broadcast' && <BroadcastView draft={draft} setDraft={setDraft} records={records} announce={announce} />}
@@ -343,10 +343,11 @@ function OverviewView({ records, query, openDetail, changeView, inquiryUnavailab
   const { klasses, institutions, students, coaches, approvals, inquiries } = records;
   const matchingInquiries = inquiries.filter((item) => `${item.name} ${item.type}`.toLowerCase().includes(query.toLowerCase()));
   const matchingApprovals = approvals.filter((item) => item.status !== 'Approved' && `${item.owner} ${item.type}`.toLowerCase().includes(query.toLowerCase()));
+  const upcoming = klasses.flatMap((klass) => (klass.deadlines?.meetings || []).map((meeting) => ({ date: meeting.date, klass }))).filter((meeting) => meeting.date >= today()).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
   const metrics = [
     { label: 'Active Klass', value: klasses.length, note: `${klasses.filter((item) => item.mode === 'Online').length} online experiences`, icon: BookOpen },
     { label: 'Partner Institutions', value: institutions.length, note: 'Learning partnerships', icon: Building2 },
-    { label: 'Active Students', value: students.length, note: 'Registered learners', icon: Users },
+    { label: 'Active Students', value: students.length, note: institutions.some((item) => item.reportedStudents != null) ? `${institutions.reduce((sum, item) => sum + (item.reportedStudents ?? 0), 0)} reported / ${students.length} registered` : 'Registered learners', icon: Users },
     { label: 'Coaches', value: coaches.length, note: `${new Set(coaches.map((item) => item.specialty)).size} teaching specialties`, icon: GraduationCap },
   ];
   return <div className="admin-overview">
@@ -359,8 +360,8 @@ function OverviewView({ records, query, openDetail, changeView, inquiryUnavailab
         <div className="admin-table-wrap"><table><thead><tr><th>Coach</th><th>Request</th><th>Deadline</th><th>Status</th></tr></thead><tbody>{matchingApprovals.slice(0, 3).map((item) => <tr key={item.id}><td><strong>{item.owner}</strong></td><td>{item.type}<small>{item.detail}</small></td><td>{item.due}</td><td><StatusChip status={item.status} /></td></tr>)}</tbody></table>{!matchingApprovals.length && <EmptyState />}</div>
       </article>
       <aside className="admin-surface admin-agenda">
-        <header><span>This week</span><h2>Learning rhythm</h2></header>
-        {[['06', 'Oct', 'STEAMaker review', 'Sekolah Cikal, 13:00'], ['08', 'Oct', 'Biotech lab', 'Xin Zhong, 10:00'], ['10', 'Oct', 'Coach reflection', 'Online, 16:00']].map(([day, month, title, meta]) => <div className="agenda-row" key={title}><b>{day}<small>{month}</small></b><div><strong>{title}</strong><span>{meta}</span></div></div>)}
+        <header><span>Upcoming meetings</span><h2>Learning rhythm</h2></header>
+        {upcoming.map(({ date, klass }) => <div className="agenda-row" key={`${klass.id}-${date}`}><b>{date.slice(8)}<small>{new Date(`${date}T12:00:00Z`).toLocaleString('en', { month: 'short', timeZone: 'Asia/Jakarta' })}</small></b><div><strong>{klass.title}{klass.groupName && ` / ${klass.groupName}`}</strong><span>{klass.school} / {klass.schedule}</span></div></div>)}{!upcoming.length && <p>No meeting dates configured.</p>}
       </aside>
     </section>
     <section className="admin-surface admin-recent">
@@ -372,12 +373,12 @@ function OverviewView({ records, query, openDetail, changeView, inquiryUnavailab
 
 function KlassView({ klasses, query, openDetail }: { klasses: KlassRecord[]; query: string; openDetail: (detail: Detail) => void }) {
   const [mode, setMode] = useState<'All' | KlassMode>('All');
-  const filtered = klasses.filter((item) => (mode === 'All' || item.mode === mode) && `${item.title} ${item.school} ${item.category}`.toLowerCase().includes(query.toLowerCase()));
+  const filtered = klasses.filter((item) => (mode === 'All' || item.mode === mode) && `${item.title} ${item.groupName || ''} ${item.school} ${item.category}`.toLowerCase().includes(query.toLowerCase()));
   return <>
     <div className="admin-filter-row" role="group" aria-label="Filter classes by mode">{(['All', 'Online', 'Onsite', 'Hybrid'] as const).map((item) => <button aria-pressed={mode === item} className={mode === item ? 'is-active' : ''} type="button" key={item} onClick={() => setMode(item)}>{item}</button>)}</div>
     {filtered.length ? <section className="admin-card-grid klass-grid">{filtered.map((klass) => <button className="admin-klass-card" type="button" key={klass.id} onClick={() => openDetail({ kind: 'klass', item: klass })}>
-      <div className="admin-card-image"><Image src={klass.image} alt={`${klass.title} learning documentation`} fill sizes="(max-width: 720px) 100vw, 33vw" /><span className={`mode-${klass.mode.toLowerCase()}`}>{klass.mode}</span></div>
-      <div className="admin-card-body"><span>{klass.category}</span><h2>{klass.title}</h2><p>{klass.school}</p><footer><span><Users size={15} />{klass.students} students</span><div>{klass.coaches.slice(0, 2).map((coach) => <b key={coach}>{initials(coach)}</b>)}</div></footer></div>
+      <div className="admin-card-image">{klass.image ? <Image src={klass.image} alt={`${klass.title} learning documentation`} fill sizes="(max-width: 720px) 100vw, 33vw" /> : <BookOpen size={36} aria-hidden />}<span className={`mode-${klass.mode.toLowerCase()}`}>{klass.mode}</span></div>
+      <div className="admin-card-body"><span>{klass.category}</span><h2>{klass.title}{klass.groupName && ` / ${klass.groupName}`}</h2><p>{klass.school}</p>{klass.plannedMeetings != null && <p>{klass.plannedMeetings} meetings / semester</p>}<footer><span><Users size={15} />{klass.reportedStudents != null ? `${klass.reportedStudents} reported / ${klass.students} enrolled` : `${klass.students} students`}</span><div>{klass.coaches.slice(0, 2).map((coach) => <b key={coach}>{initials(coach)}</b>)}</div></footer></div>
     </button>)}</section> : <EmptyState />}
   </>;
 }
@@ -386,7 +387,7 @@ function InstitutionView({ institutions, query, openDetail }: { institutions: ty
   const filtered = institutions.filter((item) => `${item.name} ${item.city}`.toLowerCase().includes(query.toLowerCase()));
   return filtered.length ? <section className="admin-card-grid institution-grid">{filtered.map((item) => <button className="admin-institution-card" type="button" key={item.id} onClick={() => openDetail({ kind: 'institution', item })}>
     <div className="institution-logo">{item.logo ? <Image src={item.logo} alt={`${item.name} logo`} fill sizes="120px" /> : <span>{initials(item.name)}</span>}</div>
-    <span>Partner institution</span><h2>{item.name}</h2><p>{item.city}{item.country && `, ${item.country}`}</p><footer><div><strong>{item.classes}</strong><small>Active Klass</small></div><div><strong>{item.students}</strong><small>Students</small></div><ChevronRight size={20} /></footer>
+    <span>Partner institution</span><h2>{item.name}</h2><p>{item.city}{item.country && `, ${item.country}`}</p>{item.reportedStudents != null && <p>{item.reportedStudents} reported students</p>}<footer><div><strong>{item.classes}</strong><small>Active Klass</small></div><div><strong>{item.students}</strong><small>Registered students</small></div><ChevronRight size={20} /></footer>
   </button>)}</section> : <EmptyState />;
 }
 
@@ -433,13 +434,13 @@ function ReportView({ records, announce }: { records: Records; announce: (messag
       const rows: (string | number)[][] = reportType === 'Student progress'
         ? [['Student', 'Institution', 'Klass', 'Score', 'Attendance'], ...records.students.map((item) => [item.name, item.school, item.klass, item.score, item.attendance])]
         : reportType === 'Klass summary'
-          ? [['Klass', 'Institution', 'Mode', 'Students', 'Schedule'], ...records.klasses.map((item) => [item.title, item.school, item.mode, item.students, item.schedule])]
+          ? [['Klass', 'Group', 'Institution', 'Mode', 'Registered students', 'Reported students', 'Planned meetings', 'Schedule'], ...records.klasses.map((item) => [item.title, item.groupName || '', item.school, item.mode, item.students, item.reportedStudents ?? '', item.plannedMeetings ?? '', item.schedule])]
           : reportType === 'Institution activity'
             ? [['Institution', 'City', 'Klass', 'Students'], ...records.institutions.map((item) => [item.name, item.city, item.classes, item.students])]
             : [['Coach', 'Specialty', 'Klass', 'Students'], ...records.coaches.map((item) => [item.name, item.specialty, item.classes, item.students])];
       downloadCsv(`kryacademia-${reportType.toLowerCase().replaceAll(' ', '-')}.csv`, rows);
     }
-    announce('Demo document downloaded.');
+    announce('Document downloaded.');
   }
   return <section className="admin-report-layout">
     <div className="admin-surface report-form"><span className="surface-eyebrow">Report setup</span><h2>Choose the evidence you need.</h2>
@@ -505,21 +506,24 @@ function ModalFrame({ title, onClose, children }: { title: string; onClose: () =
 function TeacherReview({ record, catalog, onClose, onReviewed }: { record: TeachingRecord; catalog: AcademyCatalog; onClose: () => void; onReviewed: (record: TeachingRecord, records?: TeachingRecord[], warning?: string) => void }) {
   const [status, setStatus] = useState<RecordStatus>(record.status === 'Submitted' ? 'Approved' : record.status);
   const [note, setNote] = useState(record.reviewerNote);
+  const [remarks, setRemarks] = useState(record.content.requestLines?.map(({ id, adminNote }) => ({ id, adminNote })));
+  const klass = catalog.klasses.find((item) => item.id === record.classId);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   async function submit(event: FormEvent) {
     event.preventDefault(); setPending(true); setError('');
     try {
-      const result = await reviewTeachingRecord(record.id, status, note, record.revision);
+      const result = await reviewTeachingRecord(record.id, status, note, record.revision, remarks);
       if (result.ok) onReviewed(result.record, result.records, result.refreshError); else setError(result.error);
     } catch { setError('Could not save the review. Please retry.'); }
     finally { setPending(false); }
   }
   return <ModalFrame title="Teacher submission review" onClose={() => { if (!pending) onClose(); }}>
-    <div className="teacher-submission-heading"><span className="surface-eyebrow">{recordLabels[record.kind]}</span><h2>{record.title}</h2><p>{record.teacherEmail} / {catalog.klasses.find((item) => item.id === record.classId)?.title || record.classId} / {dateLabel(record.date)}</p></div><StatusChip status={record.status} />
+    <div className="teacher-submission-heading"><span className="surface-eyebrow">{recordLabels[record.kind]}</span><h2>{record.title}</h2><p>{record.teacherEmail} / {klass ? klassGroupLabel(klass, catalog.klasses) : record.classId} / {dateLabel(record.date)}</p></div><StatusChip status={record.status} />
     <TeachingSummary record={record} students={catalog.students} />
     <TeachingAttachments files={record.files} />
-    <form className="teacher-review-controls" onSubmit={submit}><fieldset disabled={pending} style={{ border: 0, padding: 0, margin: 0 }}><TeacherSelect label="Review status" value={status} options={['Approved', 'Needs revision', 'Rejected', ...(record.kind === 'request' ? ['Fulfilled'] : [])].map((label) => ({ id: label, label }))} onChange={(value) => setStatus(value as RecordStatus)} /><label><span>Admin note{['Needs revision', 'Rejected'].includes(status) ? ' *' : ''}</span><textarea aria-label="Admin note" required={['Needs revision', 'Rejected'].includes(status)} value={note} maxLength={2000} onChange={(event) => setNote(event.target.value)} /></label></fieldset><button className="admin-primary-action" disabled={pending}>{pending ? 'Saving...' : 'Save review'}</button>{error && <p className="teacher-form-error" role="alert">{error}</p>}</form>
+    {remarks && <fieldset className="teacher-request-items" disabled={pending}><legend>Item remarks / admin only</legend>{remarks.map((line, index) => <label className="admin-text-field" key={line.id}><span>{record.content.requestLines?.[index].name} / {record.content.requestLines?.[index].quantity}</span><textarea aria-label={`Item ${index + 1} admin remarks`} value={line.adminNote} maxLength={1000} onChange={(event) => setRemarks(remarks.map((item) => item.id === line.id ? { ...item, adminNote: event.target.value } : item))} /></label>)}</fieldset>}
+    <form className="teacher-review-controls" onSubmit={submit}><fieldset disabled={pending} style={{ border: 0, padding: 0, margin: 0 }}><TeacherSelect label="Review status" value={status} options={['Approved', 'Needs revision', 'Rejected', ...(record.kind === 'request' && ['Approved', 'Fulfilled'].includes(record.status) ? ['Fulfilled'] : [])].map((label) => ({ id: label, label }))} onChange={(value) => setStatus(value as RecordStatus)} /><label><span>Admin note{['Needs revision', 'Rejected'].includes(status) ? ' *' : ''}</span><textarea aria-label="Admin note" required={['Needs revision', 'Rejected'].includes(status)} value={note} maxLength={2000} onChange={(event) => setNote(event.target.value)} /></label></fieldset><button className="admin-primary-action" disabled={pending}>{pending ? 'Saving...' : 'Save review'}</button>{error && <p className="teacher-form-error" role="alert">{error}</p>}</form>
   </ModalFrame>;
 }
 
@@ -543,7 +547,7 @@ function KlassDetail({ item, records, submissions, openDetail }: { item: KlassRe
   const syllabuses = approvedSyllabuses(submissions, item.id);
   const [syllabusId, setSyllabusId] = useState('');
   const syllabus = syllabuses.find((record) => record.id === syllabusId) || syllabuses[0];
-  return <><div className="detail-hero"><div className="detail-photo"><Image src={item.image} alt={`${item.title} documentation`} fill sizes="(max-width: 720px) 100vw, 42vw" /></div><div><span>{item.category}</span><h2>{item.title}</h2><p>{item.school}</p><StatusChip status={item.mode} /></div></div>
+  return <><div className="detail-hero"><div className="detail-photo">{item.image ? <Image src={item.image} alt={`${item.title} documentation`} fill sizes="(max-width: 720px) 100vw, 42vw" /> : <BookOpen size={36} aria-hidden />}</div><div><span>{item.category}</span><h2>{item.title}{item.groupName && ` / ${item.groupName}`}</h2><p>{item.school}</p>{item.plannedMeetings != null && <p>{item.plannedMeetings} planned semester meetings</p>}{item.reportedStudents != null && <p>{item.reportedStudents} reported students / {enrolled.length} registered learners</p>}<StatusChip status={item.mode} /></div></div>
     <div className="detail-content-grid"><div><span className="surface-eyebrow">Klass overview</span><p>{item.description}</p><dl><div><dt>Schedule</dt><dd><CalendarDays size={16} />{item.schedule}</dd></div><div><dt>Students</dt><dd><Users size={16} />{enrolled.length} enrolled learners</dd></div><div><dt>Delivery</dt><dd><MonitorUp size={16} />{item.mode}</dd></div></dl></div><div><span className="surface-eyebrow">Coach team</span>{team.map((coach) => <button type="button" className="detail-person catalog-person-link" key={coach.id} onClick={() => openDetail({ kind: 'coach', item: coach })}><span>{initials(coach.name)}</span><div><strong>{coach.name}</strong><small>{coach.specialty}</small></div><ChevronRight size={16} /></button>)}{!team.length && <p className="detail-muted">No coaches assigned.</p>}</div></div>
     <section className="detail-section"><header><div><span className="surface-eyebrow">Enrollment</span><h3>Students ({enrolled.length})</h3></div></header><div className="catalog-people">{enrolled.map((student) => <button type="button" className="detail-person catalog-person-link" key={student.id} onClick={() => openDetail({ kind: 'student', item: student })}><span>{initials(student.name)}</span><div><strong>{student.name}</strong><small>{student.grade} / {student.school}</small></div><ChevronRight size={16} /></button>)}</div>{!enrolled.length && <p className="detail-muted">No students enrolled yet.</p>}</section>
     <section className="detail-section"><header><div><span className="surface-eyebrow">Learning journey</span><h3>{syllabus?.title || 'Approved syllabus'}</h3></div>{syllabuses.length > 1 && <TeacherSelect label="Approved syllabus" value={syllabus.id} options={syllabuses.map((record) => ({ id: record.id, label: record.title }))} onChange={setSyllabusId} />}</header>{syllabus ? <><p className="detail-muted">{syllabus.teacherEmail} / Approved / {dateLabel(syllabus.date)}</p>{syllabus.content.sessions?.length ? syllabus.content.sessions.map((session, index) => <article className="session-row" key={session.date}><b>{String(index + 1).padStart(2, '0')}</b><div><h4>{session.topic}</h4><p>{dateLabel(session.date)} / {session.time} / {session.phase}</p></div></article>) : <p>{syllabus.content.outline || syllabus.content.objectives}</p>}</> : <p className="detail-muted">No approved syllabus yet.</p>}</section>
@@ -551,20 +555,27 @@ function KlassDetail({ item, records, submissions, openDetail }: { item: KlassRe
 }
 
 function KlassLinks({ klasses, openDetail }: { klasses: KlassRecord[]; openDetail: (detail: Detail) => void }) {
-  return <div className="catalog-klass-links">{klasses.map((klass) => <button type="button" className="compact-klass" key={klass.id} onClick={() => openDetail({ kind: 'klass', item: klass })}><div><Image src={klass.image} alt="" fill sizes="100px" /></div><span><strong>{klass.title}</strong><small>{klass.school} / {klass.mode}</small></span><ChevronRight size={17} /></button>)}</div>;
+  return <div className="catalog-klass-links">{klasses.map((klass) => <button type="button" className="compact-klass" key={klass.id} onClick={() => openDetail({ kind: 'klass', item: klass })}><div>{klass.image ? <Image src={klass.image} alt="" fill sizes="100px" /> : <BookOpen size={24} aria-hidden />}</div><span><strong>{klass.title}{klass.groupName && ` / ${klass.groupName}`}</strong><small>{klass.school} / {klass.mode}</small></span><ChevronRight size={17} /></button>)}</div>;
 }
 
 function CoachDetail({ item, records, submissions, unavailable, openDetail }: { item: CoachRecord; records: Records; submissions: TeachingRecord[]; unavailable: boolean; openDetail: (detail: Detail) => void }) {
   const assigned = records.klasses.filter((klass) => klass.coachIds?.includes(item.id));
   const tasks = unavailable ? [] : coachTasks(item, records, submissions, today());
-  return <><div className="profile-detail"><div className="profile-photo">{item.image ? <Image src={item.image} alt={item.name} fill sizes="180px" /> : <span>{initials(item.name)}</span>}</div><div><span>{item.level}</span><h2>{item.name}</h2><p>{item.specialty} Coach</p><a href={`mailto:${item.email}`}><Mail size={15} />{item.email}</a><small className="catalog-login">Portal: {item.portalEmail || 'Not linked'}</small></div><div className="profile-stats"><strong>{item.classes}<small>Klass</small></strong><strong>{item.students}<small>Students</small></strong></div></div>
+  const [month, setMonth] = useState(today().slice(0, 7));
+  const attendance = coachAttendance(item, records, unavailable ? [] : submissions, month);
+  return <><div className="profile-detail"><div className="profile-photo">{item.image ? <Image src={item.image} alt={item.name} fill sizes="180px" /> : <span>{initials(item.name)}</span>}</div><div><span>{item.level}</span><h2>{item.name}</h2><p>{item.specialty} Coach</p>{item.email && <a href={`mailto:${item.email}`}><Mail size={15} />{item.email}</a>}<small className="catalog-login">Portal: {item.portalEmail || 'Not linked'}</small></div><div className="profile-stats"><strong>{item.classes}<small>Klass</small></strong><strong>{item.students}<small>Students</small></strong></div></div>
     <section className="detail-section"><header><div><span className="surface-eyebrow">Submission tracking</span><h3>Outstanding tasks{!unavailable && ` (${tasks.length})`}</h3></div></header>{tasks.map((task) => <article className="catalog-task" key={`${task.classId}-${task.label}-${task.date}`}><div><strong>{task.label}</strong><p>{task.klass} / {dateLabel(task.date)}</p><small>Due {dateLabel(task.deadline)} / {task.status}</small></div><StatusChip status={task.overdue ? 'Overdue' : 'Upcoming'} /></article>)}{!tasks.length && <p className="detail-muted">{unavailable ? 'Task status unavailable.' : !item.portalEmail ? 'Teacher login account not linked.' : !assigned.some((klass) => classDeadlines(klass).length) ? 'No admin deadlines set.' : 'No outstanding tasks for the configured deadlines.'}</p>}</section>
+    <section className="detail-section"><header><div><span className="surface-eyebrow">Attendance verification</span><h3>Monthly teaching attendance</h3></div><label className="teacher-date-field"><span>Month</span><input aria-label="Attendance month" type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label></header>
+      {unavailable ? <p role="alert">Attendance records unavailable.</p> : <><p><strong>{attendance.monthVerified}</strong> verified this month / {attendance.monthSubmitted} awaiting approval</p><p>Semester progress: <strong>{attendance.semesterVerified} / {attendance.planned ?? '-'}</strong> meetings</p>
+      {attendance.rows.map((row) => <article className="catalog-task" key={row.classId}><div><strong>{row.title}</strong><p>{row.school}</p><small>{row.monthVerified} approved this month / {row.monthSubmitted} submitted</small></div><strong>{row.semesterVerified} / {row.planned ?? '-'}</strong></article>)}
+      <button type="button" className="admin-secondary-action" onClick={() => downloadCsv(`teacher-attendance-${month}.csv`, [['Teacher', 'Month', 'Klass', 'Institution', 'Approved attendance', 'Awaiting approval', 'Semester attendance', 'Planned semester meetings'], ...attendance.rows.map((row) => [item.name, month, row.title, row.school, row.monthVerified, row.monthSubmitted, row.semesterVerified, row.planned ?? 'Not configured'])])}><Download size={16} />Export attendance</button></>}
+    </section>
     <section className="detail-section"><header><div><span className="surface-eyebrow">Current work</span><h3>Assigned Klass</h3></div></header><KlassLinks klasses={assigned} openDetail={openDetail} />{!assigned.length && <p className="detail-muted">No active assignment.</p>}</section></>;
 }
 
 function StudentDetail({ item, records, submissions, openDetail }: { item: StudentRecord; records: Records; submissions: TeachingRecord[]; openDetail: (detail: Detail) => void }) {
   const enrolled = records.klasses.filter((klass) => item.classIds?.includes(klass.id));
-  const feedback = submissions.filter((record) => record.kind === 'meeting' && record.status !== 'Draft').flatMap((record) => (record.content.students || []).filter((student) => student.id === item.id).map((entry) => ({ record, entry }))).sort((a, b) => b.record.date.localeCompare(a.record.date));
+  const feedback = submissions.filter((record) => record.kind === 'meeting' && ['Submitted', 'Approved'].includes(record.status)).flatMap((record) => (record.content.students || []).filter((student) => student.id === item.id).map((entry) => ({ record, entry }))).sort((a, b) => b.record.date.localeCompare(a.record.date));
   const attendance = feedback.length ? Math.round(feedback.filter(({ entry }) => ['Present', 'Late'].includes(entry.attendance)).length / feedback.length * 100) : null;
   return <><div className="student-detail-head"><span className="student-avatar avatar-1">{initials(item.name)}</span><div><span>{item.grade}</span><h2>{item.name}</h2><p>{item.school}</p></div><button type="button" onClick={() => downloadCsv('kryacademia-student-report.csv', [['Student', 'Institution', 'Enrolled Klass'], [item.name, item.school, item.klass], ['Student', 'Klass', 'Date', 'Attendance', 'Feedback'], ...feedback.map(({ record, entry }) => [item.name, records.klasses.find((klass) => klass.id === record.classId)?.title || record.classId, record.date, entry.attendance, entry.feedback])])}><Download size={16} />Report</button></div>
     <div className="student-score-grid"><article><span>Enrolled Klass</span><strong>{enrolled.length}</strong></article><article><span>Recorded attendance</span><strong>{attendance === null ? '-' : attendance}<small>{attendance === null ? '' : '%'}</small></strong></article><article><span>Meeting records</span><strong>{feedback.length}</strong></article></div>

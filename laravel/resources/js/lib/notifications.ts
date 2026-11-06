@@ -1,0 +1,1 @@
+export type NotificationJob = { id: string; teacherEmail: string; title: string; status: 'pending' | 'delivered' | 'failed' | 'cancelled'; attempts: number; createdAt: string; availableAt: string; lastError: string };

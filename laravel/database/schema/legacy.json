@@ -1,0 +1,2138 @@
+{
+  "portal_users": {
+    "columns": {
+      "id": {
+        "type": "BIGINT",
+        "size": null,
+        "nullable": false,
+        "auto": true
+      },
+      "email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "password_hash": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "role": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "display_name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "status": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false,
+        "default": "'active'"
+      },
+      "revision": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "review_note": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "ktp_number": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "bank_name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "bank_account": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "phone": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "temp_password": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [
+      [
+        "email"
+      ]
+    ],
+    "foreign": []
+  },
+  "portal_sessions": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "expires_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "email",
+        "table": "portal_users",
+        "references": "email",
+        "cascade": true
+      }
+    ]
+  },
+  "portal_rate_limits": {
+    "columns": {
+      "key": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "window_start": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "attempts": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "primary": [
+      "key"
+    ],
+    "unique": [],
+    "foreign": []
+  },
+  "portal_account_events": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "actor_email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "target_email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "action": {
+        "type": "VARCHAR",
+        "size": 32,
+        "nullable": false
+      },
+      "note": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": []
+  },
+  "academy_catalog": {
+    "columns": {
+      "id": {
+        "type": "INT",
+        "size": null,
+        "nullable": false
+      },
+      "content": {
+        "type": "JSON",
+        "size": null,
+        "nullable": false
+      },
+      "updated_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": []
+  },
+  "academy_core_state": {
+    "columns": {
+      "id": {
+        "type": "INT",
+        "size": null,
+        "nullable": false
+      },
+      "catalog_hash": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "synced_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "relational_ready": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "FALSE"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": []
+  },
+  "institutions": {
+    "columns": {
+      "id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "city": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "country": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "logo": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "about": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "address": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "contact_name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "email": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "phone": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "website": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "sort_order": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "revision": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "active": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "TRUE"
+      },
+      "updated_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "reported_students": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": []
+  },
+  "klass_types": {
+    "columns": {
+      "id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "title": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "category": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "description": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "image": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "sort_order": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "active": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "TRUE"
+      },
+      "updated_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": []
+  },
+  "coach_profiles": {
+    "columns": {
+      "id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "specialty": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "level": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "image": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "email": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "portal_email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "bio": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "sort_order": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "revision": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "active": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "TRUE"
+      },
+      "updated_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": []
+  },
+  "student_profiles": {
+    "columns": {
+      "id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "institution_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": true
+      },
+      "name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "grade": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "score": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "attendance": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "sort_order": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "revision": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "active": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "TRUE"
+      },
+      "updated_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "institution_id",
+        "table": "institutions",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "academic_periods": {
+    "columns": {
+      "id": {
+        "type": "VARCHAR",
+        "size": 220,
+        "nullable": false
+      },
+      "institution_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": true
+      },
+      "name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "start_date": {
+        "type": "DATE",
+        "size": null,
+        "nullable": false
+      },
+      "end_date": {
+        "type": "DATE",
+        "size": null,
+        "nullable": true
+      },
+      "active": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "TRUE"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "institution_id",
+        "table": "institutions",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "class_groups": {
+    "columns": {
+      "id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "klass_type_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "institution_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": true
+      },
+      "academic_period_id": {
+        "type": "VARCHAR",
+        "size": 220,
+        "nullable": true
+      },
+      "mode": {
+        "type": "VARCHAR",
+        "size": 8,
+        "nullable": false
+      },
+      "sort_order": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "revision": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "active": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "TRUE"
+      },
+      "updated_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "group_name": {
+        "type": "VARCHAR",
+        "size": 140,
+        "nullable": false,
+        "default": "''"
+      },
+      "planned_meetings": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "reported_students": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "canva_url": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "target_meetings": {
+        "type": "INT",
+        "size": null,
+        "nullable": false
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "klass_type_id",
+        "table": "klass_types",
+        "references": "id",
+        "cascade": false
+      },
+      {
+        "column": "institution_id",
+        "table": "institutions",
+        "references": "id",
+        "cascade": false
+      },
+      {
+        "column": "academic_period_id",
+        "table": "academic_periods",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "class_schedules": {
+    "columns": {
+      "class_group_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "schedule_text": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      }
+    },
+    "primary": [
+      "class_group_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "class_group_id",
+        "table": "class_groups",
+        "references": "id",
+        "cascade": true
+      }
+    ]
+  },
+  "coach_assignments": {
+    "columns": {
+      "class_group_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "coach_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "assigned_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "class_group_id",
+      "coach_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "class_group_id",
+        "table": "class_groups",
+        "references": "id",
+        "cascade": true
+      },
+      {
+        "column": "coach_id",
+        "table": "coach_profiles",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "enrollments": {
+    "columns": {
+      "class_group_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "student_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "status": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false,
+        "default": "'active'"
+      },
+      "enrolled_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "class_group_id",
+      "student_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "class_group_id",
+        "table": "class_groups",
+        "references": "id",
+        "cascade": true
+      },
+      {
+        "column": "student_id",
+        "table": "student_profiles",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "submission_deadlines": {
+    "columns": {
+      "id": {
+        "type": "VARCHAR",
+        "size": 260,
+        "nullable": false
+      },
+      "class_group_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "academic_period_id": {
+        "type": "VARCHAR",
+        "size": 220,
+        "nullable": true
+      },
+      "kind": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "meeting_date": {
+        "type": "DATE",
+        "size": null,
+        "nullable": false
+      },
+      "due_date": {
+        "type": "DATE",
+        "size": null,
+        "nullable": false
+      },
+      "request_timing": {
+        "type": "VARCHAR",
+        "size": 20,
+        "nullable": false,
+        "default": "''"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "class_group_id",
+        "table": "class_groups",
+        "references": "id",
+        "cascade": true
+      },
+      {
+        "column": "academic_period_id",
+        "table": "academic_periods",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "academy_events": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "actor_email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "entity_kind": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "entity_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "action": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "before_data": {
+        "type": "JSON",
+        "size": null,
+        "nullable": false
+      },
+      "after_data": {
+        "type": "JSON",
+        "size": null,
+        "nullable": false
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": []
+  },
+  "portal_file_objects": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "pathname": {
+        "type": "VARCHAR",
+        "size": 100,
+        "nullable": false
+      },
+      "provider": {
+        "type": "VARCHAR",
+        "size": 8,
+        "nullable": false
+      },
+      "size": {
+        "type": "INT",
+        "size": null,
+        "nullable": false
+      },
+      "sha256": {
+        "type": "CHAR",
+        "size": 64,
+        "nullable": false
+      },
+      "ready": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "FALSE"
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [
+      [
+        "pathname"
+      ]
+    ],
+    "foreign": []
+  },
+  "academy_images": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "name": {
+        "type": "VARCHAR",
+        "size": 180,
+        "nullable": false
+      },
+      "mime": {
+        "type": "VARCHAR",
+        "size": 32,
+        "nullable": false
+      },
+      "bytes": {
+        "type": "MEDIUMBLOB",
+        "size": null,
+        "nullable": true
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "object_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "object_id",
+        "table": "portal_file_objects",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "teacher_onboarding": {
+    "columns": {
+      "email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "invitation_hash": {
+        "type": "VARCHAR",
+        "size": 64,
+        "nullable": false
+      },
+      "expires_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false
+      },
+      "completed_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": true
+      },
+      "bank_name": {
+        "type": "VARCHAR",
+        "size": 100,
+        "nullable": false,
+        "default": "''"
+      },
+      "bank_account": {
+        "type": "VARCHAR",
+        "size": 40,
+        "nullable": false,
+        "default": "''"
+      },
+      "account_holder": {
+        "type": "VARCHAR",
+        "size": 120,
+        "nullable": false,
+        "default": "''"
+      },
+      "identity_object_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "email"
+    ],
+    "unique": [
+      [
+        "invitation_hash"
+      ]
+    ],
+    "foreign": [
+      {
+        "column": "email",
+        "table": "portal_users",
+        "references": "email",
+        "cascade": true
+      },
+      {
+        "column": "identity_object_id",
+        "table": "portal_file_objects",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "teaching_records": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "teacher_email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "kind": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "class_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "meeting_date": {
+        "type": "DATE",
+        "size": null,
+        "nullable": false
+      },
+      "title": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "content": {
+        "type": "JSON",
+        "size": null,
+        "nullable": false
+      },
+      "files": {
+        "type": "JSON",
+        "size": null,
+        "nullable": false
+      },
+      "status": {
+        "type": "VARCHAR",
+        "size": 20,
+        "nullable": false
+      },
+      "reviewer_note": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "updated_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "revision": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [
+      [
+        "teacher_email",
+        "kind",
+        "class_id",
+        "meeting_date"
+      ]
+    ],
+    "foreign": [
+      {
+        "column": "teacher_email",
+        "table": "portal_users",
+        "references": "email",
+        "cascade": false
+      }
+    ]
+  },
+  "teaching_files": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "mime": {
+        "type": "VARCHAR",
+        "size": 100,
+        "nullable": false
+      },
+      "bytes": {
+        "type": "MEDIUMBLOB",
+        "size": null,
+        "nullable": true
+      },
+      "position": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "size": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "object_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_records",
+        "references": "id",
+        "cascade": true
+      },
+      {
+        "column": "object_id",
+        "table": "portal_file_objects",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "class_meetings": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "class_group_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "meeting_date": {
+        "type": "DATE",
+        "size": null,
+        "nullable": false
+      },
+      "configured": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "FALSE"
+      },
+      "canva_url": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "worksheet_url": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [
+      [
+        "class_group_id",
+        "meeting_date"
+      ]
+    ],
+    "foreign": [
+      {
+        "column": "class_group_id",
+        "table": "class_groups",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "teaching_documents": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "workflow_version": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "syllabus_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": true
+      },
+      "meeting_number": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "main_coach": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "assistant_coach": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "room": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "notes": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "objectives": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "worksheet_url": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "record_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_records",
+        "references": "id",
+        "cascade": true
+      },
+      {
+        "column": "syllabus_id",
+        "table": "teaching_records",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "teaching_syllabuses": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "academic_year": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "semester": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "deadline": {
+        "type": "DATE",
+        "size": null,
+        "nullable": true
+      },
+      "description": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "learning_values": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "projects": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "project_description": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "outline": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "record_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_documents",
+        "references": "record_id",
+        "cascade": true
+      }
+    ]
+  },
+  "syllabus_meetings": {
+    "columns": {
+      "syllabus_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "position": {
+        "type": "INT",
+        "size": null,
+        "nullable": false
+      },
+      "meeting_date": {
+        "type": "DATE",
+        "size": null,
+        "nullable": false
+      },
+      "start_time": {
+        "type": "TIME",
+        "size": null,
+        "nullable": false
+      },
+      "topic": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "phase": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      }
+    },
+    "primary": [
+      "syllabus_id",
+      "position"
+    ],
+    "unique": [
+      [
+        "syllabus_id",
+        "meeting_date"
+      ]
+    ],
+    "foreign": [
+      {
+        "column": "syllabus_id",
+        "table": "teaching_syllabuses",
+        "references": "record_id",
+        "cascade": true
+      }
+    ]
+  },
+  "teaching_lesson_plans": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "activities": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "resources": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "assessment": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "record_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_documents",
+        "references": "record_id",
+        "cascade": true
+      }
+    ]
+  },
+  "lesson_plan_steps": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "position": {
+        "type": "INT",
+        "size": null,
+        "nullable": false
+      },
+      "title": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "phase": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "minutes": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "purpose": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "teacher_activity": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "student_activity": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      }
+    },
+    "primary": [
+      "record_id",
+      "position"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_lesson_plans",
+        "references": "record_id",
+        "cascade": true
+      }
+    ]
+  },
+  "teaching_meeting_journals": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "meeting_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": true
+      },
+      "teacher_attendance": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": true
+      },
+      "reflection": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "record_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_documents",
+        "references": "record_id",
+        "cascade": true
+      },
+      {
+        "column": "meeting_id",
+        "table": "class_meetings",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "student_meeting_feedback": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "student_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": false
+      },
+      "student_profile_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": true
+      },
+      "student_name": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "position": {
+        "type": "INT",
+        "size": null,
+        "nullable": false
+      },
+      "attendance": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "feedback": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "has_ratings": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "FALSE"
+      },
+      "affective": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "problem_solving": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "storytelling": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "performance": {
+        "type": "INT",
+        "size": null,
+        "nullable": true
+      },
+      "score": {
+        "type": "DECIMAL",
+        "size": 5,
+        "scale": 2,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "record_id",
+      "student_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_meeting_journals",
+        "references": "record_id",
+        "cascade": true
+      },
+      {
+        "column": "student_profile_id",
+        "table": "student_profiles",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "teaching_materials": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "canva_url": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "record_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_documents",
+        "references": "record_id",
+        "cascade": true
+      }
+    ]
+  },
+  "class_requests": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "items": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "reason": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": true
+      },
+      "timing": {
+        "type": "VARCHAR",
+        "size": 20,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "record_id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_documents",
+        "references": "record_id",
+        "cascade": true
+      }
+    ]
+  },
+  "class_request_items": {
+    "columns": {
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "position": {
+        "type": "INT",
+        "size": null,
+        "nullable": false
+      },
+      "name": {
+        "type": "VARCHAR",
+        "size": 200,
+        "nullable": false
+      },
+      "quantity": {
+        "type": "VARCHAR",
+        "size": 80,
+        "nullable": false
+      },
+      "admin_note": {
+        "type": "VARCHAR",
+        "size": 1000,
+        "nullable": false,
+        "default": "''"
+      }
+    },
+    "primary": [
+      "record_id",
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "class_requests",
+        "references": "record_id",
+        "cascade": true
+      }
+    ]
+  },
+  "teaching_events": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "actor_email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "action": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false
+      },
+      "before_data": {
+        "type": "JSON",
+        "size": null,
+        "nullable": false
+      },
+      "after_data": {
+        "type": "JSON",
+        "size": null,
+        "nullable": false
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": [
+      {
+        "column": "record_id",
+        "table": "teaching_records",
+        "references": "id",
+        "cascade": true
+      }
+    ]
+  },
+  "notification_jobs": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "dedupe_key": {
+        "type": "VARCHAR",
+        "size": 600,
+        "nullable": false
+      },
+      "teacher_email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": true
+      },
+      "class_id": {
+        "type": "VARCHAR",
+        "size": 160,
+        "nullable": true
+      },
+      "deadline_id": {
+        "type": "VARCHAR",
+        "size": 260,
+        "nullable": true
+      },
+      "due_date": {
+        "type": "DATE",
+        "size": null,
+        "nullable": true
+      },
+      "stage": {
+        "type": "VARCHAR",
+        "size": 8,
+        "nullable": true
+      },
+      "title": {
+        "type": "VARCHAR",
+        "size": 260,
+        "nullable": false
+      },
+      "message": {
+        "type": "VARCHAR",
+        "size": 2400,
+        "nullable": false
+      },
+      "status": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false,
+        "default": "'pending'"
+      },
+      "attempts": {
+        "type": "INT",
+        "size": null,
+        "nullable": false,
+        "default": "0"
+      },
+      "available_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "delivered_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": true
+      },
+      "last_error": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "retried_by": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": true
+      },
+      "retried_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [
+      [
+        "dedupe_key"
+      ]
+    ],
+    "foreign": [
+      {
+        "column": "teacher_email",
+        "table": "portal_users",
+        "references": "email",
+        "cascade": true
+      },
+      {
+        "column": "record_id",
+        "table": "teaching_records",
+        "references": "id",
+        "cascade": true
+      },
+      {
+        "column": "class_id",
+        "table": "class_groups",
+        "references": "id",
+        "cascade": true
+      }
+    ]
+  },
+  "teacher_notifications": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "teacher_email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "record_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": true
+      },
+      "title": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "message": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "read": {
+        "type": "BOOLEAN",
+        "size": null,
+        "nullable": false,
+        "default": "FALSE"
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "source_job_id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": true
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [
+      [
+        "source_job_id"
+      ]
+    ],
+    "foreign": [
+      {
+        "column": "teacher_email",
+        "table": "portal_users",
+        "references": "email",
+        "cascade": false
+      },
+      {
+        "column": "record_id",
+        "table": "teaching_records",
+        "references": "id",
+        "cascade": true
+      },
+      {
+        "column": "source_job_id",
+        "table": "notification_jobs",
+        "references": "id",
+        "cascade": false
+      }
+    ]
+  },
+  "inquiries": {
+    "columns": {
+      "id": {
+        "type": "CHAR",
+        "size": 36,
+        "nullable": false
+      },
+      "submission_hash": {
+        "type": "VARCHAR",
+        "size": 64,
+        "nullable": false
+      },
+      "name": {
+        "type": "VARCHAR",
+        "size": 120,
+        "nullable": false
+      },
+      "email": {
+        "type": "VARCHAR",
+        "size": 254,
+        "nullable": false
+      },
+      "phone": {
+        "type": "VARCHAR",
+        "size": 30,
+        "nullable": false
+      },
+      "place": {
+        "type": "VARCHAR",
+        "size": 120,
+        "nullable": false
+      },
+      "type": {
+        "type": "VARCHAR",
+        "size": 32,
+        "nullable": false
+      },
+      "affiliation": {
+        "type": "VARCHAR",
+        "size": 20,
+        "nullable": false
+      },
+      "institution": {
+        "type": "VARCHAR",
+        "size": 180,
+        "nullable": false,
+        "default": "''"
+      },
+      "message": {
+        "type": "TEXT",
+        "size": null,
+        "nullable": false
+      },
+      "language": {
+        "type": "VARCHAR",
+        "size": 2,
+        "nullable": false
+      },
+      "details": {
+        "type": "JSON",
+        "size": null,
+        "nullable": false
+      },
+      "consent_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "status": {
+        "type": "VARCHAR",
+        "size": 16,
+        "nullable": false,
+        "default": "'New'"
+      },
+      "created_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      },
+      "updated_at": {
+        "type": "DATETIME",
+        "size": 6,
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP(6)"
+      }
+    },
+    "primary": [
+      "id"
+    ],
+    "unique": [],
+    "foreign": []
+  }
+}

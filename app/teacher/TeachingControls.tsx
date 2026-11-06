@@ -6,6 +6,7 @@ import AnimatedInput from '@/components/smoothui/animated-input';
 import BasicDropdown from '@/components/smoothui/basic-dropdown';
 import { assignedMaterials, canvaTemplates, dateLabel, emptySteps, learningPhases, lessonPhases, rubricAspects, rubricDescriptions, rubricLevels, sourceSyllabus, type LessonStep, type Ratings, type RecordDraft, type TeachingContent, type TeachingFile, type TeachingRecord } from './teacherData';
 import type { KlassRecord, StudentRecord } from '../admin/adminData';
+import { syllabusDeadline, type TeachingCatalog } from '@/lib/academy';
 
 export function TeacherSelect({ label, value, options, onChange }: { label: string; value: string; options: { id: string; label: string }[]; onChange: (value: string) => void }) {
   return <div className="admin-select teacher-select"><span>{label}</span><BasicDropdown key={value} label={`${label}: ${options.find((option) => option.id === value)?.label || value}`} items={options} onChange={(item) => onChange(String(item.id))} /></div>;
@@ -39,16 +40,20 @@ export function SyllabusFields({ draft, patch, deadlines }: { draft: RecordDraft
   const update = (value: Partial<TeachingContent>) => patch({ content: { ...content, ...value, workflowVersion: 2 } });
   function importSource() {
     const source = sourceSyllabus(draft.classId);
-    if (!source || ((content.description || content.objectives) && !window.confirm('Replace the syllabus fields with the supplied 2026-2027 example?'))) return;
+    if (!source || (deadlines?.meetings.length && !window.confirm('Use the supplied topics while keeping the admin meeting schedule?')) || ((content.description || content.objectives) && !window.confirm('Replace the syllabus fields with the supplied 2026-2027 example?'))) return;
     const date = deadlines?.semesterStart || draft.date;
     const offset = Date.parse(date) - Date.parse(source.sessions![0].date);
-    patch({ date, title: `${draft.classId === 'coding' ? 'Coding' : 'Biotechnology'} / ${date.slice(0, 4)} / Semester 1`, content: { ...source, academicYear: `${date.slice(0, 4)} - ${Number(date.slice(0, 4)) + 1}`, deadline: deadlines?.syllabus || '', sessions: source.sessions!.map((session) => ({ ...session, date: new Date(Date.parse(session.date) + offset).toISOString().slice(0, 10) })) } });
+    patch({ date, title: `${draft.classId === 'coding' ? 'Coding' : 'Biotechnology'} / ${date.slice(0, 4)} / Semester 1`, content: { ...source, academicYear: `${date.slice(0, 4)} - ${Number(date.slice(0, 4)) + 1}`, deadline: deadlines?.syllabus || '', sessions: deadlines?.meetings.length ? [...deadlines.meetings].sort((a, b) => a.date.localeCompare(b.date)).map((meeting, index) => ({ date: meeting.date, time: '08:00', topic: source.sessions?.[index]?.topic || '', phase: source.sessions?.[index]?.phase || 'Creating' })) : source.sessions!.map((session) => ({ ...session, date: new Date(Date.parse(session.date) + offset).toISOString().slice(0, 10) })) } });
   }
+  const scheduleLocked = deadlines?.semesterStart === draft.date && Boolean(deadlines?.meetings.length);
+  const configured = [...(deadlines?.meetings || [])].sort((a, b) => a.date.localeCompare(b.date));
+  const scheduleMismatch = scheduleLocked && (sessions.length !== configured.length || sessions.some((session, index) => session.date !== configured[index]?.date));
   function changeSession(index: number, value: Partial<typeof sessions[number]>) { update({ sessions: sessions.map((session, i) => i === index ? { ...session, ...value } : session) }); }
   return <>
     {!draft.id && sourceSyllabus(draft.classId) && <button type="button" className="admin-secondary-action teacher-source-button" onClick={importSource}><FileText size={16} />Use supplied 2026-2027 syllabus</button>}
+    {scheduleMismatch && <button type="button" className="admin-secondary-action" onClick={() => update({ sessions: configured.map(({ date }) => sessions.find((session) => session.date === date) || { date, time: '08:00', topic: '', phase: 'Creating' }) })}><FileText size={16} />Sync admin meeting schedule</button>}
     <div className="teacher-form-grid"><AnimatedInput className="admin-animated-input" label="Academic year *" value={content.academicYear || ''} maxLength={40} onChange={(academicYear) => update({ academicYear })} /><TeacherSelect label="Semester" value={content.semester || '1'} options={['1', '2'].map((id) => ({ id, label: id }))} onChange={(semester) => update({ semester })} /></div>
-    <label className="teacher-date-field teacher-deadline-input"><span>Submission deadline / set by admin</span><input aria-label="Submission deadline" type="date" readOnly value={(draft.date === deadlines?.semesterStart ? deadlines.syllabus : content.deadline) || ''} /></label>
+    <label className="teacher-date-field teacher-deadline-input"><span>Submission deadline / set by admin</span><input aria-label="Submission deadline" type="date" readOnly value={syllabusDeadline(deadlines, draft)} /></label>
     <CoachFields content={content} update={update} />
     <AnimatedInput className="admin-animated-input" label="Classroom / location" value={content.room || ''} maxLength={140} onChange={(room) => update({ room })} />
     <TeacherTextArea label="Program description" value={content.description || ''} required onChange={(description) => update({ description })} />
@@ -57,12 +62,12 @@ export function SyllabusFields({ draft, patch, deadlines }: { draft: RecordDraft
     <TeacherTextArea label="Projects" value={content.projects || ''} required onChange={(projects) => update({ projects })} />
     <TeacherTextArea label="Project description" value={content.projectDescription || ''} required onChange={(projectDescription) => update({ projectDescription })} />
     {content.outline && <TeacherTextArea label="Previous syllabus outline" value={content.outline} onChange={(outline) => update({ outline })} />}
-    <section className="teacher-syllabus-timeline"><header className="teacher-section-head"><h3>Meeting timeline</h3><button type="button" className="admin-icon-button" title="Add meeting" aria-label="Add meeting" disabled={sessions.length >= 36} onClick={() => {
+    <section className="teacher-syllabus-timeline"><header className="teacher-section-head"><h3>Meeting timeline</h3><button type="button" className="admin-icon-button" title="Add meeting" aria-label="Add meeting" disabled={scheduleLocked || sessions.length >= 36} onClick={() => {
       const date = sessions.length ? new Date(new Date(`${sessions.at(-1)!.date}T12:00:00Z`).getTime() + 7 * 86400000).toISOString().slice(0, 10) : draft.date;
       update({ sessions: [...sessions, { date, time: '08:00', topic: '', phase: 'Creating' }] });
     }}><Plus size={18} /></button></header>{sessions.map((session, index) => <div className="teacher-timeline-entry" key={index}>
-      <header><strong>Meeting {index + 1}</strong><button type="button" className="admin-icon-button" title={`Remove meeting ${index + 1}`} aria-label={`Remove meeting ${index + 1}`} onClick={() => update({ sessions: sessions.filter((_, i) => i !== index) })}><Trash2 size={16} /></button></header>
-      <div className="teacher-timeline-fields"><label className="teacher-date-field"><span>Date</span><input aria-label={`Meeting ${index + 1} date`} type="date" value={session.date} onChange={(event) => changeSession(index, { date: event.target.value })} /></label><label className="teacher-date-field"><span>Time</span><input aria-label={`Meeting ${index + 1} time`} type="time" value={session.time} onChange={(event) => changeSession(index, { time: event.target.value })} /></label><TeacherSelect label={`Meeting ${index + 1} phase`} value={session.phase} options={learningPhases.map((label) => ({ id: label, label }))} onChange={(phase) => changeSession(index, { phase: phase as typeof session.phase })} /></div>
+      <header><strong>Meeting {index + 1}</strong><button type="button" className="admin-icon-button" disabled={scheduleLocked} title={`Remove meeting ${index + 1}`} aria-label={`Remove meeting ${index + 1}`} onClick={() => update({ sessions: sessions.filter((_, i) => i !== index) })}><Trash2 size={16} /></button></header>
+      <div className="teacher-timeline-fields"><label className="teacher-date-field"><span>Date</span><input aria-label={`Meeting ${index + 1} date`} type="date" readOnly={scheduleLocked} value={session.date} onChange={(event) => changeSession(index, { date: event.target.value })} /></label><label className="teacher-date-field"><span>Time</span><input aria-label={`Meeting ${index + 1} time`} type="time" value={session.time} onChange={(event) => changeSession(index, { time: event.target.value })} /></label><TeacherSelect label={`Meeting ${index + 1} phase`} value={session.phase} options={learningPhases.map((label) => ({ id: label, label }))} onChange={(phase) => changeSession(index, { phase: phase as typeof session.phase })} /></div>
       <AnimatedInput className="admin-animated-input" label={`Meeting ${index + 1} topic *`} value={session.topic} maxLength={500} onChange={(topic) => changeSession(index, { topic })} />
     </div>)}</section><RubricGuide />
   </>;
@@ -86,9 +91,22 @@ export function LessonFields({ content, update }: { content: TeachingContent; up
   </>;
 }
 
-export function MaterialFields({ draft, update, canvaTemplate }: { draft: RecordDraft; update: (content: Partial<TeachingContent>) => void; canvaTemplate: string }) {
+export function RequestFields({ content, update }: { content: TeachingContent; update: (content: Partial<TeachingContent>) => void }) {
+  const lines = content.requestLines;
+  return <section className="teacher-request-items">
+    <header className="teacher-section-head"><h3>Class needs</h3>{lines && <button type="button" className="admin-secondary-action" disabled={lines.length >= 60} onClick={() => update({ requestLines: [...lines, { id: crypto.randomUUID(), name: '', quantity: '', adminNote: '' }] })}><Plus size={16} />Add item</button>}</header>
+    {lines ? lines.map((line, index) => <div className="teacher-request-row" key={line.id}>
+      <AnimatedInput className="admin-animated-input" label={`Item ${index + 1} name`} required maxLength={200} value={line.name} onChange={(name) => update({ requestLines: lines.map((item) => item.id === line.id ? { ...item, name } : item) })} />
+      <AnimatedInput className="admin-animated-input" label={`Item ${index + 1} quantity`} required maxLength={80} value={line.quantity} onChange={(quantity) => update({ requestLines: lines.map((item) => item.id === line.id ? { ...item, quantity } : item) })} />
+      <div><span>Admin remarks</span><p>{line.adminNote || 'Awaiting admin review'}</p></div>
+      <button type="button" className="admin-icon-button" disabled={lines.length === 1} aria-label={`Remove item ${index + 1}`} title="Remove item" onClick={() => update({ requestLines: lines.filter((item) => item.id !== line.id) })}><Trash2 size={16} /></button>
+    </div>) : <TeacherTextArea label="Items & quantities" required value={content.items || ''} onChange={(items) => update({ items })} />}
+  </section>;
+}
+
+export function MaterialFields({ draft, update, canvaTemplate, catalog }: { draft: RecordDraft; update: (content: Partial<TeachingContent>) => void; canvaTemplate: string; catalog: TeachingCatalog }) {
   const { content } = draft;
-  const assigned = content.meetingNumber ? assignedMaterials(draft.classId, content.meetingNumber) : { canvaUrl: '', worksheetUrl: '' };
+  const assigned = content.meetingNumber ? assignedMaterials(draft.classId, content.meetingNumber, catalog, draft.date) : { canvaUrl: '', worksheetUrl: '' };
   return <>
     <div className="teacher-material-links">{assigned.canvaUrl ? <a href={assigned.canvaUrl} target="_blank" rel="noopener noreferrer"><FileText size={18} /><span>Assigned presentation<strong>Meeting {content.meetingNumber}</strong></span><ArrowUpRight size={17} /></a> : <><div className="teacher-canva-templates"><span>KRYAcademia Canva templates</span><div>{[...(canvaTemplate ? [canvaTemplate] : []), ...canvaTemplates].map((url, index) => <a key={url} href={url} target="_blank" rel="noopener noreferrer"><FileText size={17} />Template {index + 1}<ArrowUpRight size={15} /></a>)}</div></div><AnimatedInput className="admin-animated-input" label="Your Canva slides link" type="url" value={content.canvaUrl || ''} onChange={(canvaUrl) => update({ canvaUrl })} /></>}
     {assigned.worksheetUrl ? <a href={assigned.worksheetUrl} target="_blank" rel="noopener noreferrer"><FileText size={18} /><span>Assigned worksheet<strong>Meeting {content.meetingNumber}</strong></span><ArrowUpRight size={17} /></a> : <AnimatedInput className="admin-animated-input" label="Worksheet Canva link" type="url" value={content.worksheetUrl || ''} onChange={(worksheetUrl) => update({ worksheetUrl })} />}</div>
@@ -102,6 +120,7 @@ export function TeachingSummary({ record, students = [] }: { record: TeachingRec
   return <div className="teacher-summary"><dl className="teacher-review-fields">{Object.entries(labels).map(([key, label]) => { if (key === 'meetingNumber' && record.kind === 'request' && record.content.timing === 'Before semester') return null; const value = record.content[key as keyof typeof labels]; return value ? <div key={key}><dt>{label}</dt><dd>{key === 'canvaUrl' || key === 'worksheetUrl' ? <a href={String(value)} target="_blank" rel="noopener noreferrer">Open {label.toLowerCase()} <ArrowUpRight size={14} /></a> : value}</dd></div> : null; })}</dl>
     {record.content.sessions && <section><h3>Meeting timeline</h3><ol className="teacher-summary-timeline">{record.content.sessions.map((session, index) => <li key={index}><strong>{session.topic}</strong><span>{dateLabel(session.date)} / {session.time} / {session.phase}</span></li>)}</ol><RubricGuide /></section>}
     {record.content.steps?.map((step, index) => <section className="teacher-summary-step" key={index}><h3>{index + 1}. {step.title}</h3><span>{step.phase} / {step.minutes} minutes</span><dl className="teacher-review-fields"><div><dt>Purpose</dt><dd>{step.purpose}</dd></div><div><dt>Coach activity</dt><dd>{step.teacherActivity}</dd></div><div><dt>Student activity</dt><dd>{step.studentActivity}</dd></div></dl></section>)}
+    {record.content.requestLines && <section><h3>Requested items</h3>{record.content.requestLines.map((line) => <div className="teacher-request-summary" key={line.id}><strong>{line.name}</strong><span>{line.quantity}</span><p>{line.adminNote || 'Awaiting admin remarks'}</p></div>)}</section>}
     <dl className="teacher-review-fields">{record.content.students?.map((student) => <div key={student.id}><dt>{student.name || students.find((item) => item.id === student.id)?.name || student.id} / {student.attendance}</dt><dd>{student.ratings ? <div className="teacher-summary-ratings">{Object.entries(rubricAspects).map(([key, label]) => <span key={key}>{label}: <strong>{student.ratings?.[key as keyof Ratings] || '-'} / 4</strong></span>)}</div> : `Score: ${student.score || '-'} / 100`}<p>{student.feedback}</p></dd></div>)}</dl>
   </div>;
 }

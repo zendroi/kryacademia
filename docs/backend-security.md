@@ -3,7 +3,7 @@
 ## Access Rules
 
 - Admin can manage all academy records. Public registration never creates admin accounts.
-- Teacher applications are pending until admin approves them in Teacher accounts. Verify the applicant's identity and email through your existing contact process before approving: automatic email verification is not connected.
+- Admin provisions teacher credentials and an expiring single-use registration invitation. Invited teachers upload their KTP photo and bank details before admin approval in Teacher accounts. Existing accounts remain unchanged. Verify identity and email through your existing contact process: automatic email verification is not connected. See [Workflow revisions](portal-revisions.md) for private identity storage and migration requirements.
 - Approval grants portal access, not a class assignment. Link an active account in the coach profile and assign that coach to the appropriate Klass separately.
 - Teachers can read current rosters only for their assigned classes. They can read their own submission history and its documentation after an assignment is removed, but cannot edit it or load the latest roster.
 - Data-loading functions check the session and scope themselves. Mutations also check role, ownership and current assignments server-side. Teacher writes lock the account/session during the transaction so revocation cannot race a committed save.
@@ -31,7 +31,15 @@ MFA, automated email verification/password recovery, CAPTCHA, and external email
 
 ## Verification
 
+Page responses set anti-framing, MIME-sniffing, referrer and browser-permission headers in `next.config.ts`, independent of the hosting provider. The CSP only restricts framing, plugin objects and base URLs; it is not a complete script-source policy. Private file routes retain their stricter sandbox policy. The HTTPS reverse proxy must supply HSTS after the target domain's HTTPS setup is confirmed.
+
+Before a Hostinger release, confirm the Node runtime, persistent private file storage, scheduled notification/cleanup/backup jobs, and trusted proxy configuration. The current non-Vercel client-address fallback shares one authentication quota bucket; configure trusted proxy handling before accepting public traffic there. A hosting move does not by itself replace the configured private Blob provider or activate scheduled jobs.
+
+Secrets copied into reports must be redacted before sharing. Rotate exposed database/account passwords in coordination with every environment using them, revoke old sessions, and update the deployment's secret store before reopening traffic. Local `.env.local` does not prove which database production uses; do not rerun the seed or replace production secrets blindly.
+
 ```powershell
+npm ci
+npx playwright install chromium
 npx tsc --noEmit
 npm run build
 npm run test:security

@@ -39,3 +39,17 @@ next-env.d.ts
 /outputs/
 /work/
 /backups/
+
+# private data and local audit artifacts
+/.agents/teamwork/
+*.sqlite*
+*.db
+*.enc
+*.key
+*.p12
+*.pfx
+
+# local Python and preview output
+__pycache__/
+*.py[cod]
+/tmp/

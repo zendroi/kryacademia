@@ -12,5 +12,5 @@ import { PagePreloaderProvider } from '@/components/smoothui/page-preloader';
 export const metadata: Metadata = { title: 'KRYAcademia — The 21st Education Center', description: 'Creative, project-based learning experiences for young people, families, and schools.', icons: { icon: '/kryacademia-logo.png' } };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body><PagePreloaderProvider>{children}</PagePreloaderProvider></body></html>;
+  return <html lang="en" data-scroll-behavior="smooth"><body><PagePreloaderProvider>{children}</PagePreloaderProvider></body></html>;
 }

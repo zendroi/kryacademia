@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import postgres from 'postgres';
 import { rootCertificates } from 'node:tls';
 import { readPrivateFile } from '../lib/private-files.mjs';
+import { exportHostinger, restoreMySQLCheck } from './hostinger-data.mjs';
 
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 function key() {
@@ -54,6 +55,7 @@ async function hashes(sql, schema) {
 }
 
 export async function backup(directory) {
+  if (new URL(process.env.DATABASE_URL).protocol === 'mysql:') return exportHostinger(directory);
   key(); const url = directUrl(); const sql = client(url);
   const output = resolve(directory); await mkdir(output, { recursive: false, mode: 0o700 });
   const temp = await mkdtemp(join(output, '.staging-'));
@@ -71,7 +73,7 @@ export async function backup(directory) {
       const dump = await readFile(join(temp, 'database.dump'));
       await writeFile(join(output, 'database.enc'), encrypt(dump), { flag: 'wx', mode: 0o600 });
       const [{ exists }] = await tx`SELECT to_regclass(${`${schema}.portal_file_objects`}) IS NOT NULL AS exists`;
-      const objects = exists ? await tx`SELECT o.* FROM portal_file_objects o WHERE EXISTS (SELECT 1 FROM teaching_files f WHERE f.object_id = o.id) OR EXISTS (SELECT 1 FROM academy_images f WHERE f.object_id = o.id) ORDER BY o.id` : [];
+      const objects = exists ? await tx`SELECT o.* FROM portal_file_objects o WHERE EXISTS (SELECT 1 FROM teaching_files f WHERE f.object_id = o.id) OR EXISTS (SELECT 1 FROM academy_images f WHERE f.object_id = o.id) OR EXISTS (SELECT 1 FROM teacher_onboarding f WHERE f.identity_object_id = o.id) ORDER BY o.id` : [];
       for (const object of objects) await writeFile(join(output, `${object.id}.enc`), encrypt(await readPrivateFile(object)), { flag: 'wx', mode: 0o600 });
       return { version: 1, schema, createdAt: new Date().toISOString(), dumpSha256: digest(dump), tables: await hashes(tx, schema), objects: objects.map(({ id, pathname, size, sha256 }) => ({ id, pathname, size, sha256 })) };
     });
@@ -82,6 +84,7 @@ export async function backup(directory) {
 }
 
 export async function restoreCheck(directory) {
+  if (new URL(process.env.DATABASE_URL).protocol === 'mysql:') return restoreMySQLCheck(directory);
   const source = resolve(directory);
   const manifest = JSON.parse(decrypt(await readFile(join(source, 'manifest.enc'))).toString());
   if (manifest.version !== 1 || !/^[a-z_][a-z0-9_]*$/i.test(manifest.schema) || !Array.isArray(manifest.objects)) throw new Error('Unsupported backup manifest.');

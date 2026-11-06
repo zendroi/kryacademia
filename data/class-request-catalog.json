@@ -1,0 +1,21 @@
+{
+  "source": "class request.xlsx / Kebutuhan Kelas",
+  "institutions": [
+    { "id": "cikal-primary", "name": "Cikal Primary", "sourceRows": [4, 20] },
+    { "id": "gloria-1", "name": "Gloria 1", "sourceRows": [42] },
+    { "id": "gloria-3", "name": "Gloria 3", "sourceRows": [53] },
+    { "id": "xin-zhong-secondary", "name": "Xin Zhong Secondary", "sourceRows": [66, 101] },
+    { "id": "chung-chung", "name": "Chung Chung", "sourceRows": [88] },
+    { "id": "sma-dharma-mulya", "name": "SMA Dharma Mulya", "sourceRows": [117] },
+    { "id": "smp-dharma-mulya", "name": "SMP Dharma Mulya", "sourceRows": [127] }
+  ],
+  "klasses": [
+    { "institutionId": "cikal-primary", "typeId": "steamaker", "title": "STEAMaker", "category": "STEAM", "image": "/klass/steamaker-cikal.webp", "sourceRow": 4 },
+    { "institutionId": "cikal-primary", "typeId": "innovation", "title": "Innovation", "category": "Innovation & Creativity", "image": "/klass/innovation-gloria.webp", "sourceRow": 20 },
+    { "institutionId": "xin-zhong-secondary", "typeId": "biotechnology", "title": "Biotechnology", "category": "Biotechnology", "image": "/klass/biotechnology-xin-zhong.webp", "sourceRow": 66 },
+    { "institutionId": "chung-chung", "typeId": "visual-thinker", "title": "Visual Thinker", "category": "Visual Thinking", "image": "/klass/visual-thinking-chung-chung.webp", "sourceRow": 88 },
+    { "institutionId": "xin-zhong-secondary", "typeId": "steamaker", "title": "STEAMaker", "category": "STEAM", "image": "/klass/steamaker-cikal.webp", "sourceRow": 101 },
+    { "institutionId": "sma-dharma-mulya", "typeId": "technova", "title": "Technova", "category": "Technology & Innovation", "image": "", "sourceRow": 117 },
+    { "institutionId": "smp-dharma-mulya", "typeId": "technova", "title": "Technova", "category": "Technology & Innovation", "image": "", "sourceRow": 127 }
+  ]
+}

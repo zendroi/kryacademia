@@ -28,6 +28,7 @@ async function context(email = teacherEmail, role = 'teacher', width = 1440) {
   return ctx;
 }
 async function navigate(page, name) {
+  await page.locator('.admin-shell').waitFor();
   const menu = page.getByRole('button', { name: 'Open navigation', exact: true });
   if (await menu.isVisible()) await menu.click();
   await page.getByRole('navigation', { name: 'Teacher navigation' }).getByRole('button', { name: new RegExp(`^${name}`) }).click();
@@ -78,11 +79,11 @@ try {
   const page = await ctx.newPage();
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-  await sql`ALTER TABLE teacher_notifications RENAME TO teacher_notifications_recovery_check`;
+  await sql`ALTER TABLE teacher_notifications RENAME COLUMN message TO message_recovery_check`;
   try {
     await page.goto(`${baseUrl}/teacher`);
     await page.getByRole('alert').filter({ hasText: 'Database unavailable' }).waitFor();
-  } finally { await sql`ALTER TABLE teacher_notifications_recovery_check RENAME TO teacher_notifications`; }
+  } finally { await sql`ALTER TABLE teacher_notifications RENAME COLUMN message_recovery_check TO message`; }
   await page.getByRole('button', { name: 'Refresh workspace', exact: true }).click();
   await page.getByRole('status').filter({ hasText: 'Workspace updated.' }).waitFor();
   assert.equal(await page.getByRole('alert').filter({ hasText: 'Database unavailable' }).count(), 0);
@@ -105,11 +106,15 @@ try {
   await page.getByRole('button', { name: 'Before semester', exact: true }).click();
   assert.equal(await page.getByLabel('Semester start', { exact: true }).inputValue(), testDate);
   await page.getByLabel('Title *', { exact: true }).fill(`${testName} advance request`);
-  await page.getByLabel('Items & quantities').fill('Science tools for the coming semester');
+  await page.getByLabel('Item 1 name', { exact: true }).fill('Science tools for the coming semester');
+  await page.getByLabel('Item 1 quantity', { exact: true }).fill('1 set');
   await page.getByLabel('Purpose & classroom needs').fill('Prepare before the syllabus is submitted');
   await save(page, true);
   assert.equal((await sql`SELECT meeting_date::text AS date FROM teaching_records WHERE title = ${`${testName} advance request`}`)[0].date, testDate);
   assert.equal(await page.getByRole('button', { name: 'Save draft', exact: true }).isEnabled(), true, 'Successful refresh must restore saving');
+  await sql`DELETE FROM teaching_records WHERE teacher_email = ${teacherEmail} AND title = ${`${testName} advance request`}`;
+  await page.getByRole('button', { name: 'Refresh workspace', exact: true }).click();
+  await page.getByRole('status').filter({ hasText: 'Workspace updated.' }).waitFor();
   await navigate(page, 'Semester Preparation');
   await page.getByLabel('Semester start', { exact: true }).fill(testDate);
   assert.equal(await page.getByLabel('Submission deadline', { exact: true }).inputValue(), '2032-02-13');
@@ -125,7 +130,13 @@ try {
   await save(page);
   const [syllabus] = await sql`SELECT id, content FROM teaching_record_details WHERE title = ${`${testName} syllabus`}`;
   assert.equal(syllabus.content.sessions[1].date, '2032-02-27');
+  await sql.begin((tx) => updateCatalog(tx, (catalog) => { catalog.klasses.find((klass) => klass.id === 'biotech-10').deadlines.syllabus = '2032-02-14'; }));
+  await page.getByRole('button', { name: 'Refresh workspace', exact: true }).click();
+  await page.getByRole('status').filter({ hasText: 'Workspace updated.' }).waitFor();
+  assert.equal(await page.getByLabel('Submission deadline', { exact: true }).inputValue(), '2032-02-14');
   await navigate(page, 'Class Workflow');
+  assert.match(await page.locator('.teacher-inline-deadline').innerText(), /14 Feb 2032/);
+  assert.equal((await sql`SELECT content->>'deadline' AS deadline FROM teaching_record_details WHERE id = ${syllabus.id}`)[0].deadline, '2032-02-13', 'Displaying a new deadline must preserve the stored historical snapshot');
   assert.equal(await page.locator('.teacher-workflow-row').count(), 2);
   await page.getByRole('button', { name: 'Meeting journal for meeting 1', exact: true }).click();
   assert.equal(await page.getByLabel('Meeting date', { exact: true }).getAttribute('readonly'), '');
@@ -136,6 +147,14 @@ try {
   for (const id of ['alicia', 'darren']) for (const aspect of ['Afektif', 'Problem solving', 'Story telling', 'Kinerja']) await page.getByRole('group', { name: `${aspect} ${id}`, exact: true }).getByRole('button', { name: '3 / Proficient', exact: true }).click();
   await page.getByLabel('Personal feedback alicia').fill('Explained the experiment clearly and used observations as evidence.');
   await page.getByLabel('Personal feedback darren').fill('Worked carefully; next meeting focus on describing experimental controls.');
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click();
+  await page.getByRole('group', { name: 'Attendance darren', exact: true }).getByRole('button', { name: 'Absent', exact: true }).click();
+  await page.getByRole('button', { name: 'Student & Class Feedback', exact: true }).click();
+  assert.equal(await page.getByLabel('Personal feedback darren').count(), 0, 'Absent students must not have feedback inputs');
+  assert.equal(await page.getByRole('group', { name: 'Afektif darren', exact: true }).count(), 0);
+  await page.getByRole('button', { name: 'Attendance', exact: true }).click();
+  await page.getByRole('group', { name: 'Attendance darren', exact: true }).getByRole('button', { name: 'Present', exact: true }).click();
+  await page.getByRole('button', { name: 'Student & Class Feedback', exact: true }).click();
   await page.getByLabel('Class feedback').fill('Students compared findings and shared their observations confidently.');
   const photo = await page.evaluate(async () => {
     const canvas = document.createElement('canvas'); canvas.width = 2400; canvas.height = 1600;
@@ -233,8 +252,10 @@ try {
   await navigate(page, 'Class Requests');
   assert.equal(await page.getByLabel('Needed by', { exact: true }).inputValue(), '2032-02-27');
   await page.getByLabel('Title *', { exact: true }).fill(`${testName} supplies`);
-  await page.getByLabel('Items & quantities').fill('10 reusable sample containers and 2 measuring tools.');
+  await page.getByLabel('Item 1 name', { exact: true }).fill('Reusable sample containers');
+  await page.getByLabel('Item 1 quantity', { exact: true }).fill('10 pieces');
   await page.getByLabel('Purpose & classroom needs').fill('For student experiments during the next biotechnology class.');
+  await tamperSave(page, (draft) => { draft.content.requestLines[0].adminNote = 'Forged approval'; }, 'Only admin can change item remarks');
   await page.getByRole('button', { name: /^Request timeframe:/ }).click();
   await page.getByRole('button', { name: 'Before semester', exact: true }).click();
   assert.equal(await page.getByLabel('Semester start', { exact: true }).inputValue(), testDate);
@@ -255,6 +276,7 @@ try {
   await adminPage.getByRole('button', { name: /^Review status/ }).click();
   await adminPage.getByRole('button', { name: 'Needs revision', exact: true }).click();
   await adminPage.getByLabel('Admin note', { exact: true }).fill('Please add the required container size.');
+  await adminPage.getByLabel('Item 1 admin remarks').fill('Makerspace / confirm container size');
   const reviewCapture = adminPage.waitForRequest((request) => request.method() === 'POST' && request.headers()['next-action']);
   await adminPage.getByRole('button', { name: 'Save review', exact: true }).click();
   await adminPage.getByRole('status').filter({ hasText: 'Review saved.' }).waitFor();
@@ -274,7 +296,8 @@ try {
   assert.equal(reviewEvent.before_status, 'Submitted');
   assert.equal(reviewEvent.after_status, 'Needs revision');
   await page.getByRole('button', { name: `View ${testName} supplies: Needs revision`, exact: true }).click();
-  await page.getByLabel('Items & quantities').fill('10 reusable 100 ml sample containers and 2 measuring tools.');
+  await page.getByLabel('Item 1 name', { exact: true }).fill('Reusable 100 ml sample containers');
+  assert.match(await page.locator('.teacher-request-items').innerText(), /Makerspace \/ confirm container size/);
   await save(page);
   await adminPage.reload();
   await adminPage.waitForLoadState('networkidle');
@@ -326,7 +349,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 960 });
   await navigate(page, 'Semester Preparation');
   await page.getByRole('button', { name: /^Klass:/ }).click();
-  await page.getByRole('button', { name: 'Coding Fundamentals', exact: true }).click();
+  await page.getByRole('button', { name: /^Coding Fundamentals \/ / }).click();
   await page.getByRole('button', { name: 'Use supplied 2026-2027 syllabus', exact: true }).click();
   assert.equal(await page.locator('.teacher-timeline-entry').count(), 9);
   assert.equal(await page.getByLabel('Meeting 1 date').inputValue(), '2026-09-26');

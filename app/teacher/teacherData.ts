@@ -27,6 +27,7 @@ export type Ratings = Record<keyof typeof rubricAspects, string>;
 export type SyllabusSession = { date: string; time: string; topic: string; phase: typeof learningPhases[number] };
 export type LessonStep = { title: string; phase: typeof lessonPhases[number]; minutes: string; purpose: string; teacherActivity: string; studentActivity: string };
 export type StudentEntry = { id: string; name?: string; attendance: Attendance; score: string; feedback: string; ratings?: Ratings };
+export type RequestLine = { id: string; name: string; quantity: string; adminNote: string };
 export type TeachingContent = {
   workflowVersion?: 2;
   syllabusId?: string;
@@ -55,6 +56,7 @@ export type TeachingContent = {
   outline?: string;
   canvaUrl?: string;
   items?: string;
+  requestLines?: RequestLine[];
   reason?: string;
   timing?: 'Before class' | 'Before semester';
 };
@@ -75,7 +77,9 @@ const presentationLinks = {
   'biotech-10': ['7qu8j7bw0oc4ve1', 'brn95bq75j17sd3', 'xrmhe5f65cf4c7q', 'c4aw4vo3q5vhbji', 'j9wuyiag6vuhppi', 'a5nzrqto2syjm6m', '4212l3jxaygu971', 'yio5jtgkyub460u', 'apqw2kg1fo30gyo'],
   coding: ['vwxt65610c4ckqw', 'tc5cebwq56d8044', '8fjc4y6njxplyrs', 'tf9z5tip7qyaou8', 'i3f5k4c0935yqcq', 'nm765gwx1xzjuaf', 'gumd0qw5kyocojx', 'xylxksxohy6w9ch', 'm7ia4nxnqp1ptgw'],
 };
-export function assignedMaterials(classId: string, meetingNumber: number) {
+export function assignedMaterials(classId: string, meetingNumber: number, catalog?: TeachingCatalog, date?: string) {
+  const meeting = catalog?.klasses.find((klass) => klass.id === classId)?.deadlines?.meetings.find((meeting) => meeting.date === date);
+  if (meeting && (meeting.canvaUrl !== undefined || meeting.worksheetUrl !== undefined)) return { canvaUrl: meeting.canvaUrl || '', worksheetUrl: meeting.worksheetUrl || '' };
   const presentation = presentationLinks[classId as keyof typeof presentationLinks]?.[meetingNumber - 1];
   const worksheet = classId === 'biotech-10' ? ['5gnj7agqoy3l593', 'l1cc3xdxv419wxl'][meetingNumber - 1] : undefined;
   return { canvaUrl: presentation ? `https://canva.link/${presentation}` : '', worksheetUrl: worksheet ? `https://canva.link/${worksheet}` : '' };
@@ -155,9 +159,16 @@ export function validateDraft(input: RecordDraft, config: TeachingConfig, catalo
     if (input.submit && !input.content.canvaUrl && !input.files?.some((file) => file.mime === 'application/pdf')) throw new Error('Add a Canva link or slides PDF.');
   }
   if (input.kind === 'request') {
-    text('items'); text('reason');
+    text('items', !content.requestLines && input.submit); text('reason');
+    if (content.requestLines !== undefined) {
+      if (!Array.isArray(content.requestLines) || !content.requestLines.length || content.requestLines.length > 60 || new Set(content.requestLines.map((line) => line?.id)).size !== content.requestLines.length) throw new Error('Add between 1 and 60 distinct request items.');
+      for (const line of content.requestLines) {
+        if (!line || typeof line.id !== 'string' || !/^[a-f0-9-]{36}$/i.test(line.id) || typeof line.name !== 'string' || line.name.length > 200 || typeof line.quantity !== 'string' || line.quantity.length > 80 || typeof line.adminNote !== 'string' || line.adminNote.length > 1000 || (input.submit && (!line.name.trim() || !line.quantity.trim()))) throw new Error('Complete the item name and quantity.');
+      }
+    }
     if (!['Before class', 'Before semester'].includes(input.content.timing || '')) throw new Error('Select a request timeframe.');
   }
+  if (content.requestLines !== undefined && input.kind !== 'request') throw new Error('Request items belong to class requests only.');
   for (const key of ['academicYear', 'semester', 'deadline', 'mainCoach', 'assistantCoach', 'room', 'description', 'values', 'projects', 'projectDescription', 'assessment', 'worksheetUrl', 'notes', 'reflection', 'objectives', 'activities', 'resources', 'outline', 'items', 'reason', 'timing'] as const) text(key, false);
   for (const key of ['canvaUrl', 'worksheetUrl'] as const) {
     text(key, false);
@@ -196,7 +207,7 @@ export function validateDraft(input: RecordDraft, config: TeachingConfig, catalo
   }
   if (content.workflowVersion === 2 && input.kind === 'slides' && content.meetingNumber) {
     text('notes');
-    const assigned = assignedMaterials(input.classId, content.meetingNumber);
+    const assigned = assignedMaterials(input.classId, content.meetingNumber, catalog, input.date);
     if ((assigned.canvaUrl && content.canvaUrl !== assigned.canvaUrl) || (assigned.worksheetUrl && content.worksheetUrl !== assigned.worksheetUrl)) throw new Error('Keep the assigned presentation and worksheet links unchanged.');
   }
   if ((input.kind === 'syllabus' && content.workflowVersion !== 2) || (input.kind === 'request' && input.content.timing === 'Before semester' && !content.syllabusId)) {

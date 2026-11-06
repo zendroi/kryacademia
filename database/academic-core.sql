@@ -128,6 +128,10 @@ ALTER TABLE klass_types ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEF
 ALTER TABLE coach_profiles ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE class_groups ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE class_groups ADD COLUMN IF NOT EXISTS group_name TEXT NOT NULL DEFAULT '' CHECK (length(group_name) <= 140);
+ALTER TABLE class_groups ADD COLUMN IF NOT EXISTS planned_meetings INTEGER CHECK (planned_meetings BETWEEN 1 AND 72);
+ALTER TABLE class_groups ADD COLUMN IF NOT EXISTS reported_students INTEGER CHECK (reported_students BETWEEN 0 AND 10000);
+ALTER TABLE institutions ADD COLUMN IF NOT EXISTS reported_students INTEGER CHECK (reported_students BETWEEN 0 AND 10000);
 
 CREATE INDEX IF NOT EXISTS class_groups_institution ON class_groups (institution_id) WHERE active;
 CREATE INDEX IF NOT EXISTS coach_assignments_coach ON coach_assignments (coach_id);

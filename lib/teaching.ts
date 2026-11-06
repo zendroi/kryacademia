@@ -1,4 +1,5 @@
 import 'server-only';
+import { textColumn, clause } from './sql-dialect.mjs';
 import type postgres from 'postgres';
 import { db } from './db';
 import { requireSession } from './auth';
@@ -20,8 +21,8 @@ export async function loadTeachingRecords(email?: string): Promise<TeachingRecor
   // ponytail: complete pilot history avoids false missing tasks; paginate by class/semester as data grows.
   return sql<TeachingRecord[]>`
     SELECT id, teacher_email AS "teacherEmail", kind, class_id AS "classId",
-      meeting_date::text AS date, title, content, files, status,
-      reviewer_note AS "reviewerNote", updated_at::text AS "updatedAt", revision
+      ${textColumn(db(), 'meeting_date')} AS date, title, content, files, status,
+      reviewer_note AS "reviewerNote", ${textColumn(db(), 'updated_at')} AS "updatedAt", revision
     FROM teaching_record_details
     ${email ? sql`WHERE teacher_email = ${email}` : sql``}
     ORDER BY updated_at DESC
@@ -31,8 +32,8 @@ export async function loadTeachingRecords(email?: string): Promise<TeachingRecor
 export async function readTeachingRecord(tx: postgres.TransactionSql, id: string) {
   const [record] = await tx<TeachingRecord[]>`
     SELECT id, teacher_email AS "teacherEmail", kind, class_id AS "classId",
-      meeting_date::text AS date, title, content, files, status,
-      reviewer_note AS "reviewerNote", updated_at::text AS "updatedAt", revision
+      ${textColumn(db(), 'meeting_date')} AS date, title, content, files, status,
+      reviewer_note AS "reviewerNote", ${textColumn(db(), 'updated_at')} AS "updatedAt", revision
     FROM teaching_record_details WHERE id = ${id}
   `;
   if (!record) throw new Error('The saved teaching record is unavailable.');
@@ -42,8 +43,9 @@ export async function readTeachingRecord(tx: postgres.TransactionSql, id: string
 export async function loadTeacherNotifications(email: string) {
   const session = await requireSession();
   if (session.role !== 'admin' && email !== session.email) throw new Error('These notifications are not accessible.');
-  return db()<TeacherNotification[]>`
-    SELECT id, record_id AS "recordId", title, message, read, created_at::text AS "createdAt"
+  const sql = db();
+  return sql<TeacherNotification[]>`
+    SELECT id, record_id AS "recordId", title, message, ${clause(sql, '"read"', '`read`')}, ${textColumn(sql, 'created_at')} AS "createdAt"
     FROM teacher_notifications WHERE teacher_email = ${email}
     ORDER BY created_at DESC LIMIT 100
   `;

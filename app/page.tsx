@@ -287,7 +287,7 @@ function Klass() {
     if (!activeKlass) return;
     dialog.current?.close();
     dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'Klass', program: activeKlass[0] } }));
-    window.location.assign('#contact');
+    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -453,7 +453,7 @@ function Programs() {
 
   const req = (p: string) => {
     dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'Program', program: p } }));
-    window.location.assign('#contact');
+    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
@@ -580,7 +580,7 @@ function Partners() {
   const { copy } = useLanguage();
   const go = () => {
     dispatchEvent(new CustomEvent('inquiry', { detail: { type: 'School Partnership' } }));
-    window.location.assign('#contact');
+    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (

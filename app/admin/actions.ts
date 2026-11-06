@@ -1,4 +1,5 @@
 'use server';
+import { clause } from '@/lib/sql-dialect.mjs';
 
 import { randomUUID } from 'node:crypto';
 import { requireRole } from '@/lib/auth';
@@ -72,6 +73,14 @@ export async function saveAcademyRecord(kind: CatalogKind, id: string | null, re
         return value;
       };
       const base = { id: id || createId, revision: (existing?.revision || 0) + 1 };
+      const count = (key: 'plannedMeetings' | 'reportedStudents', minimum: number, maximum: number) => {
+        const old = existing as { plannedMeetings?: number | null; reportedStudents?: number | null } | undefined;
+        if (input[key] === undefined) return old?.[key] ?? null;
+        const value = input[key];
+        if (value === '' || value === null) return null;
+        if ((typeof value !== 'string' && typeof value !== 'number') || !/^\d+$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) < minimum || Number(value) > maximum) throw new Error(`Check ${key}.`);
+        return Number(value);
+      };
       let record: CatalogRecord;
       if (kind === 'klasses') {
         const storedType = existing && 'klassTypeId' in existing ? existing.klassTypeId || existing.id : '';
@@ -80,31 +89,40 @@ export async function saveAcademyRecord(kind: CatalogKind, id: string | null, re
         if (!id && requestedType && !source) throw new Error('Select an existing Klass type.');
         const shared = source
           ? { title: source.title, category: source.category, description: source.description, image: source.image }
-          : { title: text('title', true), category: text('category', true), description: text('description', true, 3000), image: await storedImage('image', true) };
+          : { title: text('title', true), category: text('category', true), description: text('description', false, 3000), image: await storedImage('image') };
         const mode = text('mode');
         if (!['Online', 'Onsite', 'Hybrid'].includes(mode)) throw new Error('Select a delivery mode.');
         const supplied = input.deadlines as ReturnType<typeof emptyDeadlines>;
         const previous = existing && 'deadlines' in existing ? existing.deadlines : undefined;
-        const deadlines = supplied && { ...supplied, semesterRequest: supplied.semesterRequest ?? previous?.semesterRequest ?? '', meetings: Array.isArray(supplied.meetings) ? supplied.meetings.map((meeting) => ({ ...meeting, request: meeting?.request ?? previous?.meetings.find((entry) => entry.date === meeting?.date)?.request ?? '' })) : supplied.meetings };
+        const deadlines = supplied && { ...supplied, semesterRequest: supplied.semesterRequest ?? previous?.semesterRequest ?? '', meetings: Array.isArray(supplied.meetings) ? supplied.meetings.map((meeting) => ({ ...meeting, request: meeting?.request ?? previous?.meetings.find((entry) => entry.date === meeting?.date)?.request ?? '', canvaUrl: meeting?.canvaUrl ?? previous?.meetings.find((entry) => entry.date === meeting?.date)?.canvaUrl ?? '', worksheetUrl: meeting?.worksheetUrl ?? previous?.meetings.find((entry) => entry.date === meeting?.date)?.worksheetUrl ?? '' })) : supplied.meetings };
         if (!deadlines || typeof deadlines !== 'object' || !Array.isArray(deadlines.meetings) || deadlines.meetings.length > 72 || (deadlines.semesterStart !== '' && !validDate(deadlines.semesterStart)) || (deadlines.syllabus !== '' && !validDate(deadlines.syllabus)) || Boolean(deadlines.syllabus) !== Boolean(deadlines.semesterStart) || (deadlines.syllabus && deadlines.syllabus >= deadlines.semesterStart)) throw new Error('Set the syllabus deadline before the semester start, or leave both empty.');
         if (new Set(deadlines.meetings.map((meeting) => meeting?.date)).size !== deadlines.meetings.length || deadlines.meetings.some((meeting) => !meeting || !validDate(meeting.date) || (meeting.lessonPlan !== '' && (!validDate(meeting.lessonPlan) || meeting.lessonPlan > meeting.date)) || (meeting.feedback !== '' && (!validDate(meeting.feedback) || meeting.feedback < meeting.date)))) throw new Error('Check meeting deadlines: lesson plan on/before the meeting, feedback on/after it.');
         if ((deadlines.semesterRequest !== '' && (!validDate(deadlines.semesterRequest) || !deadlines.semesterStart || deadlines.semesterRequest >= deadlines.semesterStart)) || deadlines.meetings.some((meeting) => meeting.request !== '' && (!validDate(meeting.request) || meeting.request >= meeting.date))) throw new Error('Class needs deadlines must be before the class or semester starts.');
+        for (const meeting of deadlines.meetings) for (const key of ['canvaUrl', 'worksheetUrl'] as const) {
+          const value = meeting[key];
+          if (value === undefined || value === '') continue;
+          if (typeof value !== 'string' || value.length > 1000) throw new Error('Check the meeting Canva links.');
+          const url = new URL(value);
+          if (url.protocol !== 'https:' || url.username || url.password || !['canva.com', 'www.canva.com', 'canva.link'].includes(url.hostname)) throw new Error('Use a secure Canva design link.');
+        }
         // shortcut: one request per teacher/Klass/date; combine first-meeting and semester needs until separate request instances exist.
         if (deadlines.semesterRequest && deadlines.meetings.some((meeting) => meeting.date === deadlines.semesterStart && meeting.request)) throw new Error('Use one class needs deadline for the semester-start date. Combine those needs in one request.');
-        record = { ...base, ...shared, klassTypeId: storedType || requestedType || base.id, institutionId: institutionId(), mode: mode as 'Online' | 'Onsite' | 'Hybrid', schedule: text('schedule', true), coachIds: ids('coachIds', current.coaches), deadlines: { semesterStart: deadlines.semesterStart, syllabus: deadlines.syllabus, semesterRequest: deadlines.semesterRequest, meetings: deadlines.meetings.map(({ date, lessonPlan, feedback, request }) => ({ date, lessonPlan, feedback, request })) }, school: '', coaches: [], students: 0 };
+        const plannedMeetings = count('plannedMeetings', 1, 72);
+        if (plannedMeetings !== null && plannedMeetings < deadlines.meetings.length) throw new Error('Planned meetings cannot be fewer than configured meeting dates.');
+        record = { ...base, ...shared, groupName: input.groupName === undefined && existing && 'groupName' in existing ? existing.groupName : text('groupName'), plannedMeetings, reportedStudents: count('reportedStudents', 0, 10000), klassTypeId: storedType || requestedType || base.id, institutionId: institutionId(), mode: mode as 'Online' | 'Onsite' | 'Hybrid', schedule: text('schedule', true), coachIds: ids('coachIds', current.coaches), deadlines: { semesterStart: deadlines.semesterStart, syllabus: deadlines.syllabus, semesterRequest: deadlines.semesterRequest, meetings: deadlines.meetings.map(({ date, lessonPlan, feedback, request, canvaUrl, worksheetUrl }) => ({ date, lessonPlan, feedback, request, canvaUrl: canvaUrl || '', worksheetUrl: worksheetUrl || '' })) }, school: '', coaches: [], students: 0 };
       } else if (kind === 'institutions') {
         const website = text('website', false, 1000);
         if (website && (!/^https:\/\//.test(website) || new URL(website).username || new URL(website).password)) throw new Error('Use an HTTPS website URL.');
         const phone = text('phone', false, 40);
         if (phone && !/^\+?[\d ()-]{6,40}$/.test(phone)) throw new Error('Enter a valid contact number.');
-        record = { ...base, name: text('name', true), city: text('city', true), country: text('country', true), logo: await storedImage('logo'), address: text('address', false, 500), contactName: text('contactName'), email: email('email'), phone, website, about: '', classes: 0, students: 0 };
+        record = { ...base, name: text('name', true), city: text('city'), country: text('country', true), reportedStudents: count('reportedStudents', 0, 10000), logo: await storedImage('logo'), address: text('address', false, 500), contactName: text('contactName'), email: email('email'), phone, website, about: '', classes: 0, students: 0 };
       } else if (kind === 'coaches') {
         const level = text('level');
         if (!['Lead Coach', 'Coach'].includes(level)) throw new Error('Select a coach level.');
         const portalEmail = email('portalEmail');
         const previousEmail = existing && 'portalEmail' in existing ? existing.portalEmail : '';
-        if (portalEmail && portalEmail !== previousEmail && !(await tx`SELECT email FROM portal_users WHERE email = ${portalEmail} AND role = 'teacher' AND status = 'active' FOR SHARE`).length) throw new Error('The portal account must be an approved, active teacher account.');
-        record = { ...base, name: text('name', true), specialty: text('specialty', true), level: level as 'Coach' | 'Lead Coach', image: await storedImage('image'), email: email('email', true), portalEmail, bio: text('bio', false, 3000), classes: 0, students: 0 };
+        if (portalEmail && portalEmail !== previousEmail && !(await tx`SELECT email FROM portal_users WHERE email = ${portalEmail} AND role = 'teacher' AND status = 'active' ${clause(tx, 'FOR SHARE', 'LOCK IN SHARE MODE')}`).length) throw new Error('The portal account must be an approved, active teacher account.');
+        record = { ...base, name: text('name', true), specialty: text('specialty', true), level: level as 'Coach' | 'Lead Coach', image: await storedImage('image'), email: email('email'), portalEmail, bio: text('bio', false, 3000), classes: 0, students: 0 };
       } else {
         record = { ...base, name: text('name', true), grade: text('grade', true, 40), institutionId: institutionId(), classIds: ids('classIds', current.klasses), school: '', klass: '', score: existing && 'score' in existing ? existing.score : 0, attendance: existing && 'attendance' in existing ? existing.attendance : 0 };
       }

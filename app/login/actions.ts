@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { createSessionToken, revokeCurrentSession, SESSION_COOKIE, type Role } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { portalClientAddress, portalLimit } from '@/lib/portal-limits';
+import { verifyPassword } from '@/lib/passwords.mjs';
 
 type PortalUser = { email: string; role: Role; status: string };
 
@@ -17,16 +18,16 @@ export async function login(formData: FormData) {
   let error = '';
   let token = '';
   try {
-    if (!(await portalLimit('login:ip', await portalClientAddress(), 60, 900)) || !(await portalLimit('login:account', email, 10, 900))) error = 'limited';
+    const clientIp = await portalClientAddress();
+    const ipAllowed = clientIp ? await portalLimit('login:ip', clientIp, 60, 900) : true;
+    const accountAllowed = await portalLimit('login:account', email, 10, 900);
+    if (!ipAllowed || !accountAllowed) error = 'limited';
     else {
-      // Keep password-hash work for unknown emails too.
-      const dummyHash = '$2a$12$gjccHS/IAdCt0Nw3tneE0.Q/eFJJAF1POtzGFHGURFnuN1b7JgZPW';
-      const [candidate] = await db()<(PortalUser & { verified: boolean })[]>`
-        SELECT u.email, u.role, u.status,
-          crypt(${password}, COALESCE(u.password_hash, ${dummyHash})) = COALESCE(u.password_hash, ${dummyHash}) AS verified
-        FROM (SELECT 1) AS seed LEFT JOIN portal_users u ON u.email = ${email}
+      const [candidate] = await db()<(PortalUser & { password_hash: string })[]>`
+        SELECT email, role, status, password_hash FROM portal_users WHERE email = ${email}
       `;
-      if (candidate?.email && candidate.verified) user = candidate;
+      const verified = await verifyPassword(password, candidate?.password_hash);
+      if (candidate && verified) user = { email: candidate.email, role: candidate.role, status: candidate.status };
     }
     if (user?.status === 'active') token = await createSessionToken(user.email, user.role);
   } catch {

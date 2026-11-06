@@ -29,7 +29,7 @@ export default function LoginForm({ error }: { error?: string }) {
   return (
     <form action={login} className="auth-form">
       <FormPagePreloader />
-      {error && <div className="auth-error" role="alert">{errors[error] || errors.invalid}</div>}
+      {error && <div className="auth-error" role="alert">{Object.hasOwn(errors, error) ? errors[error] : errors.invalid}</div>}
       <div className="auth-field">
         <AnimatedInput autoComplete="username" label="Email address" name="email" required type="email" />
       </div>

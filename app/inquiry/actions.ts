@@ -1,4 +1,5 @@
 'use server';
+import { textColumn, lockScope, clause } from '@/lib/sql-dialect.mjs';
 
 import { createHash } from 'node:crypto';
 import { requireRole } from '@/lib/auth';
@@ -21,11 +22,11 @@ export async function submitInquiry(form: FormData) {
   try {
     const result = await db().begin(async (tx) => {
       // Serialize the per-email quota across serverless instances and concurrent submissions.
-      await tx`SELECT pg_advisory_xact_lock(hashtextextended(${data.email}, 0))`;
+      await lockScope(tx, data.email);
       const [existing] = await tx`SELECT submission_hash FROM inquiries WHERE id = ${id as string}`;
       if (existing) return existing.submission_hash === hash ? 'saved' : 'validation';
       // ponytail: email quota + honeypot for the pilot; add CAPTCHA/firewall if spam bypasses them.
-      const [{ count }] = await tx`SELECT count(*)::int AS count FROM inquiries WHERE email = ${data.email} AND created_at > NOW() - INTERVAL '15 minutes'`;
+      const [{ count }] = await tx`SELECT count(*) AS count FROM inquiries WHERE email = ${data.email} AND created_at > CURRENT_TIMESTAMP(6) - ${clause(tx, "INTERVAL '15 minutes'", 'INTERVAL 15 MINUTE')}`;
       if (count >= 5) return 'rateLimit';
       await tx`
         INSERT INTO inquiries (id, submission_hash, name, email, phone, place, type, affiliation, institution, message, language, details)
@@ -51,11 +52,13 @@ export async function updateInquiryStatus(id: string, status: InquiryStatus) {
   await requireRole('admin');
   if (typeof id !== 'string' || !uuid.test(id) || !['Contacted', 'Resolved'].includes(status)) return { ok: false as const, error: 'Invalid inquiry status.' };
   try {
-    const [record] = await db()<InquiryRecord[]>`
-      UPDATE inquiries SET status = ${status}, updated_at = NOW()
-      WHERE id = ${id} AND status != 'Resolved' AND (${status} = 'Resolved' OR status = 'New')
-      RETURNING id, name, email, phone, place, type, affiliation, institution, message, language, details, status, created_at::text AS date, updated_at::text AS "updatedAt"
-    `;
+    const record = await db().begin(async (tx) => {
+      const [before] = await tx`SELECT id FROM inquiries WHERE id = ${id} AND status != 'Resolved' AND (${status} = 'Resolved' OR status = 'New') FOR UPDATE`;
+      if (!before) return undefined;
+      await tx`UPDATE inquiries SET status = ${status}, updated_at = CURRENT_TIMESTAMP(6) WHERE id = ${id}`;
+      const [saved] = await tx<InquiryRecord[]>`SELECT id, name, email, phone, place, type, affiliation, institution, message, language, details, status, ${textColumn(tx, 'created_at')} AS date, ${textColumn(tx, 'updated_at')} AS "updatedAt" FROM inquiries WHERE id = ${id}`;
+      return saved;
+    });
     return record ? { ok: true as const, record } : { ok: false as const, error: 'This inquiry changed or is unavailable. Refresh the inbox.' };
   } catch { return { ok: false as const, error: 'Could not save the status. Please retry.' }; }
 }

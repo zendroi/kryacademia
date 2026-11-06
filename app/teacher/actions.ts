@@ -1,4 +1,5 @@
 'use server';
+import { textColumn, clause } from '@/lib/sql-dialect.mjs';
 
 import { randomUUID } from 'node:crypto';
 import type postgres from 'postgres';
@@ -12,7 +13,7 @@ import { verifyUpload } from '@/lib/upload-validation.mjs';
 import { stagePrivateFile } from '@/lib/private-files.mjs';
 import { portalLimit } from '@/lib/portal-limits';
 import { notifyTeacher } from '@/lib/notification-jobs.mjs';
-import { recordLabels, validateDraft, type RecordDraft, type RecordStatus, type TeachingFile, type TeachingContent } from './teacherData';
+import { assignedMaterials, recordLabels, validateDraft, type RecordDraft, type RecordStatus, type RequestLine, type TeachingFile, type TeachingContent } from './teacherData';
 
 export async function saveTeachingRecord(input: RecordDraft) {
   const session = await requireRole('teacher');
@@ -22,13 +23,13 @@ export async function saveTeachingRecord(input: RecordDraft) {
     if (!Array.isArray(input.files) || input.files.length > 4) throw new Error('Attach up to three photos and one PDF.');
     async function checkDraft(tx: postgres.TransactionSql) {
       const fullCatalog = await readAcademyCatalog(tx);
-      const [active] = await tx`SELECT email FROM portal_users WHERE email = ${session.email} AND role = 'teacher' AND status = 'active' FOR SHARE`;
-      const [live] = await tx`SELECT id FROM portal_sessions WHERE id = ${session.id} AND email = ${session.email} AND expires_at > NOW() FOR SHARE`;
+      const [active] = await tx`SELECT email FROM portal_users WHERE email = ${session.email} AND role = 'teacher' AND status = 'active' ${clause(tx, 'FOR SHARE', 'LOCK IN SHARE MODE')}`;
+      const [live] = await tx`SELECT id FROM portal_sessions WHERE id = ${session.id} AND email = ${session.email} AND expires_at > CURRENT_TIMESTAMP(6) ${clause(tx, 'FOR SHARE', 'LOCK IN SHARE MODE')}`;
       if (!active || !live) throw new Error('Your session is no longer active. Sign in again.');
       let catalog = assignedCatalog(fullCatalog, session.email);
       const klass = catalog.klasses.find((klass) => klass.id === input.classId);
       if (!klass) throw new Error('This Klass is not assigned to your teacher account.');
-      const [owned] = await tx`SELECT details.* FROM teaching_records r JOIN teaching_record_details details ON details.id = r.id WHERE r.teacher_email = ${session.email} AND r.kind = ${input.kind} AND r.class_id = ${input.classId} AND r.meeting_date = ${input.date} ${input.id ? tx`AND r.id = ${input.id}` : tx``} FOR UPDATE OF r`;
+      const [owned] = await tx`SELECT details.* FROM teaching_records r JOIN teaching_record_details details ON details.id = r.id WHERE r.teacher_email = ${session.email} AND r.kind = ${input.kind} AND r.class_id = ${input.classId} AND r.meeting_date = ${input.date} ${input.id ? tx`AND r.id = ${input.id}` : tx``} ${clause(tx, 'FOR UPDATE OF r', 'FOR UPDATE')}`;
       if (input.id && !owned) throw new Error('This record is not available to your account.');
       if (owned && !input.id) throw new Error('A record already exists for this Klass and date. Open it from Class Workflow or Recent submissions.');
       if (owned && (!Number.isInteger(input.revision) || input.revision !== owned.revision)) throw new Error('This record changed in another tab or review. Your form is unchanged. Refresh the workspace and reopen the latest record before saving.');
@@ -37,6 +38,8 @@ export async function saveTeachingRecord(input: RecordDraft) {
         const deadline = input.date === klass.deadlines?.semesterStart ? klass.deadlines.syllabus : owned?.content.deadline;
         if (!deadline) throw new Error('Admin must set the semester start and syllabus deadline for this Klass first.');
         input = { ...input, content: { ...input.content, deadline } };
+        const planned = klass.deadlines?.meetings;
+        if (input.date === klass.deadlines?.semesterStart && planned?.length && (input.content.sessions?.length !== planned.length || input.content.sessions.some((meeting, index) => meeting.date !== [...planned].sort((a, b) => a.date.localeCompare(b.date))[index].date))) throw new Error('Use the meeting count and dates configured by admin. Refresh the workspace to see the current schedule.');
       }
       if (owned && input.kind === 'meeting' && Array.isArray(owned.content.students)) {
         // Preserve the historical roster when current enrollments change.
@@ -48,10 +51,16 @@ export async function saveTeachingRecord(input: RecordDraft) {
         if (!stored) throw new Error('This attachment belongs to another record.');
         return stored;
       }) };
+      if (input.kind === 'slides' && owned && input.content?.meetingNumber) {
+        const assigned = assignedMaterials(input.classId, input.content.meetingNumber, catalog, input.date);
+        for (const key of ['canvaUrl', 'worksheetUrl'] as const) if (assigned[key] && input.content[key] === owned.content[key]) input = { ...input, content: { ...input.content, [key]: assigned[key] } };
+      }
       validateDraft(input, { ...teachingConfig(), ...(klass.deadlines?.semesterStart ? { semesterStart: klass.deadlines.semesterStart, deadline: klass.deadlines.syllabus, sample: false } : {}) }, catalog);
+      if (input.kind === 'request' && owned?.content.requestLines && !input.content.requestLines) throw new Error('Keep the structured request item format.');
+      if (input.kind === 'request' && input.content.requestLines?.some((line) => line.adminNote !== ((owned?.content as TeachingContent | undefined)?.requestLines?.find((item) => item.id === line.id)?.adminNote || ''))) throw new Error('Only admin can change item remarks.');
       if (input.content.workflowVersion !== 2 && (!owned || owned.content.workflowVersion === 2)) throw new Error('Use the current syllabus and meeting workflow for new records.');
       if (input.content.syllabusId) {
-        const [syllabus] = await tx`SELECT details.content, r.meeting_date::text AS date, r.status FROM teaching_records r JOIN teaching_record_details details ON details.id = r.id WHERE r.id = ${input.content.syllabusId} AND r.teacher_email = ${session.email} AND r.class_id = ${input.classId} AND r.kind = 'syllabus' FOR UPDATE OF r`;
+        const [syllabus] = await tx`SELECT details.content, ${textColumn(db(), 'r.meeting_date')} AS date, r.status FROM teaching_records r JOIN teaching_record_details details ON details.id = r.id WHERE r.id = ${input.content.syllabusId} AND r.teacher_email = ${session.email} AND r.class_id = ${input.classId} AND r.kind = 'syllabus' ${clause(tx, 'FOR UPDATE OF r', 'FOR UPDATE')}`;
         if (!syllabus || !['Submitted', 'Approved'].includes(syllabus.status)) throw new Error('Choose a submitted or approved syllabus belonging to your Klass.');
         const planned = (syllabus.content as TeachingContent).sessions?.[Number(input.content.meetingNumber) - 1];
         if (input.kind === 'request' && input.content.timing === 'Before semester') {
@@ -59,7 +68,7 @@ export async function saveTeachingRecord(input: RecordDraft) {
         } else if (!planned || planned.date !== input.date) throw new Error('The meeting date must match the selected syllabus meeting.');
       }
       if (owned && input.kind === 'syllabus') {
-        const children = await tx`SELECT kind, meeting_date::text AS date, content FROM teaching_record_details WHERE teacher_email = ${session.email} AND content->>'syllabusId' = ${owned.id}`;
+        const children = await tx`SELECT kind, ${textColumn(db(), 'meeting_date')} AS date, content FROM teaching_record_details WHERE teacher_email = ${session.email} AND ${clause(tx, "content->>'syllabusId'", "JSON_UNQUOTE(JSON_EXTRACT(content, '$.syllabusId'))")} = ${owned.id}`;
         if (children.some((child) => !(child.kind === 'request' && child.content.timing === 'Before semester') && child.content.meetingNumber && input.content.sessions?.[Number(child.content.meetingNumber) - 1]?.date !== child.date)) throw new Error('Keep meeting dates with existing records unchanged. Add new meetings after them.');
       }
       return { catalog, owned };
@@ -75,15 +84,9 @@ export async function saveTeachingRecord(input: RecordDraft) {
     }
     const record = await sql.begin(async (tx) => {
       const { catalog, owned } = await checkDraft(tx);
-      const [{ id } = {}] = await tx`
-        INSERT INTO teaching_records (id, teacher_email, kind, class_id, meeting_date, title, status)
-        VALUES (${input.id || randomUUID()}, ${session.email}, ${input.kind}, ${input.classId}, ${input.date}, ${input.title.trim()}, ${input.submit ? 'Submitted' : 'Draft'})
-        ON CONFLICT (teacher_email, kind, class_id, meeting_date) DO UPDATE
-        SET title = EXCLUDED.title, status = EXCLUDED.status, reviewer_note = '', updated_at = NOW(), revision = teaching_records.revision + 1
-        WHERE teaching_records.status NOT IN ('Approved', 'Fulfilled') AND teaching_records.id = EXCLUDED.id
-        RETURNING id
-      `;
-      if (!id) throw new Error('Approved or fulfilled records cannot be changed.');
+      const id = owned?.id || input.id || randomUUID();
+      if (owned) await tx`UPDATE teaching_records SET title = ${input.title.trim()}, status = ${input.submit ? 'Submitted' : 'Draft'}, reviewer_note = '', updated_at = CURRENT_TIMESTAMP(6), revision = revision + 1 WHERE id = ${id}`;
+      else await tx`INSERT INTO teaching_records (id, teacher_email, kind, class_id, meeting_date, title, status) VALUES (${id}, ${session.email}, ${input.kind}, ${input.classId}, ${input.date}, ${input.title.trim()}, ${input.submit ? 'Submitted' : 'Draft'})`;
       await writeTeachingWorkflow(tx, { ...input, id, content: { ...input.content, ...(input.kind === 'meeting' ? { students: input.content.students?.map((entry) => ({ ...entry, name: catalog.students.find((student) => student.id === entry.id)?.name || entry.id })) } : {}) } });
       const existing = await tx`SELECT id FROM teaching_files WHERE record_id = ${id}`;
       const files: TeachingFile[] = [];
@@ -118,15 +121,22 @@ export async function saveTeachingRecord(input: RecordDraft) {
   }
 }
 
-export async function reviewTeachingRecord(id: string, status: RecordStatus, note: string, revision: number) {
+export async function reviewTeachingRecord(id: string, status: RecordStatus, note: string, revision: number, remarks?: Pick<RequestLine, 'id' | 'adminNote'>[]) {
   const session = await requireRole('admin');
   if (!/^[a-f0-9-]{36}$/i.test(id) || !['Approved', 'Needs revision', 'Rejected', 'Fulfilled'].includes(status) || typeof note !== 'string' || note.length > 2000 || (['Needs revision', 'Rejected'].includes(status) && !note.trim())) return { ok: false as const, error: 'Add a review note before requesting changes or rejecting.' };
   try {
     const record = await db().begin(async (tx) => {
-      const [before] = await tx`SELECT details.* FROM teaching_records r JOIN teaching_record_details details ON details.id = r.id WHERE r.id = ${id} FOR UPDATE OF r`;
+      const [before] = await tx`SELECT details.* FROM teaching_records r JOIN teaching_record_details details ON details.id = r.id WHERE r.id = ${id} ${clause(tx, 'FOR UPDATE OF r', 'FOR UPDATE')}`;
       if (before && (!Number.isInteger(revision) || revision !== before.revision)) throw new Error('This record changed. Refresh the page and review the latest submission.');
-      const [record] = await tx`UPDATE teaching_records SET status = ${status}, reviewer_note = ${note.trim()}, updated_at = NOW(), revision = revision + 1 WHERE id = ${id} AND status != 'Draft' AND (kind = 'request' OR ${status} != 'Fulfilled') RETURNING teacher_email, title`;
-      if (!before || !record) throw new Error('This submission is not available for review.');
+      if (status === 'Fulfilled' && !['Approved', 'Fulfilled'].includes(before?.status)) throw new Error('Approve the class request before marking it fulfilled.');
+      if (remarks !== undefined) {
+        const lines = (before?.content as TeachingContent | undefined)?.requestLines || [];
+        if (before?.kind !== 'request' || !Array.isArray(remarks) || remarks.length !== lines.length || new Set(remarks.map((line) => line?.id)).size !== lines.length || remarks.some((line) => !line || !lines.some((item) => item.id === line.id) || typeof line.adminNote !== 'string' || line.adminNote.length > 1000)) throw new Error('Check the item remarks.');
+        for (const line of remarks) await tx`UPDATE class_request_items SET admin_note = ${line.adminNote.trim()} WHERE record_id = ${id} AND id = ${line.id}`;
+      }
+      if (!before || before.status === 'Draft' || (status === 'Fulfilled' && before.kind !== 'request')) throw new Error('This submission is not available for review.');
+      await tx`UPDATE teaching_records SET status = ${status}, reviewer_note = ${note.trim()}, updated_at = CURRENT_TIMESTAMP(6), revision = revision + 1 WHERE id = ${id}`;
+      const record = before;
       const [after] = await tx`SELECT * FROM teaching_record_details WHERE id = ${id}`;
       await tx`INSERT INTO teaching_events (id, record_id, actor_email, action, before_data, after_data) VALUES (${randomUUID()}, ${id}, ${session.email}, 'review', ${tx.json(before)}, ${tx.json(after)})`;
       await notifyTeacher(tx, { key: `review:${id}:${after.revision}`, teacherEmail: record.teacher_email, recordId: id,
@@ -143,7 +153,8 @@ export async function reviewTeachingRecord(id: string, status: RecordStatus, not
 export async function markTeacherNotificationsRead() {
   const session = await requireRole('teacher');
   try {
-    await db()`UPDATE teacher_notifications SET read = TRUE WHERE teacher_email = ${session.email}`;
+    const sql = db();
+    await sql`UPDATE teacher_notifications SET ${clause(sql, '"read"', '`read`')} = TRUE WHERE teacher_email = ${session.email}`;
     return { ok: true as const };
   } catch { return { ok: false as const, error: 'Could not update notifications.' }; }
 }

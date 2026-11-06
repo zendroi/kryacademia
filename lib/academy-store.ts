@@ -1,4 +1,5 @@
 import 'server-only';
+import { clause } from './sql-dialect.mjs';
 import type postgres from 'postgres';
 import { db } from './db';
 import { assignedCatalog, type AcademyCatalog } from './academy';
@@ -8,7 +9,7 @@ import { requireRole } from './auth';
 type Transaction = postgres.TransactionSql;
 
 export async function readAcademyCatalog(tx: Transaction): Promise<AcademyCatalog> {
-  const [state] = await tx`SELECT relational_ready FROM academy_core_state WHERE id = 1 FOR SHARE`;
+  const [state] = await tx`SELECT relational_ready FROM academy_core_state WHERE id = 1 ${clause(tx, 'FOR SHARE', 'LOCK IN SHARE MODE')}`;
   if (!state?.relational_ready) throw new Error('Run the Phase 3 database migration before using the portal.');
   return readAcademicCore(tx);
 }

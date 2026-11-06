@@ -14,8 +14,11 @@ export type KlassRecord = {
   institutionId?: string;
   klassTypeId?: string;
   coachIds?: string[];
-  deadlines?: { semesterStart: string; syllabus: string; semesterRequest?: string; meetings: { date: string; lessonPlan: string; feedback: string; request?: string }[] };
+  deadlines?: { semesterStart: string; syllabus: string; semesterRequest?: string; meetings: { date: string; lessonPlan: string; feedback: string; request?: string; canvaUrl?: string; worksheetUrl?: string }[] };
   revision?: number;
+  groupName?: string;
+  plannedMeetings?: number | null;
+  reportedStudents?: number | null;
 };
 
 export type CoachRecord = {
@@ -48,6 +51,7 @@ export type StudentRecord = {
 export type InstitutionRecord = {
   id: string; name: string; city: string; classes: number; students: number; logo: string; about: string;
   country?: string; address?: string; contactName?: string; email?: string; phone?: string; website?: string; revision?: number;
+  reportedStudents?: number | null;
 };
 
 export const klasses: KlassRecord[] = [

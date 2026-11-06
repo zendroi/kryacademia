@@ -15,23 +15,28 @@
     "db:phase3": "node --env-file=.env.local scripts/migrate-phase3.mjs",
     "db:phase4": "node --env-file=.env.local scripts/migrate-phase4.mjs",
     "db:phase5": "node --env-file=.env.local scripts/migrate-phase5.mjs",
+    "db:revisions": "node --env-file=.env.local scripts/migrate-portal-revisions.mjs",
+    "db:hostinger": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.hostinger.local --env-file-if-exists=.env.backup.local scripts/hostinger-data.mjs",
+    "test:hostinger": "node tests/hostinger-data-check.mjs",
     "jobs:run": "node --env-file=.env.local scripts/run-notification-jobs.mjs",
     "files:cleanup": "node --env-file=.env.local scripts/cleanup-files.mjs",
     "db:backup": "node --env-file=.env.local --env-file-if-exists=.env.backup.local scripts/backup.mjs create",
     "db:restore-check": "node --env-file=.env.local --env-file-if-exists=.env.backup.local scripts/backup.mjs check",
     "test:uploads": "node tests/upload-check.mjs",
     "test:auth": "node --env-file=.env.local tests/auth-check.mjs",
-    "test:security": "node --env-file=.env.local tests/security-check.mjs"
+    "test:security": "node --env-file=.env.local --env-file-if-exists=.env.backup.local tests/security-check.mjs"
   },
   "dependencies": {
     "@fontsource/montserrat": "^5.3.0",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.6.1",
     "@vercel/blob": "^2.8.2",
+    "bcryptjs": "3.0.3",
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
     "lucide-react": "^1.44.0",
     "motion": "^13.3.0",
+    "mysql2": "3.24.6",
     "next": "16.3.8",
     "pdf-lib": "^1.17.1",
     "postgres": "^3.4.9",
@@ -42,29 +47,18 @@
     "three": "^0.165.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
-    "@cloudflare/workers-types": "4.20260515.1",
-    "@openai/sites-vite-plugin": "^0.1.0 || ^0.2.0",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/three": "^0.165.0",
-    "@vitejs/plugin-react": "6.0.2",
-    "@vitejs/plugin-rsc": "0.5.26",
     "eslint": "9.39.4",
     "eslint-config-next": "16.3.8",
     "playwright": "1.58.2",
     "react-server-dom-webpack": "19.2.9",
     "shadcn": "^4.21.0",
     "tailwindcss": "4.2.1",
-    "typescript": "5.9.3",
-    "vinext": "1.0.0-beta.3",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
-  },
-  "optionalDependencies": {
-    "@rolldown/binding-win32-x64-msvc": "^1.0.1"
+    "typescript": "5.9.3"
   },
   "type": "module"
 }

@@ -7,7 +7,7 @@ import AnimatedInput from '@/components/smoothui/animated-input';
 import Checkbox from '@/components/smoothui/checkbox';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 import { TeacherSelect } from '../teacher/TeachingControls';
-import { approvedSyllabuses, emptyDeadlines, type AcademyCatalog, type CatalogKind, type CatalogRecord } from '@/lib/academy';
+import { approvedSyllabuses, emptyDeadlines, klassGroupLabel, type AcademyCatalog, type CatalogKind, type CatalogRecord } from '@/lib/academy';
 import type { TeachingRecord } from '../teacher/teacherData';
 import { compressImage, type CompressedImage } from '@/lib/client-image';
 import { saveAcademyRecord } from './actions';
@@ -15,7 +15,7 @@ import { saveAcademyRecord } from './actions';
 const labels = { klasses: 'Klass', institutions: 'institution', coaches: 'coach', students: 'student' };
 
 export default function CatalogEditor({ kind, item, catalog, submissions, onSaved, onPending }: { kind: CatalogKind; item?: CatalogRecord; catalog: AcademyCatalog; submissions: TeachingRecord[]; onSaved: (catalog: AcademyCatalog) => void; onPending: (pending: boolean) => void }) {
-  const [values, setValues] = useState<Record<string, string>>(() => ({ mode: 'Online', level: 'Coach', country: 'Indonesia', image: '', logo: '', institutionId: '', ...Object.fromEntries(Object.entries(item || {}).filter(([, value]) => typeof value === 'string')) }));
+  const [values, setValues] = useState<Record<string, string>>(() => ({ mode: 'Online', level: 'Coach', country: 'Indonesia', image: '', logo: '', institutionId: '', ...Object.fromEntries(Object.entries(item || {}).filter(([key, value]) => typeof value === 'string' || ['plannedMeetings', 'reportedStudents'].includes(key)).map(([key, value]) => [key, value == null ? '' : String(value)])) }));
   const [selected, setSelected] = useState<string[]>(() => item && 'coachIds' in item ? item.coachIds || [] : item && 'classIds' in item ? item.classIds || [] : []);
   const [studentIds, setStudentIds] = useState(() => item && kind === 'klasses' ? catalog.students.filter((student) => student.classIds?.includes(item.id)).map((student) => student.id) : []);
   const [deadlines, setDeadlines] = useState(() => item && 'deadlines' in item && item.deadlines ? structuredClone(item.deadlines) : emptyDeadlines());
@@ -64,28 +64,32 @@ export default function CatalogEditor({ kind, item, catalog, submissions, onSave
       }} />}
       {field(kind === 'klasses' ? 'title' : 'name', kind === 'klasses' ? 'Klass title' : 'Name')}
       {kind === 'klasses' && <>
+        {field('groupName', 'Group / grade', false)}
+        <div className="teacher-form-grid">{field('plannedMeetings', 'Planned semester meetings', false, 'number')}{field('reportedStudents', 'Reported students', false, 'number')}</div>
         <div className="teacher-form-grid">{field('category', 'Category')}{institution}</div>
         <div className="teacher-form-grid"><TeacherSelect label="Delivery mode" value={values.mode} options={['Online', 'Onsite', 'Hybrid'].map((label) => ({ id: label, label }))} onChange={(mode) => setValues({ ...values, mode })} />{field('schedule', 'Schedule')}</div>
-        <CatalogImageUpload label={imageLabel} required src={imageSrc} upload={imageUpload} busy={imageBusy} readOnly={reusingType} onChoose={chooseImage} onClear={() => setImageUpload(null)} />
-        <label className="admin-text-field"><span>Description</span><textarea aria-label="Description" required disabled={reusingType} rows={4} maxLength={3000} value={values.description || ''} onChange={(event) => setValues({ ...values, description: event.target.value })} /></label>
+        <CatalogImageUpload label={imageLabel} src={imageSrc} upload={imageUpload} busy={imageBusy} readOnly={reusingType} onChoose={chooseImage} onClear={() => setImageUpload(null)} />
+        <label className="admin-text-field"><span>Description</span><textarea aria-label="Description" disabled={reusingType} rows={4} maxLength={3000} value={values.description || ''} onChange={(event) => setValues({ ...values, description: event.target.value })} /></label>
         <fieldset className="catalog-options"><legend>Coach team</legend>{catalog.coaches.map((coach) => <label htmlFor={`coach-${coach.id}`} key={coach.id}><Checkbox className="admin-checkbox" id={`coach-${coach.id}`} checked={selected.includes(coach.id)} onCheckedChange={(checked) => check(coach.id, checked)} />{coach.name}</label>)}</fieldset>
         <fieldset className="catalog-options"><legend>Students</legend>{catalog.students.map((student) => <label htmlFor={`student-${student.id}`} key={student.id}><Checkbox className="admin-checkbox" id={`student-${student.id}`} checked={studentIds.includes(student.id)} onCheckedChange={(checked) => setStudentIds((items) => checked ? [...items, student.id] : items.filter((id) => id !== student.id))} />{student.name}</label>)}</fieldset>
-        <section className="catalog-deadlines"><h3>Submission deadlines</h3><div className="teacher-form-grid">{deadlineField('semesterStart', 'Semester start')}{deadlineField('syllabus', 'Syllabus deadline')}{deadlineField('semesterRequest', 'Semester request deadline')}</div>
+        <section className="catalog-deadlines"><h3>Schedule & submission deadlines</h3><p>{deadlines.meetings.length} meetings configured</p><div className="teacher-form-grid">{deadlineField('semesterStart', 'Semester start')}{deadlineField('syllabus', 'Syllabus deadline')}{deadlineField('semesterRequest', 'Semester request deadline')}</div>
           <header><h4>Meeting deadlines</h4><div>{sessions.length > 0 && <button type="button" className="admin-secondary-action" onClick={addApprovedDates}>Use approved meetings</button>}<button type="button" className="admin-icon-button" title="Add meeting deadline" aria-label="Add meeting deadline" disabled={deadlines.meetings.length >= 72} onClick={() => setDeadlines({ ...deadlines, meetings: [...deadlines.meetings, { date: '', lessonPlan: '', feedback: '' }] })}><Plus size={17} /></button></div></header>
           {deadlines.meetings.map((meeting, index) => <div className="catalog-deadline-row" key={index}>{(['date', 'lessonPlan', 'feedback', 'request'] as const).map((key) => <label className="teacher-date-field" key={key}><span>{key === 'date' ? 'Meeting date' : key === 'lessonPlan' ? 'Lesson plan due' : key === 'feedback' ? 'Feedback due' : 'Class needs due'}</span><input aria-label={`Meeting deadline ${index + 1} ${key}`} type="date" required={key === 'date'} value={meeting[key] || ''} onChange={(event) => setDeadlines({ ...deadlines, meetings: deadlines.meetings.map((entry, i) => i === index ? { ...entry, [key]: event.target.value } : entry) })} /></label>)}<button className="admin-icon-button" type="button" aria-label={`Remove deadline ${index + 1}`} title="Remove deadline" onClick={() => setDeadlines({ ...deadlines, meetings: deadlines.meetings.filter((_, i) => i !== index) })}><Trash2 size={17} /></button></div>)}
+          {deadlines.meetings.length > 0 && <section className="catalog-meeting-materials"><h4>Assigned Canva materials</h4>{deadlines.meetings.map((meeting, index) => <div className="teacher-form-grid" key={index}><AnimatedInput className="admin-animated-input" label={`Meeting ${index + 1} presentation Canva`} type="url" maxLength={1000} value={meeting.canvaUrl || ''} onChange={(canvaUrl) => setDeadlines({ ...deadlines, meetings: deadlines.meetings.map((entry, i) => i === index ? { ...entry, canvaUrl } : entry) })} /><AnimatedInput className="admin-animated-input" label={`Meeting ${index + 1} worksheet Canva`} type="url" maxLength={1000} value={meeting.worksheetUrl || ''} onChange={(worksheetUrl) => setDeadlines({ ...deadlines, meetings: deadlines.meetings.map((entry, i) => i === index ? { ...entry, worksheetUrl } : entry) })} /></div>)}</section>}
         </section>
       </>}
       {kind === 'institutions' && <>
-        <div className="teacher-form-grid">{field('city', 'City')}{field('country', 'Country')}</div><CatalogImageUpload label={imageLabel} src={imageSrc} upload={imageUpload} busy={imageBusy} onChoose={chooseImage} onClear={() => setImageUpload(null)} />{field('address', 'Address', false, 'text', 500)}
+        {field('reportedStudents', 'Reported students', false, 'number')}
+        <div className="teacher-form-grid">{field('city', 'City', false)}{field('country', 'Country')}</div><CatalogImageUpload label={imageLabel} src={imageSrc} upload={imageUpload} busy={imageBusy} onChoose={chooseImage} onClear={() => setImageUpload(null)} />{field('address', 'Address', false, 'text', 500)}
         <div className="teacher-form-grid">{field('contactName', 'Contact person', false)}{field('email', 'Contact email', false, 'email', 200)}</div><div className="teacher-form-grid">{field('phone', 'Contact number', false, 'tel', 40)}{field('website', 'Website', false, 'url', 1000)}</div>
       </>}
       {kind === 'coaches' && <>
         <div className="teacher-form-grid">{field('specialty', 'Teaching specialty')}<TeacherSelect label="Level" value={values.level} options={['Lead Coach', 'Coach'].map((label) => ({ id: label, label }))} onChange={(level) => setValues({ ...values, level })} /></div>
-        <CatalogImageUpload label={imageLabel} src={imageSrc} upload={imageUpload} busy={imageBusy} onChoose={chooseImage} onClear={() => setImageUpload(null)} />{field('email', 'Contact email', true, 'email', 200)}{field('portalEmail', 'Teacher login email', false, 'email', 200)}
+        <CatalogImageUpload label={imageLabel} src={imageSrc} upload={imageUpload} busy={imageBusy} onChoose={chooseImage} onClear={() => setImageUpload(null)} />{field('email', 'Contact email', false, 'email', 200)}{field('portalEmail', 'Teacher login email', false, 'email', 200)}
       </>}
       {kind === 'students' && <>
         <div className="teacher-form-grid">{institution}{field('grade', 'Grade', true, 'text', 40)}</div>
-        <fieldset className="catalog-options"><legend>Enrolled Klass</legend>{catalog.klasses.map((klass) => <label htmlFor={`enrollment-${klass.id}`} key={klass.id}><Checkbox className="admin-checkbox" id={`enrollment-${klass.id}`} checked={selected.includes(klass.id)} onCheckedChange={(checked) => check(klass.id, checked)} />{klass.title}</label>)}</fieldset>
+        <fieldset className="catalog-options"><legend>Enrolled Klass</legend>{catalog.klasses.map((klass) => <label htmlFor={`enrollment-${klass.id}`} key={klass.id}><Checkbox className="admin-checkbox" id={`enrollment-${klass.id}`} checked={selected.includes(klass.id)} onCheckedChange={(checked) => check(klass.id, checked)} />{klassGroupLabel(klass, catalog.klasses)}</label>)}</fieldset>
       </>}
     </fieldset>
     {error && <p className="admin-form-error" role="alert">{error}</p>}

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import ts from 'typescript';
 import { academy } from '../scripts/academic-modules.mjs';
+import { clause, textColumn } from '../lib/sql-dialect.mjs';
 
 const moduleUrl = (source) => `data:text/javascript;base64,${Buffer.from(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText).toString('base64')}`;
 const demo = moduleUrl(await readFile(new URL('../app/admin/adminData.ts', import.meta.url), 'utf8'));
@@ -21,7 +22,8 @@ const tx = async (parts, ...values) => {
   const query = parts.join('');
   if (query.includes('FROM portal_users')) return [{ email: 'save@example.com' }];
   if (query.includes('FROM portal_sessions')) return [{ id: randomUUID() }];
-  if (query.includes('SELECT details.*')) return current ? [{ id: current.id, revision: current.revision, status: current.status, content: current.content, files: current.files }] : [];
+  if (query.includes('SELECT details.*')) return current ? [{ ...current, teacher_email: current.teacherEmail }] : [];
+  if (query.includes('SELECT details.content')) return [{ content: { sessions: [{ date: klass.deadlines.semesterStart }] }, date: klass.deadlines.semesterStart, status: 'Approved' }];
   if (query.includes('INSERT INTO teaching_records')) {
     if (failWrite) throw Object.assign(new Error('write failed'), { code: 'CONNECTION_CLOSED' });
     current = { id: values[0], teacherEmail: values[1], kind: values[2], classId: values[3], date: values[4], title: values[5], status: values[6], revision: revision++, content: {}, files: [], reviewerNote: '', updatedAt: new Date().toISOString() };
@@ -31,16 +33,24 @@ const tx = async (parts, ...values) => {
     current = { ...current, status: values[0], reviewerNote: values[1], revision: current.revision + 1 };
     return [{ teacher_email: current.teacherEmail, title: current.title }];
   }
+  if (query.includes('UPDATE teaching_records SET title')) {
+    if (failWrite) throw Object.assign(new Error('write failed'), { code: 'CONNECTION_CLOSED' });
+    current = { ...current, title: values[0], status: values[1], reviewerNote: '', revision: current.revision + 1 };
+    return [];
+  }
   if (query.includes('FROM teaching_record_details')) return [current];
   return [];
 };
 tx.json = (value) => value;
-const sql = { begin: async (fn) => { const result = await fn(tx); committed = true; return result; } };
+tx.unsafe = (text) => text;
+const sql = { unsafe: (text) => text, begin: async (fn) => { const result = await fn(tx); committed = true; return result; } };
 const refresh = async () => { if (failRefresh) throw Object.assign(new Error('refresh failed'), { code: 'CONNECTION_CLOSED' }); return [current]; };
 const dependencies = {
+  clause, textColumn,
   randomUUID, db: () => sql, requireRole: async () => ({ email: 'save@example.com', role, id: randomUUID() }),
   readAcademyCatalog: async () => catalog, assignedCatalog: academy.assignedCatalog, validDate: academy.validDate,
   teachingConfig: () => config, recordLabels: data.recordLabels, validateDraft: data.validateDraft,
+  assignedMaterials: data.assignedMaterials,
   writeTeachingWorkflow: async (_tx, input) => { current.content = input.content; },
   notifyTeacher: async () => { notices++; }, loadTeachingRecords: refresh, loadTeacherNotifications: refresh,
 };
@@ -49,7 +59,7 @@ function withoutImports(source) {
   return ts.createPrinter().printFile(ts.factory.updateSourceFile(file, file.statements.filter((node) => !ts.isImportDeclaration(node))));
 }
 globalThis.teachingSaveDependencies = dependencies;
-const teaching = await import(moduleUrl('const {db}=globalThis.teachingSaveDependencies;\n' + withoutImports(await readFile(new URL('../lib/teaching.ts', import.meta.url), 'utf8'))));
+const teaching = await import(moduleUrl('const {db,textColumn}=globalThis.teachingSaveDependencies;\n' + withoutImports(await readFile(new URL('../lib/teaching.ts', import.meta.url), 'utf8'))));
 dependencies.readTeachingRecord = teaching.readTeachingRecord;
 const actions = await import(moduleUrl(`const {${Object.keys(dependencies).join(',')}}=globalThis.teachingSaveDependencies;\n` + withoutImports(await readFile(new URL('../app/teacher/actions.ts', import.meta.url), 'utf8'))));
 const draft = { kind: 'request', classId: klass.id, date: klass.deadlines.semesterStart, title: 'Semester supplies', files: [], submit: true, content: { workflowVersion: 2, timing: 'Before semester', items: 'Science tools', reason: 'Class preparation' } };
@@ -62,6 +72,8 @@ assert.equal(saved.record.revision, 0);
 assert.equal(saved.record.status, 'Submitted');
 assert.equal(notices, 1);
 role = 'admin';
+const prematurelyFulfilled = await actions.reviewTeachingRecord(saved.record.id, 'Fulfilled', 'Skipped approval', saved.record.revision);
+assert.equal(prematurelyFulfilled.ok, false); assert.match(prematurelyFulfilled.error, /Approve the class request/); assert.equal(current.status, 'Submitted');
 const reviewed = await actions.reviewTeachingRecord(saved.record.id, 'Approved', 'Ready', saved.record.revision);
 assert.equal(reviewed.ok, true);
 assert.ok(reviewed.refreshError);
@@ -72,10 +84,27 @@ failRefresh = false;
 const rereviewed = await actions.reviewTeachingRecord(saved.record.id, 'Approved', 'Updated note', reviewed.record.revision);
 assert.equal(rereviewed.ok, true);
 assert.deepEqual(rereviewed.records, [current]);
-role = 'teacher'; current = undefined; committed = false; failWrite = true;
+role = 'teacher'; current = undefined; committed = false;
+const forgedRemarks = await actions.saveTeachingRecord({ ...draft, content: { ...draft.content, requestLines: [{ id: randomUUID(), name: 'Test tubes', quantity: '10 pcs', adminNote: 'Forged admin approval' }] } });
+assert.equal(forgedRemarks.ok, false); assert.match(forgedRemarks.error, /Only admin/); assert.equal(committed, false);
+klass.deadlines.meetings = [{ date: '2027-02-01' }, { date: '2027-02-08' }];
+const changedCount = await actions.saveTeachingRecord({ kind: 'syllabus', classId: klass.id, date: klass.deadlines.semesterStart, title: 'Teacher changed meeting count', submit: false, files: [], content: { workflowVersion: 2, sessions: [{ date: '2027-02-01' }] } });
+assert.equal(changedCount.ok, false); assert.match(changedCount.error, /meeting count and dates/); assert.equal(committed, false);
+klass.deadlines.meetings = [];
+failWrite = true;
 const rejected = await actions.saveTeachingRecord(draft);
 assert.equal(rejected.ok, false);
 assert.equal(committed, false);
 assert.equal(notices, 3, 'A failed write must not confirm a submission');
+failWrite = false; failRefresh = false;
+klass.deadlines.meetings = [{ date: klass.deadlines.semesterStart, canvaUrl: 'https://canva.link/admin-updated-material', worksheetUrl: '' }];
+current = { id: randomUUID(), kind: 'slides', classId: klass.id, teacherEmail: 'save@example.com', date: klass.deadlines.semesterStart, title: 'Saved materials', revision: 0, status: 'Draft', files: [], content: { workflowVersion: 2, syllabusId: randomUUID(), meetingNumber: 1, mainCoach: 'Coach', notes: 'Prepared', canvaUrl: 'https://canva.link/previous-material', worksheetUrl: '' } };
+const updatedMaterial = await actions.saveTeachingRecord({ ...current, submit: true });
+assert.equal(updatedMaterial.ok, true); assert.equal(updatedMaterial.record.content.canvaUrl, 'https://canva.link/admin-updated-material', 'Saved material drafts must pick up an admin link update');
+const tamperedMaterial = await actions.saveTeachingRecord({ ...current, submit: true, content: { ...current.content, canvaUrl: 'https://canva.link/teacher-changed-material' } });
+assert.equal(tamperedMaterial.ok, false); assert.match(tamperedMaterial.error, /unchanged/);
+current = { ...current, kind: 'request', status: 'Needs revision', content: { workflowVersion: 2, timing: 'Before semester', reason: 'Prepare tools', requestLines: [{ id: randomUUID(), name: 'Test tubes', quantity: '10 pcs', adminNote: 'Provided by school' }] } };
+const downgradedRequest = await actions.saveTeachingRecord({ ...current, submit: true, content: { workflowVersion: 2, timing: 'Before semester', reason: 'Prepare tools', items: 'Drop the structured items' } });
+assert.equal(downgradedRequest.ok, false); assert.match(downgradedRequest.error, /structured request item format/);
 delete globalThis.teachingSaveDependencies;
 console.log('Committed save/review survive refresh outages; failed writes stay failures; class-specific semester requests pass.');

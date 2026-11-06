@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import Link, { useLinkStatus } from 'next/link';
+import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
@@ -55,7 +55,11 @@ export function PagePreloaderProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => update('initial', false));
-    return () => cancelAnimationFrame(frame);
+    const timer = setTimeout(() => update('initial', false), 50);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
   }, [update]);
   useEffect(() => {
     const element = content.current;
@@ -91,12 +95,6 @@ export function FormPagePreloader() {
   return null;
 }
 
-function LinkPagePreloader() {
-  const { pending } = useLinkStatus();
-  usePagePending(pending);
-  return null;
-}
-
-export function PageLoadingLink({ children, ...props }: ComponentProps<typeof Link>) {
-  return <Link {...props}>{children}<LinkPagePreloader /></Link>;
+export function PageLoadingLink(props: ComponentProps<typeof Link>) {
+  return <Link {...props} />;
 }

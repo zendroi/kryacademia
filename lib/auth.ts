@@ -1,4 +1,5 @@
 import 'server-only';
+import { clause } from './sql-dialect.mjs';
 import { randomUUID } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -17,9 +18,8 @@ export async function createSessionToken(email: string, role: Role) {
   const session: Session = { id: randomUUID(), email, role, exp: Date.now() + 8 * 60 * 60 * 1000 };
   const token = signSession(session, secret());
   await db().begin(async (tx) => {
-    const [user] = await tx`SELECT email FROM portal_users WHERE email = ${email} AND role = ${role} AND status = 'active' FOR SHARE`;
+    const [user] = await tx`SELECT email FROM portal_users WHERE email = ${email} AND role = ${role} AND status = 'active' ${clause(tx, 'FOR SHARE', 'LOCK IN SHARE MODE')}`;
     if (!user) throw new Error('Account unavailable');
-    await tx`DELETE FROM portal_sessions WHERE expires_at <= NOW()`;
     await tx`INSERT INTO portal_sessions (id, email, expires_at) VALUES (${session.id}, ${email}, ${new Date(session.exp)})`;
   });
   return token;
@@ -31,7 +31,7 @@ export async function getSession(): Promise<Session | null> {
   const session = readSession(token, secret());
   if (!session) return null;
   const [user] = await db()`SELECT u.role FROM portal_sessions s JOIN portal_users u ON u.email = s.email
-    WHERE s.id = ${session.id} AND s.email = ${session.email} AND s.expires_at > NOW() AND u.status = 'active'`;
+    WHERE s.id = ${session.id} AND s.email = ${session.email} AND s.expires_at > CURRENT_TIMESTAMP(6) AND u.status = 'active'`;
   return user?.role === session.role ? session : null;
 }
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import postgres from 'postgres';
+if (process.env.DATABASE_URL?.startsWith('mysql:')) throw new Error('PostgreSQL migration only. For MySQL use scripts/hostinger-data.mjs prepare, import, then runtime; see docs/hostinger-migration.md.');
 import { core, workflow } from './academic-modules.mjs';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required.');

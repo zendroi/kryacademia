@@ -7,6 +7,16 @@ export type CatalogRecord = KlassRecord | CoachRecord | StudentRecord | Institut
 export type TeachingCatalog = Pick<AcademyCatalog, 'klasses' | 'students'>;
 export const emptyDeadlines = () => ({ semesterStart: '', syllabus: '', semesterRequest: '', meetings: [] as NonNullable<KlassRecord['deadlines']>['meetings'] });
 
+export function klassGroupLabel(klass: KlassRecord, groups: KlassRecord[]) {
+  const label = (item: KlassRecord) => [item.title, item.groupName, item.school, item.schedule, item.mode].filter(Boolean).join(' / ');
+  const value = label(klass);
+  return groups.some((item) => item.id !== klass.id && label(item) === value) ? `${value} / ${klass.id}` : value;
+}
+
+export function syllabusDeadline(deadlines: KlassRecord['deadlines'], record: Pick<TeachingRecord, 'date' | 'content'>) {
+  return deadlines?.semesterStart === record.date ? deadlines.syllabus : record.content.deadline || '';
+}
+
 export function catalogCounts(catalog: AcademyCatalog): AcademyCatalog {
   const assigned = (id: string) => catalog.klasses.filter((klass) => klass.coachIds?.includes(id));
   return {
@@ -49,6 +59,22 @@ export function coachTasks(coach: CoachRecord, catalog: AcademyCatalog, records:
     }
   }
   return tasks.sort((a, b) => a.deadline.localeCompare(b.deadline));
+}
+
+export function coachAttendance(coach: CoachRecord, catalog: AcademyCatalog, records: TeachingRecord[], month: string) {
+  const assignedIds = catalog.klasses.filter((klass) => klass.coachIds?.includes(coach.id)).map((klass) => klass.id);
+  const sharedLogin = catalog.coaches?.some((profile) => profile.id !== coach.id && profile.portalEmail === coach.portalEmail);
+  const journals = coach.portalEmail ? records.filter((record) => record.kind === 'meeting' && record.teacherEmail === coach.portalEmail && (!sharedLogin || assignedIds.includes(record.classId))) : [];
+  const ids = new Set([...assignedIds, ...journals.map((record) => record.classId)]);
+  const rows = [...ids].map((classId) => {
+    const klass = catalog.klasses.find((klass) => klass.id === classId);
+    const syllabus = approvedSyllabuses(records, classId).find((record) => !klass?.deadlines?.semesterStart || record.date === klass.deadlines.semesterStart);
+    const dates = [...new Set(klass?.deadlines?.meetings.length ? klass.deadlines.meetings.map((meeting) => meeting.date) : (syllabus?.content.sessions || []).map((meeting) => meeting.date))];
+    const attending = journals.filter((record) => record.classId === classId && ['Present', 'Late'].includes(record.content.teacherAttendance || ''));
+    const count = (status: string, predicate: (record: TeachingRecord) => boolean) => new Set(attending.filter((record) => record.status === status && predicate(record)).map((record) => record.date)).size;
+    return { classId, title: [klass?.title || classId, klass?.groupName].filter(Boolean).join(' / '), school: klass?.school || '', monthVerified: count('Approved', (record) => record.date.slice(0, 7) === month), monthSubmitted: count('Submitted', (record) => record.date.slice(0, 7) === month), semesterVerified: count('Approved', (record) => dates.includes(record.date)), planned: klass?.plannedMeetings ?? (dates.length || null) };
+  });
+  return { rows, monthVerified: rows.reduce((sum, row) => sum + row.monthVerified, 0), monthSubmitted: rows.reduce((sum, row) => sum + row.monthSubmitted, 0), semesterVerified: rows.reduce((sum, row) => sum + row.semesterVerified, 0), planned: rows.length && rows.every((row) => row.planned !== null) ? rows.reduce((sum, row) => sum + row.planned!, 0) : null };
 }
 
 export function classDeadlines(klass: KlassRecord) {

@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import postgres from 'postgres';
+if (process.env.DATABASE_URL?.startsWith('mysql:')) throw new Error('PostgreSQL migration only. For MySQL use scripts/hostinger-data.mjs prepare, import, then runtime; see docs/hostinger-migration.md.');
 import { verifyUpload } from '../lib/upload-validation.mjs';
 import { stagePrivateFile, readPrivateFile, cleanupPrivateFiles } from '../lib/private-files.mjs';
 

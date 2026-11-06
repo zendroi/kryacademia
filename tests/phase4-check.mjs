@@ -12,6 +12,7 @@ import { backup, restoreCheck } from '../scripts/backup.mjs';
 if (!process.env.PORTAL_TEST_SCHEMA?.startsWith('security_check_') || new URL(process.env.DATABASE_URL).searchParams.get('options') !== `-c search_path=${process.env.PORTAL_TEST_SCHEMA},public`) throw new Error('Phase 4 checks require an isolated security test schema.');
 const sql = postgres(process.env.DATABASE_URL, { ssl: process.env.DATABASE_URL.includes('localhost') ? false : 'verify-full', max: 2, onnotice: () => {} });
 const imageId = randomUUID(); const folder = await mkdtemp(join(tmpdir(), 'krya-backup-test-'));
+let identityId;
 const activeUrl = process.env.DATABASE_URL;
 const previousDirectUrl = process.env.DATABASE_URL_UNPOOLED;
 const migrate = () => new Promise((accept, reject) => {
@@ -33,15 +34,19 @@ try {
   await writeFile(path, Buffer.from('tampered'));
   await assert.rejects(readPrivateFile(image), /integrity/);
   await writeFile(path, original);
+  identityId = await stagePrivateFile(sql, { bytes, mime: 'image/webp' });
+  await sql`INSERT INTO teacher_onboarding (email, invitation_hash, expires_at, completed_at, identity_object_id) VALUES ('teacher@krya.global', ${`${randomUUID()}${randomUUID()}`.replaceAll('-', '')}, NOW() + INTERVAL '1 hour', NOW(), ${identityId})`;
+  await sql`UPDATE portal_file_objects SET created_at = NOW() - INTERVAL '2 days' WHERE id = ${identityId}`;
   const orphan = await stagePrivateFile(sql, { bytes, mime: 'image/webp' });
   await sql`UPDATE portal_file_objects SET created_at = NOW() - INTERVAL '2 days' WHERE id IN ${sql([orphan, image.object_id])}`;
   assert.ok(await cleanupPrivateFiles(sql) >= 1);
   assert.equal((await sql`SELECT id FROM portal_file_objects WHERE id = ${orphan}`).length, 0);
   assert.equal((await sql`SELECT id FROM portal_file_objects WHERE id = ${image.object_id}`).length, 1, 'Cleanup must preserve referenced files');
+  assert.equal((await sql`SELECT id FROM portal_file_objects WHERE id = ${identityId}`).length, 1, 'Cleanup must preserve private KTP attachments');
   process.env.DATABASE_URL_UNPOOLED = 'postgres://unused:unused@invalid.invalid/wrong_database';
   const directory = join(folder, 'snapshot');
-  const saved = await backup(directory); assert.equal(saved.files, 1);
-  const restored = await restoreCheck(directory); assert.equal(restored.verified, true); assert.equal(restored.files, 1);
+  const saved = await backup(directory); assert.equal(saved.files, 2, 'Encrypted backups must include private KTP attachments');
+  const restored = await restoreCheck(directory); assert.equal(restored.verified, true); assert.equal(restored.files, 2);
   const encrypted = await readFile(join(directory, 'database.enc')); encrypted[30] ^= 1; await writeFile(join(directory, 'database.enc'), encrypted);
   await assert.rejects(restoreCheck(directory), /authenticate|authentication/i, 'Tampered backup must fail before database creation');
   const raceUrl = new URL(activeUrl);
@@ -64,6 +69,10 @@ try {
       await tx`DELETE FROM academy_images WHERE id = ${imageId}`;
       await tx`DELETE FROM portal_file_objects WHERE id = ${image.object_id}`;
       await unlink(path);
+      const [identity] = await tx`SELECT pathname FROM portal_file_objects WHERE id = ${identityId}`;
+      await tx`DELETE FROM teacher_onboarding WHERE email = 'teacher@krya.global'`;
+      await tx`DELETE FROM portal_file_objects WHERE id = ${identityId}`;
+      await unlink(join(process.env.PORTAL_LOCAL_FILE_DIR, identity.pathname));
     });
     assert.equal((await pendingBackup).files, 0, 'Backup must see the committed cleanup, not a snapshot with deleted files');
     assert.equal((await restoreCheck(raceDirectory)).files, 0);
@@ -74,5 +83,6 @@ try {
   if (previousDirectUrl === undefined) delete process.env.DATABASE_URL_UNPOOLED;
   else process.env.DATABASE_URL_UNPOOLED = previousDirectUrl;
   await sql`DELETE FROM academy_images WHERE id = ${imageId}`;
+  if (identityId) await sql`DELETE FROM teacher_onboarding WHERE identity_object_id = ${identityId}`;
   await sql.end(); await rm(folder, { recursive: true, force: true });
 }

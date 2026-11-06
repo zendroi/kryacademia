@@ -1,4 +1,5 @@
 import 'server-only';
+import { textColumn, conflict, isMySQL } from './sql-dialect.mjs';
 import type postgres from 'postgres';
 import { catalogCounts, emptyDeadlines, seedCatalog, type AcademyCatalog } from './academy';
 import type { CoachRecord, InstitutionRecord, KlassRecord, StudentRecord } from '@/app/admin/adminData';
@@ -28,16 +29,14 @@ export async function writeAcademicCore(tx: Transaction, catalog: AcademyCatalog
     await tx`UPDATE class_meetings SET configured = FALSE`;
   }
 
-  const institutions = edited.institutions.map((item) => ({ id: item.id, name: item.name, city: item.city, country: item.country || 'Indonesia', logo: item.logo, about: item.about, address: item.address || '', contact_name: item.contactName || '', email: item.email || '', phone: item.phone || '', website: item.website || '', sort_order: catalog.institutions.findIndex((entry) => entry.id === item.id), revision: item.revision || 0, active: true }));
+  const institutions = edited.institutions.map((item) => ({ id: item.id, name: item.name, city: item.city, country: item.country || 'Indonesia', logo: item.logo, about: item.about, address: item.address || '', contact_name: item.contactName || '', email: item.email || '', phone: item.phone || '', website: item.website || '', reported_students: item.reportedStudents ?? null, sort_order: catalog.institutions.findIndex((entry) => entry.id === item.id), revision: item.revision || 0, active: true }));
   if (institutions.length) await tx`
     INSERT INTO institutions ${tx(institutions)}
-    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, city = EXCLUDED.city, country = EXCLUDED.country, logo = EXCLUDED.logo, about = EXCLUDED.about, address = EXCLUDED.address, contact_name = EXCLUDED.contact_name, email = EXCLUDED.email, phone = EXCLUDED.phone, website = EXCLUDED.website, sort_order = EXCLUDED.sort_order, revision = EXCLUDED.revision, active = TRUE, updated_at = NOW()
-  `;
+    ${conflict(tx, "id", "name = EXCLUDED.name, city = EXCLUDED.city, country = EXCLUDED.country, logo = EXCLUDED.logo, about = EXCLUDED.about, address = EXCLUDED.address, contact_name = EXCLUDED.contact_name, email = EXCLUDED.email, phone = EXCLUDED.phone, website = EXCLUDED.website, reported_students = EXCLUDED.reported_students, sort_order = EXCLUDED.sort_order, revision = EXCLUDED.revision, active = TRUE, updated_at = CURRENT_TIMESTAMP(6)")}`;
   const coaches = edited.coaches.map((coach) => ({ id: coach.id, name: coach.name, specialty: coach.specialty, level: coach.level, image: coach.image, email: coach.email, portal_email: coach.portalEmail || '', bio: coach.bio, sort_order: catalog.coaches.findIndex((entry) => entry.id === coach.id), revision: coach.revision || 0, active: true }));
   if (coaches.length) await tx`
     INSERT INTO coach_profiles ${tx(coaches)}
-    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, specialty = EXCLUDED.specialty, level = EXCLUDED.level, image = EXCLUDED.image, email = EXCLUDED.email, portal_email = EXCLUDED.portal_email, bio = EXCLUDED.bio, sort_order = EXCLUDED.sort_order, revision = EXCLUDED.revision, active = TRUE, updated_at = NOW()
-  `;
+    ${conflict(tx, "id", "name = EXCLUDED.name, specialty = EXCLUDED.specialty, level = EXCLUDED.level, image = EXCLUDED.image, email = EXCLUDED.email, portal_email = EXCLUDED.portal_email, bio = EXCLUDED.bio, sort_order = EXCLUDED.sort_order, revision = EXCLUDED.revision, active = TRUE, updated_at = CURRENT_TIMESTAMP(6)")}`;
   const klassTypes = [...new Map(edited.klasses.map((klass) => [klass.klassTypeId || klass.id, { id: klass.klassTypeId || klass.id, title: klass.title, category: klass.category, description: klass.description, image: klass.image, sort_order: catalog.klasses.findIndex((entry) => entry.id === klass.id), active: true }])).values()];
   const changedTypes = klassTypes.filter((type) => {
     const before = previous?.klasses.find((klass) => (klass.klassTypeId || klass.id) === type.id);
@@ -45,41 +44,43 @@ export async function writeAcademicCore(tx: Transaction, catalog: AcademyCatalog
   }).map((type) => type.id);
   if (klassTypes.length) await tx`
     INSERT INTO klass_types ${tx(klassTypes)}
-    ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, category = EXCLUDED.category, description = EXCLUDED.description, image = EXCLUDED.image, sort_order = EXCLUDED.sort_order, active = TRUE, updated_at = NOW()
-  `;
+    ${conflict(tx, "id", "title = EXCLUDED.title, category = EXCLUDED.category, description = EXCLUDED.description, image = EXCLUDED.image, sort_order = EXCLUDED.sort_order, active = TRUE, updated_at = CURRENT_TIMESTAMP(6)")}`;
   const students = edited.students.map((student) => ({ id: student.id, institution_id: student.institutionId || null, name: student.name, grade: student.grade, score: student.score || 0, attendance: student.attendance || 0, sort_order: catalog.students.findIndex((entry) => entry.id === student.id), revision: student.revision || 0, active: true }));
   if (students.length) await tx`
     INSERT INTO student_profiles ${tx(students)}
-    ON CONFLICT (id) DO UPDATE SET institution_id = EXCLUDED.institution_id, name = EXCLUDED.name, grade = EXCLUDED.grade, score = EXCLUDED.score, attendance = EXCLUDED.attendance, sort_order = EXCLUDED.sort_order, revision = EXCLUDED.revision, active = TRUE, updated_at = NOW()
-  `;
+    ${conflict(tx, "id", "institution_id = EXCLUDED.institution_id, name = EXCLUDED.name, grade = EXCLUDED.grade, score = EXCLUDED.score, attendance = EXCLUDED.attendance, sort_order = EXCLUDED.sort_order, revision = EXCLUDED.revision, active = TRUE, updated_at = CURRENT_TIMESTAMP(6)")}`;
 
   const periods = edited.klasses.flatMap((klass) => {
     const deadlines = klass.deadlines || emptyDeadlines();
     return deadlines.semesterStart ? [{ id: periodId(klass.id, deadlines.semesterStart), institution_id: klass.institutionId || null, name: `Semester starting ${deadlines.semesterStart}`, start_date: deadlines.semesterStart, active: true }] : [];
   });
-  if (periods.length) await tx`INSERT INTO academic_periods ${tx(periods)} ON CONFLICT (id) DO UPDATE SET institution_id = EXCLUDED.institution_id, active = TRUE`;
-  const groups = edited.klasses.map((klass) => ({ id: klass.id, klass_type_id: klass.klassTypeId || klass.id, institution_id: klass.institutionId || null, academic_period_id: klass.deadlines?.semesterStart ? periodId(klass.id, klass.deadlines.semesterStart) : null, mode: klass.mode, sort_order: catalog.klasses.findIndex((entry) => entry.id === klass.id), revision: klass.revision || 0, active: true }));
+  if (periods.length) await tx`INSERT INTO academic_periods ${tx(periods)} ${conflict(tx, "id", "institution_id = EXCLUDED.institution_id, active = TRUE")}`;
+  const groups = edited.klasses.map((klass) => ({ id: klass.id, klass_type_id: klass.klassTypeId || klass.id, institution_id: klass.institutionId || null, academic_period_id: klass.deadlines?.semesterStart ? periodId(klass.id, klass.deadlines.semesterStart) : null, mode: klass.mode, group_name: klass.groupName || '', planned_meetings: klass.plannedMeetings ?? null, reported_students: klass.reportedStudents ?? null, sort_order: catalog.klasses.findIndex((entry) => entry.id === klass.id), revision: klass.revision || 0, active: true }));
   if (groups.length) await tx`
       INSERT INTO class_groups ${tx(groups)}
-      ON CONFLICT (id) DO UPDATE SET institution_id = EXCLUDED.institution_id, academic_period_id = EXCLUDED.academic_period_id, mode = EXCLUDED.mode, sort_order = EXCLUDED.sort_order, revision = EXCLUDED.revision, active = TRUE, updated_at = NOW()
-  `;
+      ${conflict(tx, "id", "institution_id = EXCLUDED.institution_id, academic_period_id = EXCLUDED.academic_period_id, mode = EXCLUDED.mode, group_name = EXCLUDED.group_name, planned_meetings = EXCLUDED.planned_meetings, reported_students = EXCLUDED.reported_students, sort_order = EXCLUDED.sort_order, revision = EXCLUDED.revision, active = TRUE, updated_at = CURRENT_TIMESTAMP(6)")}`;
   // A shared type edit also invalidates open forms for its other groups.
-  if (changedTypes.length) await tx`UPDATE class_groups SET revision = revision + 1, updated_at = NOW() WHERE klass_type_id IN ${tx(changedTypes)} AND id NOT IN ${tx(groups.map((group) => group.id))}`;
+  if (changedTypes.length) await tx`UPDATE class_groups SET revision = revision + 1, updated_at = CURRENT_TIMESTAMP(6) WHERE klass_type_id IN ${tx(changedTypes)} AND id NOT IN ${tx(groups.map((group) => group.id))}`;
   const assignments = edited.klasses.flatMap((klass) => (klass.coachIds || []).map((coach_id) => ({ class_group_id: klass.id, coach_id })));
   if (edited.klasses.length) {
     const ids = edited.klasses.map((klass) => klass.id);
-    await tx`DELETE FROM coach_assignments a WHERE class_group_id IN ${tx(ids)} AND NOT EXISTS (SELECT 1 FROM jsonb_to_recordset(${tx.json(assignments)}) AS keep(class_group_id TEXT, coach_id TEXT) WHERE keep.class_group_id = a.class_group_id AND keep.coach_id = a.coach_id)`;
+    if (isMySQL(tx)) {
+      for (const id of ids) {
+        const keep = assignments.filter((item) => item.class_group_id === id).map((item) => item.coach_id);
+        await tx`DELETE FROM coach_assignments WHERE class_group_id = ${id} ${keep.length ? tx`AND coach_id NOT IN ${tx(keep)}` : tx``}`;
+      }
+    } else await tx`DELETE FROM coach_assignments a WHERE class_group_id IN ${tx(ids)} AND NOT EXISTS (SELECT 1 FROM jsonb_to_recordset(${tx.json(assignments)}) AS keep(class_group_id TEXT, coach_id TEXT) WHERE keep.class_group_id = a.class_group_id AND keep.coach_id = a.coach_id)`;
     await tx`DELETE FROM submission_deadlines WHERE class_group_id IN ${tx(ids)} AND (kind != 'request' OR request_timing != '')`;
     await tx`UPDATE class_meetings SET configured = FALSE WHERE class_group_id IN ${tx(ids)}`;
   }
   const schedules = edited.klasses.map((klass) => ({ class_group_id: klass.id, schedule_text: klass.schedule }));
-  if (schedules.length) await tx`INSERT INTO class_schedules ${tx(schedules)} ON CONFLICT (class_group_id) DO UPDATE SET schedule_text = EXCLUDED.schedule_text`;
-  if (assignments.length) await tx`INSERT INTO coach_assignments ${tx(assignments)} ON CONFLICT (class_group_id, coach_id) DO NOTHING`;
+  if (schedules.length) await tx`INSERT INTO class_schedules ${tx(schedules)} ${conflict(tx, "class_group_id", "schedule_text = EXCLUDED.schedule_text")}`;
+  if (assignments.length) await tx`INSERT INTO coach_assignments ${tx(assignments)} ${conflict(tx, "class_group_id, coach_id")}`;
   if (edited.students.length) await tx`UPDATE enrollments SET status = 'withdrawn' WHERE student_id IN ${tx(edited.students.map((student) => student.id))}`;
   const enrollments = edited.students.flatMap((student) => (student.classIds || []).map((class_group_id) => ({ class_group_id, student_id: student.id, status: 'active' })));
-  if (enrollments.length) await tx`INSERT INTO enrollments ${tx(enrollments)} ON CONFLICT (class_group_id, student_id) DO UPDATE SET status = 'active'`;
-  const meetings = edited.klasses.flatMap((klass) => (klass.deadlines?.meetings || []).map((meeting) => ({ class_group_id: klass.id, meeting_date: meeting.date, configured: true })));
-  if (meetings.length) await tx`INSERT INTO class_meetings ${tx(meetings)} ON CONFLICT (class_group_id, meeting_date) DO UPDATE SET configured = TRUE`;
+  if (enrollments.length) await tx`INSERT INTO enrollments ${tx(enrollments)} ${conflict(tx, "class_group_id, student_id", "status = 'active'")}`;
+  const meetings = edited.klasses.flatMap((klass) => (klass.deadlines?.meetings || []).map((meeting) => ({ class_group_id: klass.id, meeting_date: meeting.date, configured: true, canva_url: meeting.canvaUrl || '', worksheet_url: meeting.worksheetUrl || '' })));
+  if (meetings.length) await tx`INSERT INTO class_meetings ${tx(meetings)} ${conflict(tx, "class_group_id, meeting_date", "configured = TRUE, canva_url = EXCLUDED.canva_url, worksheet_url = EXCLUDED.worksheet_url")}`;
   const submissionDeadlines = edited.klasses.flatMap((klass) => {
     const deadlines = klass.deadlines || emptyDeadlines();
     const academic_period_id = deadlines.semesterStart ? periodId(klass.id, deadlines.semesterStart) : null;
@@ -99,36 +100,43 @@ export async function writeAcademicCore(tx: Transaction, catalog: AcademyCatalog
 export async function initializeAcademicCore(tx: Transaction) {
   const [state] = await tx`SELECT relational_ready FROM academy_core_state WHERE id = 1 FOR UPDATE`;
   if (state?.relational_ready) return;
-  await tx`INSERT INTO academy_catalog (id, content) VALUES (1, ${tx.json(seedCatalog())}) ON CONFLICT (id) DO NOTHING`;
-  const [row] = await tx`SELECT content, md5(content::text) AS hash FROM academy_catalog WHERE id = 1 FOR UPDATE`;
+  await tx`INSERT INTO academy_catalog (id, content) VALUES (1, ${tx.json(seedCatalog())}) ${conflict(tx, "id")}`;
+  const [row] = await tx`SELECT content, md5(${textColumn(tx, 'content')}) AS hash FROM academy_catalog WHERE id = 1 FOR UPDATE`;
   await writeAcademicCore(tx, row.content as AcademyCatalog);
-  await tx`UPDATE academy_core_state SET relational_ready = TRUE, catalog_hash = ${row.hash}, synced_at = NOW() WHERE id = 1`;
+  await tx`UPDATE academy_core_state SET relational_ready = TRUE, catalog_hash = ${row.hash}, synced_at = CURRENT_TIMESTAMP(6) WHERE id = 1`;
 }
 
 export async function readAcademicCore(tx: Transaction): Promise<AcademyCatalog> {
-  const institutions = await tx<Omit<InstitutionRecord, 'classes' | 'students'>[]>`SELECT id, name, city, country, logo, about, address, contact_name AS "contactName", email, phone, website, revision FROM institutions WHERE active ORDER BY sort_order`;
+  const institutions = await tx<Omit<InstitutionRecord, 'classes' | 'students'>[]>`SELECT id, name, city, country, logo, about, address, contact_name AS "contactName", email, phone, website, reported_students AS "reportedStudents", revision FROM institutions WHERE active ORDER BY sort_order`;
   const coaches = await tx<(Omit<CoachRecord, 'classes' | 'students' | 'level'> & { level: string })[]>`SELECT id, name, specialty, level, image, email, portal_email AS "portalEmail", bio, revision FROM coach_profiles WHERE active ORDER BY sort_order`;
   const groups = await tx<(Omit<KlassRecord, 'school' | 'coaches' | 'students' | 'coachIds' | 'deadlines' | 'mode'> & { mode: string; semesterStart: string | null })[]>`
-    SELECT g.id, g.klass_type_id AS "klassTypeId", COALESCE(g.institution_id, '') AS "institutionId", g.mode, g.revision, t.title, t.category, t.description, t.image,
-      COALESCE(s.schedule_text, '') AS schedule, p.start_date::text AS "semesterStart"
+    SELECT g.id, g.klass_type_id AS "klassTypeId", COALESCE(g.institution_id, '') AS "institutionId", g.mode, g.group_name AS "groupName", g.planned_meetings AS "plannedMeetings", g.reported_students AS "reportedStudents", g.revision, t.title, t.category, t.description, t.image,
+      COALESCE(s.schedule_text, '') AS schedule, ${textColumn(tx, 'p.start_date')} AS "semesterStart"
     FROM class_groups g JOIN klass_types t ON t.id = g.klass_type_id
     LEFT JOIN class_schedules s ON s.class_group_id = g.id
     LEFT JOIN academic_periods p ON p.id = g.academic_period_id
     WHERE g.active AND t.active ORDER BY g.sort_order
   `;
-  const assignments = await tx<{ classId: string; coachId: string }[]>`SELECT class_group_id AS "classId", coach_id AS "coachId" FROM coach_assignments`;
+  const assignments = await tx<{ classId: string; coachId: string }[]>`SELECT class_group_id AS "classId", coach_id AS "coachId" FROM coach_assignments ORDER BY class_group_id, coach_id`;
   const students = await tx<Omit<StudentRecord, 'school' | 'klass' | 'classIds'>[]>`SELECT id, COALESCE(institution_id, '') AS "institutionId", name, grade, score, attendance, revision FROM student_profiles WHERE active ORDER BY sort_order`;
-  const enrollments = await tx<{ classId: string; studentId: string }[]>`SELECT class_group_id AS "classId", student_id AS "studentId" FROM enrollments WHERE status = 'active'`;
-  const deadlines = await tx<{ classId: string; kind: 'syllabus' | 'lesson-plan' | 'meeting' | 'request'; date: string; dueDate: string; timing: string }[]>`SELECT class_group_id AS "classId", kind, meeting_date::text AS date, due_date::text AS "dueDate", request_timing AS timing FROM submission_deadlines ORDER BY meeting_date, kind`;
+  const enrollments = await tx<{ classId: string; studentId: string }[]>`SELECT class_group_id AS "classId", student_id AS "studentId" FROM enrollments WHERE status = 'active' ORDER BY class_group_id, student_id`;
+  const deadlines = await tx<{ classId: string; kind: 'syllabus' | 'lesson-plan' | 'meeting' | 'request'; date: string; dueDate: string; timing: string }[]>`SELECT class_group_id AS "classId", kind, ${textColumn(tx, 'meeting_date')} AS date, ${textColumn(tx, 'due_date')} AS "dueDate", request_timing AS timing FROM submission_deadlines ORDER BY meeting_date, kind`;
 
-  const configured = await tx<{ classId: string; date: string }[]>`SELECT class_group_id AS "classId", meeting_date::text AS date FROM class_meetings WHERE configured ORDER BY meeting_date`;
+  const configured = await tx<{ classId: string; date: string; canvaUrl: string; worksheetUrl: string }[]>`SELECT class_group_id AS "classId", ${textColumn(tx, 'meeting_date')} AS date, canva_url AS "canvaUrl", worksheet_url AS "worksheetUrl" FROM class_meetings WHERE configured ORDER BY meeting_date`;
+  const deadlinesByClass = new Map<string, (typeof deadlines)[number][]>();
+  for (const item of deadlines) {
+    const list = deadlinesByClass.get(item.classId) ?? [];
+    list.push(item);
+    deadlinesByClass.set(item.classId, list);
+  }
+
   const catalog: AcademyCatalog = {
     institutions: institutions.map((item) => ({ ...item, classes: 0, students: 0 })),
     coaches: coaches.map((item) => ({ ...item, level: item.level as 'Lead Coach' | 'Coach', classes: 0, students: 0 })),
     students: students.map((student) => ({ ...student, school: '', klass: '', classIds: enrollments.filter((entry) => entry.studentId === student.id).map((entry) => entry.classId) })),
     klasses: groups.map(({ semesterStart, ...group }) => {
-      const items = deadlines.filter((entry) => entry.classId === group.id);
-      const meetings = configured.filter((entry) => entry.classId === group.id).map((entry) => entry.date).map((date) => ({ date, lessonPlan: items.find((entry) => entry.kind === 'lesson-plan' && entry.date === date)?.dueDate || '', feedback: items.find((entry) => entry.kind === 'meeting' && entry.date === date)?.dueDate || '', request: items.find((entry) => entry.kind === 'request' && entry.timing === 'Before class' && entry.date === date)?.dueDate || '' }));
+      const items = deadlinesByClass.get(group.id) ?? [];
+      const meetings = configured.filter((entry) => entry.classId === group.id).map(({ date, canvaUrl, worksheetUrl }) => ({ date, canvaUrl, worksheetUrl, lessonPlan: items.find((entry) => entry.kind === 'lesson-plan' && entry.date === date)?.dueDate || '', feedback: items.find((entry) => entry.kind === 'meeting' && entry.date === date)?.dueDate || '', request: items.find((entry) => entry.kind === 'request' && entry.timing === 'Before class' && entry.date === date)?.dueDate || '' }));
       return { ...group, mode: group.mode as 'Online' | 'Onsite' | 'Hybrid', school: '', coaches: [], students: 0, coachIds: assignments.filter((entry) => entry.classId === group.id).map((entry) => entry.coachId), deadlines: { semesterStart: semesterStart || '', syllabus: items.find((entry) => entry.kind === 'syllabus')?.dueDate || '', semesterRequest: items.find((entry) => entry.kind === 'request' && entry.timing === 'Before semester')?.dueDate || '', meetings } };
     }),
   };

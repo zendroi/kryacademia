@@ -1,0 +1,318 @@
+"use client";
+
+import { ChevronDown } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+
+const ROTATION_ANGLE_OPEN = 180;
+const DROPDOWN_OFFSET = 4;
+
+function dropdownPosition(rect: DOMRect, count: number) {
+  const height = Math.min(count * 44 + 16, window.innerHeight - 16);
+  return {
+    left: rect.left,
+    top: rect.bottom + DROPDOWN_OFFSET + height <= window.innerHeight - 8 ? rect.bottom + DROPDOWN_OFFSET : Math.max(8, rect.top - height - DROPDOWN_OFFSET),
+    width: rect.width,
+  };
+}
+
+export interface DropdownItem {
+  icon?: React.ReactNode;
+  id: string | number;
+  label: string;
+}
+
+export interface BasicDropdownProps {
+  className?: string;
+  items: DropdownItem[];
+  label: string;
+  onChange?: (item: DropdownItem) => void;
+}
+
+export default function BasicDropdown({
+  label,
+  items,
+  onChange,
+  className = "",
+}: BasicDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [portalHost, setPortalHost] = useState<Element | null>(null);
+  const listId = useId();
+  const [selectedItem, setSelectedItem] = useState<DropdownItem | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ left: 0, top: 0, width: 0 });
+  const shouldReduceMotion = useReducedMotion();
+
+  const handleItemSelect = useCallback((item: DropdownItem) => {
+    setSelectedItem(item);
+    setIsOpen(false);
+    onChange?.(item);
+  }, [onChange]);
+
+  const handleToggle = useCallback(() => {
+    if (!isOpen && buttonRef.current) {
+      setPortalHost(dropdownRef.current?.closest("dialog") || document.body);
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPosition(dropdownPosition(rect, items.length));
+    }
+    setIsOpen(!isOpen);
+  }, [isOpen, items.length]);
+
+  // Update position on scroll/resize when open
+  useEffect(() => {
+    if (!(isOpen && buttonRef.current)) {
+      return;
+    }
+
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setPosition(dropdownPosition(rect, items.length));
+      }
+    };
+
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isOpen, items.length]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        isOpen &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target) &&
+        portalRef.current &&
+        !portalRef.current.contains(target)
+      ) {
+        setIsOpen(false);
+        setFocusedIndex(-1);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isOpen) {
+        // Open dropdown on Enter or Space when button is focused
+        if (
+          (event.key === "Enter" || event.key === " ") &&
+          document.activeElement === buttonRef.current
+        ) {
+          event.preventDefault();
+          handleToggle();
+        }
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsOpen(false);
+        setFocusedIndex(-1);
+        buttonRef.current?.focus();
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setFocusedIndex((prev) => (prev < items.length - 1 ? prev + 1 : 0));
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setFocusedIndex((prev) => (prev > 0 ? prev - 1 : items.length - 1));
+      } else if (event.key === "Enter" && focusedIndex >= 0) {
+        event.preventDefault();
+        const item = items[focusedIndex];
+        if (item) {
+          handleItemSelect(item);
+        }
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setFocusedIndex(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setFocusedIndex(items.length - 1);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Handlers are stable via closure
+  }, [isOpen, items, focusedIndex, handleItemSelect, handleToggle]);
+
+  const dropdownContent = (
+    <AnimatePresence>
+      {isOpen ? (
+        <div ref={portalRef}>
+          <motion.div
+            animate={
+              shouldReduceMotion
+                ? { opacity: 1 }
+                : { opacity: 1, scaleY: 1, y: 0 }
+            }
+            className="smooth-dropdown-menu fixed z-50 origin-top overflow-hidden rounded-lg border shadow-lg"
+            exit={
+              shouldReduceMotion
+                ? { opacity: 0, transition: { duration: 0 } }
+                : {
+                    opacity: 0,
+                    scaleY: 0.8,
+                    transition: { duration: 0.15 },
+                    y: -10,
+                  }
+            }
+            initial={
+              shouldReduceMotion
+                ? { opacity: 1 }
+                : { opacity: 0, scaleY: 0.8, y: -10 }
+            }
+            style={{
+              left: `${position.left}px`,
+              top: `${position.top}px`,
+              width: `${position.width}px`,
+              maxHeight: "calc(100dvh - 16px)",
+              overflowY: "auto",
+            }}
+            transition={
+              shouldReduceMotion
+                ? { duration: 0 }
+                : { bounce: 0.1, duration: 0.25, type: "spring" as const }
+            }
+          >
+            <ul
+              aria-label="Dropdown options"
+              className="py-2"
+              id={listId}
+            >
+              {items.map((item, index) => (
+                <motion.li
+                  animate={
+                    shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }
+                  }
+                  aria-selected={
+                    selectedItem?.id === item.id || index === focusedIndex
+                  }
+                  className="block"
+                  exit={
+                    shouldReduceMotion
+                      ? { opacity: 0, transition: { duration: 0 } }
+                      : { opacity: 0, x: -10 }
+                  }
+                  initial={
+                    shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: -10 }
+                  }
+                  key={item.id}
+                  role="option"
+                  transition={
+                    shouldReduceMotion
+                      ? { duration: 0 }
+                      : {
+                          damping: 30,
+                          duration: 0.2,
+                          stiffness: 300,
+                          type: "spring" as const,
+                        }
+                  }
+                  whileHover={shouldReduceMotion ? {} : { x: 5 }}
+                >
+                  <button
+                    aria-label={item.label}
+                    className={`smooth-dropdown-option flex min-h-[44px] w-full items-center px-4 py-2 text-left text-sm transition-colors focus-visible:outline-none ${
+                      selectedItem?.id === item.id
+                        ? "is-selected font-medium"
+                        : ""
+                    } ${index === focusedIndex ? "is-focused" : ""}`}
+                    onClick={() => handleItemSelect(item)}
+                    onMouseEnter={() => setFocusedIndex(index)}
+                    type="button"
+                  >
+                    {item.icon ? (
+                      <span className="mr-2">{item.icon}</span>
+                    ) : null}
+                    {item.label}
+
+                    {selectedItem?.id === item.id && (
+                      <motion.span
+                        animate={shouldReduceMotion ? {} : { scale: 1 }}
+                        className="ml-auto"
+                        initial={shouldReduceMotion ? {} : { scale: 0 }}
+                        transition={
+                          shouldReduceMotion
+                            ? { duration: 0 }
+                            : {
+                                damping: 20,
+                                duration: 0.2,
+                                stiffness: 300,
+                                type: "spring" as const,
+                              }
+                        }
+                      >
+                        <svg
+                          className="h-4 w-4 text-brand"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <title>Selected</title>
+                          <path
+                            d="M5 13l4 4L19 7"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                          />
+                        </svg>
+                      </motion.span>
+                    )}
+                  </button>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+      ) : null}
+    </AnimatePresence>
+  );
+
+  return (
+    <>
+      <div className={`relative inline-block ${className}`} ref={dropdownRef}>
+        <button
+          aria-controls={listId}
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-label={selectedItem ? `${label}: ${selectedItem.label}` : label}
+          className="flex min-h-[44px] w-full cursor-pointer items-center justify-between gap-2 rounded-lg border bg-background px-4 py-2 text-left transition-colors hover:bg-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          onClick={handleToggle}
+          ref={buttonRef}
+          type="button"
+        >
+          <span className="block truncate">
+            {String(selectedItem ? selectedItem.label : label)}
+          </span>
+          <motion.div
+            animate={{ rotate: isOpen ? ROTATION_ANGLE_OPEN : 0 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </motion.div>
+        </button>
+      </div>
+      {portalHost ? createPortal(dropdownContent, portalHost) : null}
+    </>
+  );
+}

@@ -19,7 +19,11 @@ export default function NotificationJobs({ query }: { query: string }) {
     setPending(true); setError('');
     try {
       const result = id ? await retryNotificationJob(id) : await refreshNotificationJobs();
-      if (result.ok) setJobs(result.jobs); else setError(result.error);
+      if (result.ok) {
+        if (result.jobs) setJobs(result.jobs);
+        else if ('job' in result) setJobs((items) => items.map((job) => job.id === result.job.id ? result.job : job));
+        if ('refreshError' in result) setError(result.refreshError || '');
+      } else setError(result.error);
     } catch { setError('Could not update delivery jobs.'); }
     finally { setPending(false); }
   }

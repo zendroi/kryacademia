@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS class_meetings (
   UNIQUE (class_group_id, meeting_date)
 );
 
+ALTER TABLE class_meetings ADD COLUMN IF NOT EXISTS canva_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE class_meetings ADD COLUMN IF NOT EXISTS worksheet_url TEXT NOT NULL DEFAULT '';
+
 CREATE TABLE IF NOT EXISTS teaching_documents (
   record_id UUID PRIMARY KEY REFERENCES teaching_records(id) ON DELETE CASCADE,
   workflow_version INTEGER CHECK (workflow_version = 2),
@@ -99,6 +102,16 @@ CREATE TABLE IF NOT EXISTS class_requests (
   timing TEXT CHECK (timing IN ('Before class', 'Before semester'))
 );
 
+CREATE TABLE IF NOT EXISTS class_request_items (
+  record_id UUID NOT NULL REFERENCES class_requests(record_id) ON DELETE CASCADE,
+  id UUID NOT NULL,
+  position INTEGER NOT NULL,
+  name TEXT NOT NULL CHECK (length(name) <= 200),
+  quantity TEXT NOT NULL CHECK (length(quantity) <= 80),
+  admin_note TEXT NOT NULL DEFAULT '' CHECK (length(admin_note) <= 1000),
+  PRIMARY KEY (record_id, id)
+);
+
 CREATE TABLE IF NOT EXISTS teaching_events (
   id UUID PRIMARY KEY,
   record_id UUID NOT NULL REFERENCES teaching_records(id) ON DELETE CASCADE,
@@ -144,7 +157,11 @@ SELECT r.id, r.teacher_email, r.kind, r.class_id, r.meeting_date, r.title, r.sta
       'id', sf.student_id, 'name', sf.student_name, 'attendance', sf.attendance, 'score', COALESCE(sf.score::text, ''), 'feedback', sf.feedback,
       'ratings', CASE WHEN sf.has_ratings THEN jsonb_build_object('affective', COALESCE(sf.affective::text, ''), 'problemSolving', COALESCE(sf.problem_solving::text, ''), 'storytelling', COALESCE(sf.storytelling::text, ''), 'performance', COALESCE(sf.performance::text, '')) END
     )) ORDER BY sf.position) FROM student_meeting_feedback sf WHERE sf.record_id = r.id
-  ), '[]'::jsonb)) ELSE '{}'::jsonb END AS content,
+  ), '[]'::jsonb)) ELSE '{}'::jsonb END
+  || CASE WHEN r.kind = 'request' AND EXISTS (SELECT 1 FROM class_request_items qi WHERE qi.record_id = r.id) THEN jsonb_build_object('requestLines', (
+    SELECT jsonb_agg(jsonb_build_object('id', qi.id, 'name', qi.name, 'quantity', qi.quantity, 'adminNote', qi.admin_note) ORDER BY qi.position)
+    FROM class_request_items qi WHERE qi.record_id = r.id
+  )) ELSE '{}'::jsonb END AS content,
   COALESCE((SELECT jsonb_agg(jsonb_build_object('id', f.id, 'name', f.name, 'mime', f.mime, 'size', COALESCE(f.size, octet_length(f.bytes))) ORDER BY f.position, f.id) FROM teaching_files f WHERE f.record_id = r.id), '[]'::jsonb) AS files,
   r.revision
 FROM teaching_records r

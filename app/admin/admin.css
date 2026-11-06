@@ -304,6 +304,7 @@
 .admin-card-body footer div { display: flex; }
 .admin-card-body footer b { width: 28px; height: 28px; margin-left: -5px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: var(--navy); color: #fff; font-size: 10px; }
 
+.admin-card-image > svg, .detail-photo > svg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--navy); }
 .institution-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .admin-institution-card { min-height: 290px; padding: 22px; }
 .institution-logo { position: relative; width: 82px; height: 82px; overflow: hidden; border: 1px solid #e1e6ea; border-radius: 8px; background: #fff; }
@@ -667,6 +668,7 @@
   .admin-modal-close { transition: none; }
 }
 .teacher-account-row { border-bottom: 1px solid #dce3e8; padding: 18px 0; }
+.teacher-account-private { overflow-wrap: anywhere; }
 .teacher-account-row summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer; }
 .teacher-account-row summary > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .teacher-account-row summary strong, .teacher-account-row summary small { display: block; }

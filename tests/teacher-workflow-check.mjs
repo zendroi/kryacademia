@@ -32,6 +32,13 @@ assert.throws(() => validateDraft(badSyllabus, config), /time/);
 
 const meeting = { kind: 'meeting', classId: 'biotech-10', date: '2026-09-05', title: 'Meeting 1', files: [], submit: true, content: { workflowVersion: 2, syllabusId, meetingNumber: 1, mainCoach: 'Coach', teacherAttendance: 'Present', reflection: 'Students explored biotechnology.', students: roster('biotech-10').map((student) => ({ id: student.id, attendance: 'Present', score: '', feedback: 'Used evidence to explain observations.', ratings: { affective: '4', problemSolving: '3', storytelling: '3', performance: '4' } })) } };
 validateDraft(meeting, config);
+meeting.content.students[0].attendance = 'Excused';
+meeting.content.students[0].feedback = '';
+meeting.content.students[0].ratings = emptyRatings();
+validateDraft(meeting, config);
+meeting.content.students[0].attendance = 'Present';
+meeting.content.students[0].feedback = 'Participates actively.';
+meeting.content.students[0].ratings = { affective: '4', problemSolving: '3', storytelling: '3', performance: '4' };
 meeting.content.students[0].ratings.affective = '5';
 assert.throws(() => validateDraft(meeting, config), /1 to 4/);
 meeting.content.students[0].ratings = emptyRatings();
@@ -68,3 +75,12 @@ assert.throws(() => validateDraft({ ...syllabus, files: [photo, photo] }, config
 assert.throws(() => validateDraft({ ...syllabus, files: [null] }, config), /unsupported format/);
 assert.throws(() => validateDraft({ ...syllabus, files: [{ ...photo, mime: 'text/html' }] }, config), /unsupported format/);
 console.log('Syllabus timeline, rubric, lesson steps, assigned Canva links and attachment boundary checks passed.');
+const request = { kind: 'request', classId: 'biotech-10', date: config.semesterStart, title: 'Class needs', files: [], submit: true, content: { workflowVersion: 2, timing: 'Before semester', reason: 'Prepare experiments', requestLines: [{ id: syllabusId, name: 'Test tubes', quantity: '10 pcs', adminNote: '' }] } };
+validateDraft(request, config);
+assert.throws(() => validateDraft({ ...request, content: { ...request.content, requestLines: [request.content.requestLines[0], request.content.requestLines[0]] } }, config), /distinct request items/);
+assert.throws(() => validateDraft({ ...request, content: { ...request.content, requestLines: [{ ...request.content.requestLines[0], quantity: '' }] } }, config), /item name and quantity/);
+const assignedCatalog = { klasses: [{ id: 'biotech-10', deadlines: { meetings: [{ date: material.date, canvaUrl: 'https://canva.link/admin-material', worksheetUrl: '' }] } }], students: [] };
+assert.equal(assignedMaterials('biotech-10', 1, assignedCatalog, material.date).canvaUrl, 'https://canva.link/admin-material');
+validateDraft({ ...material, content: { ...material.content, canvaUrl: 'https://canva.link/admin-material', worksheetUrl: '' } }, config, assignedCatalog);
+assert.throws(() => validateDraft({ ...material, content: { ...material.content, canvaUrl: 'https://canva.link/teacher-changed-material', worksheetUrl: '' } }, config, assignedCatalog), /unchanged/);
+console.log('Structured request names, quantities, duplicates, and absent/excused feedback checks passed.');

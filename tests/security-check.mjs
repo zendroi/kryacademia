@@ -10,6 +10,7 @@ import { chromium } from 'playwright';
 import { fixtureSession, signSession, readSession } from './session-fixture.mjs';
 import { core, workflow, updateCatalog } from './academic-fixture.mjs';
 import { PDFDocument } from 'pdf-lib';
+import sharp from 'sharp';
 
 if (!process.env.DATABASE_URL || !process.env.SESSION_SECRET) throw new Error('DATABASE_URL and SESSION_SECRET are required.');
 const originalUrl = process.env.DATABASE_URL;
@@ -25,6 +26,9 @@ const teacherEmail = `coach-${randomUUID()}@example.com`;
 const otherEmail = `other-${randomUUID()}@example.com`;
 const historicalId = randomUUID();
 const photoId = randomUUID();
+const suites = ['tests/phase3-check.mjs', 'tests/phase5-check.mjs', 'tests/phase4-check.mjs', 'tests/auth-check.mjs', 'tests/academy-check.mjs', 'tests/inquiry-check.mjs', 'tests/admin-check.mjs', 'tests/upload-concurrency-check.mjs', 'tests/teacher-check.mjs'];
+const selected = process.argv.slice(2);
+if (selected.some((file) => !suites.includes(file))) throw new Error('Select test files from the security suite only.');
 process.env.PORTAL_TEST_SCHEMA = schema;
 let server;
 let browser;
@@ -32,9 +36,9 @@ let created = false;
 let output = '';
 const fileDirectory = await mkdtemp(join(tmpdir(), 'krya-private-test-'));
 
-function run(file, env) {
+function run(file, env, args = []) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [file], { env, windowsHide: true, stdio: 'inherit' });
+    const child = spawn(process.execPath, [file, ...args], { env, windowsHide: true, stdio: 'inherit' });
     child.once('error', reject); child.once('exit', (code) => code === 0 ? resolve() : reject(new Error(`${file} exited ${code}\nServer output:\n${output}`)));
   });
 }
@@ -47,11 +51,13 @@ try {
   await adminSql`CREATE SCHEMA ${adminSql(schema)}`; created = true;
   await sql.begin(async (tx) => {
     await tx`SET LOCAL search_path TO ${tx(schema)}`;
-    for (const file of ['init', 'teacher', 'academy', 'academic-core', 'inquiry', 'security', 'phase3', 'phase4', 'phase5']) await tx.unsafe(await readFile(new URL(`../database/${file}.sql`, import.meta.url), 'utf8'));
+    for (const file of ['init', 'teacher', 'academy', 'academic-core', 'inquiry', 'security', 'phase3', 'phase4', 'phase5', 'portal-revisions']) await tx.unsafe(await readFile(new URL(`../database/${file}.sql`, import.meta.url), 'utf8'));
   });
   assert.equal((await sql`SELECT current_schema() AS name`)[0].name, schema, 'Tests must use their own schema');
   await sql.begin(core.initializeAcademicCore);
+  await run('scripts/migrate-portal-revisions.mjs', { ...process.env, DATABASE_URL: url.href });
   console.log('Isolated security database ready.');
+  await run('tests/portal-regression-check.mjs', process.env);
   await run('tests/teaching-save-check.mjs', process.env);
   await sql`UPDATE portal_users SET password_hash = crypt(${password}, gen_salt('bf', 12))`;
   const env = { ...process.env, VERCEL: '0', PORTAL_LOCAL_FILE_DIR: fileDirectory, BACKUP_KEY: randomBytes(32).toString('hex'), CRON_SECRET: randomBytes(32).toString('hex'), DATABASE_URL: url.href, ADMIN_TEST_PASSWORD: password, TEACHER_TEST_PASSWORD: password, PORTAL_TEST_SCHEMA: schema };
@@ -59,9 +65,10 @@ try {
   server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port), '--hostname', '127.0.0.1'], { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.on('data', (data) => { output = (output + data).slice(-6000); }); server.stderr.on('data', (data) => { output = (output + data).slice(-6000); });
   let ready = false;
-  for (let i = 0; i < 80; i++) {
+  const startupDeadline = Date.now() + 180000;
+  while (Date.now() < startupDeadline) {
     if (server.exitCode !== null) throw new Error(`Test server exited: ${output}`);
-    try { if ((await fetch(`${base}/login`)).ok) { ready = true; break; } } catch { /* Server is starting. */ }
+    try { if ((await fetch(`${base}/login`, { signal: AbortSignal.timeout(4000) })).ok) { ready = true; break; } } catch { /* Server is starting. */ }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   assert.ok(ready, 'Test server did not start');
@@ -72,13 +79,14 @@ try {
   const page = await applicant.newPage(); page.on('pageerror', (error) => errors.push(error.message));
   page.setDefaultTimeout(30000); page.setDefaultNavigationTimeout(30000);
   let registration;
-  page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/register')) registration = request; });
+  page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/register') registration = request; });
   async function signIn(target, email, pass = password) {
     await target.goto(`${base}/login`); await target.locator('.page-preloader').waitFor({ state: 'detached' });
     await target.getByLabel('Email address').fill(email); await target.getByLabel('Password', { exact: true }).fill(pass);
     await target.getByRole('button', { name: /sign in securely/i }).click();
   }
   async function navigate(target, name, role = 'admin') {
+    await target.locator('.admin-shell').waitFor();
     const menu = target.getByRole('button', { name: 'Open navigation', exact: true }); if (await menu.isVisible()) await menu.click();
     await target.getByRole('navigation', { name: `${role === 'admin' ? 'Admin' : 'Teacher'} navigation` }).getByRole('button', { name, exact: true }).click();
   }
@@ -87,10 +95,48 @@ try {
     // APIRequestContext omits Secure cookies on HTTP, unlike Chromium's trusted loopback navigation.
     return { ...headers, ...(cookie ? { cookie: `krya_session=${cookie.value}` } : {}) };
   }
-  await page.goto(`${base}/register`); await page.locator('.page-preloader').waitFor({ state: 'detached' });
-  await page.getByLabel('Full name').fill('Security fixture coach'); await page.getByLabel('Email address').fill(teacherEmail);
-  await page.getByLabel('Password (15+ characters)', { exact: true }).fill(password); await page.getByLabel('Confirm password').fill(password);
+  const admin = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
+  await admin.addCookies([{ name: 'krya_session', value: await fixtureSession(sql, 'admin@krya.global', 'admin'), url: base }]);
+  const adminPage = await admin.newPage(); await adminPage.goto(`${base}/admin`); await adminPage.locator('.page-preloader').waitFor({ state: 'detached' });
+  await navigate(adminPage, 'Teacher accounts');
+  await adminPage.getByLabel('Teacher name', { exact: true }).fill('Security fixture coach');
+  await adminPage.getByLabel('Teacher login email', { exact: true }).fill(teacherEmail);
+  await adminPage.getByLabel('Initial password (15+ characters)', { exact: true }).fill(password);
+  await adminPage.getByRole('button', { name: 'Create account & invitation' }).click();
+  await adminPage.getByLabel('Registration invitation').waitFor();
+  const initialInvitation = await adminPage.getByLabel('Registration invitation').inputValue();
+  const invitationAccount = adminPage.locator('.teacher-account-row').filter({ hasText: teacherEmail });
+  await invitationAccount.locator('summary').click();
+  await invitationAccount.getByRole('button', { name: 'Approve', exact: true }).click();
+  await adminPage.getByRole('alert').filter({ hasText: 'must complete their identity and bank details' }).waitFor();
+  assert.equal((await sql`SELECT status FROM portal_users WHERE email = ${teacherEmail}`)[0].status, 'pending');
+  await invitationAccount.getByRole('button', { name: 'Renew registration invitation' }).click();
+  await adminPage.getByRole('status').filter({ hasText: 'New invitation created' }).waitFor();
+  const invitationUrl = await adminPage.getByLabel('Registration invitation').inputValue();
+  assert.notEqual(initialInvitation, invitationUrl, 'Renewal must invalidate the previous token');
+  const identity = await sharp({ create: { width: 300, height: 180, channels: 3, background: '#ddebf4' } }).png().toBuffer();
+  await page.goto(invitationUrl); await page.locator('.page-preloader').waitFor({ state: 'detached' });
+  assert.equal(await page.getByLabel('Email address').count(), 0, 'Teacher registration must not ask for credentials');
+  await page.getByLabel('Full name').fill('Security fixture coach');
+  await page.getByLabel('Bank name', { exact: true }).fill('Fixture Bank');
+  await page.getByLabel('Bank account number').fill('123456789');
+  await page.getByLabel('Account holder name').fill('Security fixture coach');
+  await page.getByLabel('KTP photo', { exact: true }).setInputFiles({ name: 'fixture.png', mimeType: 'image/png', buffer: identity });
   await page.getByRole('button', { name: 'Submit application' }).click(); await page.getByRole('status').filter({ hasText: 'Application received' }).waitFor();
+  const [identityRow] = await sql`SELECT identity_object_id, bank_account, completed_at FROM teacher_onboarding WHERE email = ${teacherEmail}`;
+  assert.ok(identityRow.completed_at); assert.equal(identityRow.bank_account, '123456789');
+  assert.equal((await applicant.request.get(`${base}/api/teacher-identities/${identityRow.identity_object_id}`)).status(), 401);
+  assert.equal((await admin.request.get(`${base}/api/teacher-identities/${identityRow.identity_object_id}`, { headers: await requestHeaders(admin) })).status(), 200);
+  const objectCountBeforeReplay = (await sql`SELECT count(*)::int AS count FROM portal_file_objects`)[0].count;
+  await page.goto(invitationUrl); await page.locator('.page-preloader').waitFor({ state: 'detached' });
+  await page.getByLabel('Full name').fill('Replay fixture coach');
+  await page.getByLabel('Bank name', { exact: true }).fill('Fixture Bank');
+  await page.getByLabel('Bank account number').fill('123456789');
+  await page.getByLabel('Account holder name').fill('Replay fixture coach');
+  await page.getByLabel('KTP photo', { exact: true }).setInputFiles({ name: 'fixture.png', mimeType: 'image/png', buffer: identity });
+  await page.getByRole('button', { name: 'Submit application' }).click();
+  await page.getByRole('alert').filter({ hasText: 'invitation is unavailable or expired' }).waitFor();
+  assert.equal((await sql`SELECT count(*)::int AS count FROM portal_file_objects`)[0].count, objectCountBeforeReplay, 'A used invitation must not stage another identity file');
   const [pending] = await sql`SELECT id::text, role, status, password_hash FROM portal_users WHERE email = ${teacherEmail}`;
   assert.equal(pending.role, 'teacher'); assert.equal(pending.status, 'pending'); assert.notEqual(pending.password_hash, password);
   await signIn(page, teacherEmail); await page.waitForURL('**/login?error=pending');
@@ -103,14 +149,12 @@ try {
   assert.equal(readSession(signed, 'incorrect-secret'), null);
   assert.equal(readSession(signSession({ ...current, id: '' }, env.SESSION_SECRET), env.SESSION_SECRET), null, 'Old stateless sessions require a fresh login');
   assert.equal(readSession(`${signed}.extra`, env.SESSION_SECRET), null);
-  const admin = await browser.newContext({ viewport: { width: 1440, height: 960 }, reducedMotion: 'reduce' });
-  await admin.addCookies([{ name: 'krya_session', value: await fixtureSession(sql, 'admin@krya.global', 'admin'), url: base }]);
-  const adminPage = await admin.newPage(); await adminPage.goto(`${base}/admin`); await adminPage.locator('.page-preloader').waitFor({ state: 'detached' });
   const [legacyState] = await sql`SELECT md5(content::text) AS hash, jsonb_array_length(content->'klasses') AS klasses FROM academy_catalog WHERE id = 1`;
   const [coreState] = await sql`SELECT catalog_hash AS hash FROM academy_core_state WHERE id = 1`;
   assert.equal(coreState.hash, legacyState.hash, 'Relational core did not synchronize the catalog');
   assert.equal((await sql`SELECT count(*)::int AS count FROM class_groups WHERE active`)[0].count, legacyState.klasses, 'Class groups do not match the legacy catalog');
   adminPage.setDefaultTimeout(30000); adminPage.setDefaultNavigationTimeout(30000);
+  await adminPage.reload(); await adminPage.locator('.page-preloader').waitFor({ state: 'detached' });
   await navigate(adminPage, 'Teacher accounts');
   const accountRow = adminPage.locator('.teacher-account-row').filter({ hasText: teacherEmail }); await accountRow.locator('summary').click();
   let approvalRequest;
@@ -122,23 +166,28 @@ try {
   const stale = await admin.request.post(`${base}/admin`, { headers: replayHeaders, data: approvalRequest.postDataBuffer() });
   assert.match(await stale.text(), /This account changed/, 'Stale account review must not succeed');
   await signIn(page, teacherEmail); await page.waitForURL('**/teacher'); await page.locator('.page-preloader').waitFor({ state: 'detached' });
+  assert.equal((await applicant.request.get(`${base}/api/teacher-identities/${identityRow.identity_object_id}`, { headers: await requestHeaders(applicant) })).status(), 404, 'Teachers cannot read private onboarding documents');
   const cookie = (await applicant.cookies()).find((item) => item.name === 'krya_session'); assert.ok(cookie?.httpOnly);
   console.log('Pending registration and admin approval passed.');
   const unauthorized = await applicant.request.post(`${base}/admin`, { headers: await requestHeaders(applicant, replayHeaders), data: approvalRequest.postDataBuffer() });
   assert.match(unauthorized.headers()['x-action-redirect'] || '', /\/teacher/);
-  assert.ok(await registration.postDataBuffer(), 'Registration request captured');
-  const form = await new Request(registration.url(), { method: 'POST', headers: { 'content-type': registration.headers()['content-type'] }, body: registration.postDataBuffer() }).formData();
-  const prefix = [...form.keys()].find((key) => key.endsWith('email')).slice(0, -5);
+  assert.ok(registration.headers()['next-action'], 'Registration action captured');
+  // Chromium omits multipart file bytes from postDataBuffer; encode a Flight FormData argument explicitly.
+  const form = new FormData(); const prefix = '1_';
+  form.set('0', JSON.stringify([{}, '$K1']));
+  for (const [key, value] of Object.entries({ invitation: new URL(invitationUrl).searchParams.get('invitation'), name: 'Forged applicant', bank: 'Fixture bank', account: '123456789', holder: 'Forged applicant' })) form.set(`${prefix}${key}`, value);
+  form.set(`${prefix}identity`, new Blob([identity], { type: 'image/png' }), 'fixture.png');
   form.set(`${prefix}role`, 'admin');
   const forged = new Request(`${base}/register`, { method: 'POST', body: form });
   const registerHeaders = { ...registration.headers(), origin: base, 'content-type': forged.headers.get('content-type') }; delete registerHeaders.cookie; delete registerHeaders['content-length'];
-  await admin.request.post(`${base}/register`, { headers: registerHeaders, data: Buffer.from(await forged.arrayBuffer()) });
+  const replayRegistration = await admin.request.post(`${base}/register`, { headers: registerHeaders, data: Buffer.from(await forged.arrayBuffer()) });
+  assert.match(await replayRegistration.text(), /"error":/, 'Forged registration must be rejected');
   assert.equal((await sql`SELECT role FROM portal_users WHERE email = ${teacherEmail}`)[0].role, 'teacher', 'Registration cannot promote an existing account');
   const claimEmail = `claim-${randomUUID()}@example.com`; form.set(`${prefix}email`, claimEmail);
   const claim = new Request(`${base}/register`, { method: 'POST', body: form });
   await admin.request.post(`${base}/register`, { headers: { ...registerHeaders, 'content-type': claim.headers.get('content-type') }, data: Buffer.from(await claim.arrayBuffer()) });
-  const [claimed] = await sql`SELECT role, status FROM portal_users WHERE email = ${claimEmail}`;
-  assert.equal(claimed.role, 'teacher'); assert.equal(claimed.status, 'pending', 'Public registration must not create an active admin');
+  const claimed = await sql`SELECT role, status FROM portal_users WHERE email = ${claimEmail}`;
+  assert.equal(claimed.length, 0, 'Public registration cannot create an account or reuse an invitation');
   await sql`INSERT INTO portal_users (email, password_hash, role) VALUES (${otherEmail}, crypt(${password}, gen_salt('bf', 12)), 'teacher')`;
   await sql.begin(async (tx) => {
     await updateCatalog(tx, (catalog) => {
@@ -193,7 +242,7 @@ try {
   for (let i = 0; i < 11; i++) { await signIn(page, otherEmail, 'wrong-password'); await page.waitForURL(/error=(invalid|limited)/); }
   assert.match(page.url(), /error=limited/, 'Account login quota must apply');
   for (const width of [1440, 390, 360]) {
-    await page.setViewportSize({ width, height: 900 }); await page.goto(`${base}/register`); await page.getByRole('button', { name: 'Submit application' }).waitFor({ state: 'visible' }); await page.locator('.page-preloader').waitFor({ state: 'detached' });
+    await page.setViewportSize({ width, height: 900 }); await page.goto(invitationUrl); await page.getByRole('button', { name: 'Submit application' }).waitFor({ state: 'visible' }); await page.locator('.page-preloader').waitFor({ state: 'detached' });
     assert.ok(await page.locator('.auth-panel').isVisible(), 'Registration must render, not just avoid overflow');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Registration overflow'); await page.screenshot({ path: join(screenshots, `register-${width}.png`), fullPage: true });
     await adminPage.setViewportSize({ width, height: 900 }); assert.equal(await adminPage.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'Accounts overflow'); await adminPage.screenshot({ path: join(screenshots, `accounts-${width}.png`), fullPage: true });
@@ -211,7 +260,16 @@ try {
     await tx`DELETE FROM portal_account_events WHERE target_email IN ${tx([teacherEmail, otherEmail, claimEmail])}`;
   });
   await sql`TRUNCATE portal_rate_limits`;
-  for (const file of ['tests/phase3-check.mjs', 'tests/phase5-check.mjs', 'tests/phase4-check.mjs', 'tests/auth-check.mjs', 'tests/academy-check.mjs', 'tests/inquiry-check.mjs', 'tests/admin-check.mjs', 'tests/upload-concurrency-check.mjs', 'tests/teacher-check.mjs']) await run(file, env);
+  for (const file of selected.length ? selected : suites) await run(file, env);
+  const counts = async () => (await sql`SELECT (SELECT count(*)::int FROM institutions WHERE active) AS institutions, (SELECT count(*)::int FROM class_groups WHERE active) AS klasses`)[0];
+  const beforeImport = await counts();
+  await run('scripts/import-class-request-catalog.mjs', env);
+  assert.deepEqual(await counts(), beforeImport, 'A catalog preview must not write data');
+  await run('scripts/import-class-request-catalog.mjs', env, ['--apply']);
+  const imported = await counts();
+  assert.equal(imported.institutions, beforeImport.institutions + 7); assert.equal(imported.klasses, beforeImport.klasses + 7);
+  await run('scripts/import-class-request-catalog.mjs', env, ['--apply']);
+  assert.deepEqual(await counts(), imported, 'The catalog import must be idempotent');
   assert.equal((await sql`SELECT md5(content::text) AS hash FROM academy_catalog WHERE id = 1`)[0].hash, legacyState.hash, 'Relational writes changed the catalog archive');
   console.log('All security checks used an isolated schema. Operational records were not modified.');
 } catch (error) {
